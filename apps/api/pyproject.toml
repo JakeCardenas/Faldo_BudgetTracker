@@ -1,0 +1,50 @@
+[project]
+name = "faldo-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.141",
+  "uvicorn[standard]>=0.52",
+  "sqlalchemy[asyncio]>=2.0.52",
+  "asyncpg>=0.31",
+  "alembic>=1.20",
+  "pydantic>=2.13",
+  "pydantic-settings>=2.15",
+  "email-validator>=2.3",
+  "argon2-cffi>=25.1",
+  "pgvector>=0.5",
+  "openai>=3.13",
+  "python-multipart>=0.0.32",
+  "pillow>=12.3",
+  "httpx>=0.28",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.1", "pytest-asyncio>=1.4", "ruff>=0.16", "mypy>=1.18"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
+ignore = ["B008", "E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+check_untyped_defs = true
+
+[tool.vercel.scripts]
+build = "python -m app.deploy"
