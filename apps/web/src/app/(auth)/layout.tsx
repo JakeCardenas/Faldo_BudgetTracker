@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute -top-40 -right-40 size-[32rem] rounded-full bg-emerald/25 blur-3xl" aria-hidden />
         <div className="absolute -bottom-32 -left-24 size-96 rounded-full bg-leaf/15 blur-3xl" aria-hidden />
         <div className="relative flex items-center gap-2.5">
-          <LogoMark className="size-9 ring-1 ring-white/15" />
+          <LogoMark className="size-10" />
           <span className="text-lg font-extrabold tracking-tight">Faldo</span>
         </div>
         <MascotArt className="animate-bob relative mx-auto mt-10 w-56 drop-shadow-2xl xl:w-64" priority />
