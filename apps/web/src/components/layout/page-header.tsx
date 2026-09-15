@@ -1,4 +1,10 @@
+"use client"
+
+import { usePathname } from "next/navigation"
+import { LargeTitle } from "@/components/ios/nav-header"
 import { cn } from "@/lib/utils"
+
+const PLAN_CHILDREN = ["/budgets", "/goals", "/bills", "/debts", "/forecast"]
 
 export function PageHeader({ title, description, actions, className }: {
   title: string
@@ -6,15 +12,12 @@ export function PageHeader({ title, description, actions, className }: {
   actions?: React.ReactNode
   className?: string
 }) {
-  return (
-    <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", className)}>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-[1.7rem]">{title}</h1>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
-  )
+  const pathname = usePathname()
+  const back = PLAN_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/plan", label: "Plan" }
+    : pathname.startsWith("/tools/") ? { href: "/tools", label: "Tools" }
+      : pathname.startsWith("/learn/") ? { href: "/learn", label: "Learn" }
+        : pathname === "/" ? undefined : { href: "/", label: "Home" }
+  return <LargeTitle title={title} subtitle={description} actions={actions} back={back} className={className} mobileActions="below" />
 }
 
 export function SectionCard({ title, description, action, children, className, bodyClassName }: {
@@ -30,7 +33,7 @@ export function SectionCard({ title, description, action, children, className, b
       {(title || action) && (
         <div className="flex items-start justify-between gap-3 px-5 pt-5">
           <div className="space-y-0.5">
-            {title && <h2 className="text-[0.95rem] font-semibold tracking-tight">{title}</h2>}
+            {title && <h2 className="text-base font-extrabold tracking-tight">{title}</h2>}
             {description && <p className="text-xs text-muted-foreground">{description}</p>}
           </div>
           {action}

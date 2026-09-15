@@ -61,7 +61,7 @@ function Simulator() {
   return (
     <SectionCard title={<span className="flex items-center gap-2"><FlaskConical className="size-4 text-primary" /> What-if simulator</span>}
       description="Test a decision against your real balance, bills, savings plan and spending pattern.">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <div className="space-y-4">
           <div className="flex flex-wrap gap-1.5">
             {PRESETS.map((p) => (
@@ -115,7 +115,7 @@ function Simulator() {
                 <RiskBadge level={result.risk_level} verdict={result.verdict} />
               </div>
               <ForecastChart series={result.scenario_series} baseline={result.baseline_series} bufferMinor={result.buffer_minor} height={220} />
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <CalculationCard title="How Faldo calculated this" lines={result.lines} resultLabel="Projected balance" resultMinor={result.projected_minor} />
                 <div className="space-y-3">
                   {result.reasons.length > 0 && (
@@ -163,13 +163,13 @@ export default function ForecastPage() {
         <div className="card-surface"><EmptyState icon={LineChart} title="Forecast unlocks soon" description={`Faldo needs at least a week of transactions to project your balance. You have ${data.history_days} day${data.history_days === 1 ? "" : "s"} so far.`} /></div>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Spendable now</p><Money minor={data.start_balance_minor} className="text-2xl font-semibold tracking-tight" /></div>
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Projected {formatDate(data.horizon_end, "MMM d")}</p><Money minor={data.end_balance.p50} className="text-2xl font-semibold tracking-tight text-primary" /><p className="text-xs text-muted-foreground">{formatMoney(data.end_balance.p10)} – {formatMoney(data.end_balance.p90)}</p></div>
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Lowest point</p><Money minor={data.lowest_point.p50_minor} className={cn("text-2xl font-semibold tracking-tight", data.lowest_point.p50_minor < data.buffer_minor && "text-warning")} /><p className="text-xs text-muted-foreground">around {formatDate(data.lowest_point.date, "MMM d")}</p></div>
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Safe to spend</p><Money minor={data.safe_to_spend.amount_minor} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">≈{formatMoney(data.safe_to_spend.per_day_minor)}/day this month</p></div>
           </div>
-          <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_22rem]">
             <SectionCard title="Projected spendable balance" description={data.sufficiency === "low" ? "Limited history. Treat this range with caution." : `Based on ${data.history_days} days of history`}>
               <ForecastChart series={data.days} actual={data.actual} bufferMinor={data.buffer_minor} />
               <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">

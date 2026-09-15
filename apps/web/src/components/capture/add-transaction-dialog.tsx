@@ -2,19 +2,22 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowUp, Camera, FileImage, Keyboard, Loader2, MessageSquareText, RotateCcw } from "lucide-react"
+import { ArrowUp, Camera, ChevronLeft, FileImage, Loader2, MessageCircle, RotateCcw, ScanLine, X } from "lucide-react"
 import { toast } from "sonner"
 import { DraftCard } from "@/components/capture/draft-card"
 import { TransactionForm, type TransactionFormValues } from "@/components/finance/transaction-form"
+import { KeypadEntry, type EntryPreset, type EntryType } from "@/components/capture/keypad-entry"
+import { Mascot } from "@/components/brand/mascot"
+import { Segmented } from "@/components/ios/segmented"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { api, ApiError } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
-import { invalidateFinancialData, useSaveTransaction } from "@/lib/queries"
-import type { CaptureDraft, CaptureResult, Receipt, TransactionInput } from "@/lib/types"
+import { invalidateFinancialData, useMe, useSaveTransaction } from "@/lib/queries"
+import type { CaptureDraft, CaptureResult, Receipt, Transaction, TransactionInput } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
-export type AddMode = "describe" | "manual" | "receipt"
+export type AddMode = EntryType | "describe" | "manual" | "receipt"
 
 const EXAMPLES = ["Spent ₱350 at Jollibee", "Bought Nike shoes for ₱4,500 yesterday", "Salary ₱30,000", "Paid electricity ₱2,400 via GCash"]
 
@@ -61,9 +64,11 @@ function DescribeTab({ onDone }: { onDone: () => void }) {
   async function save(list: CaptureDraft[]) {
     setBusy(true)
     try {
-      await api.post("/capture/confirm", { transactions: list.map(draftToInput) })
+      const created = await api.post<Transaction[]>("/capture/confirm", { transactions: list.map(draftToInput) })
       await invalidateFinancialData(qc)
-      toast.success(list.length > 1 ? `${list.length} transactions saved` : "Transaction saved")
+      const total = created.reduce((sum, t) => sum + t.amount_minor, 0)
+      showLoggedToast(created, created.length > 1 ? `Logged ${created.length} transactions worth ${formatMoney(total)}.` : `Logged ${formatMoney(total)}. Nice and quick!`,
+        () => void invalidateFinancialData(qc))
       onDone()
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't save.")
@@ -224,7 +229,7 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
   const extraction = receipt.extraction
   const issues = Object.fromEntries(receipt.issues.map((i) => [i.field, i.message]))
   return (
-    <div className="grid gap-5 md:grid-cols-[minmax(0,14rem)_1fr]">
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,14rem)_1fr]">
       <div className="space-y-2">
         {preview && <img src={preview} alt="Receipt preview" className="max-h-80 w-full rounded-xl border object-contain bg-muted" />}
         <p className="text-xs text-muted-foreground">
@@ -273,41 +278,105 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
   )
 }
 
-export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, receipt }: {
+export function showLoggedToast(transactions: Transaction[], message: string, onUndone?: () => void, outfit?: string) {
+  toast.custom((id) => (
+    <div className="flex w-[min(24rem,calc(100vw-2rem))] items-center gap-3 rounded-[1.4rem] border bg-popover p-3 pr-2 text-popover-foreground shadow-(--shadow-float)">
+      <Mascot mood="proud" outfit={outfit} coin={false} className="w-11 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold text-primary">Faldo</p>
+        <p className="text-sm leading-snug">{message}</p>
+      </div>
+      <button type="button" onClick={async () => {
+        toast.dismiss(id)
+        try {
+          await Promise.all(transactions.map((t) => api.delete(`/transactions/${t.id}`)))
+          onUndone?.()
+          toast.success(transactions.length > 1 ? "Transactions removed" : "Transaction removed")
+        } catch {
+          toast.error("Couldn't undo that.")
+        }
+      }} className="pressable h-9 shrink-0 rounded-full bg-secondary px-3.5 text-xs font-bold text-secondary-foreground">Undo</button>
+    </div>
+  ), { duration: 6000 })
+}
+
+export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, receipt, preset }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: AddMode
   onModeChange: (mode: AddMode) => void
   receipt?: Receipt | null
+  preset?: EntryPreset
 }) {
+  const qc = useQueryClient()
   const save = useSaveTransaction()
+  const { data: me } = useMe()
+  const [manualInitial, setManualInitial] = useState<Partial<TransactionInput> | null>(null)
+  const [lastEntry, setLastEntry] = useState<EntryType>("expense")
   const close = () => onOpenChange(false)
+  const keypad = mode === "expense" || mode === "income" || mode === "transfer"
+  const entryType: EntryType = keypad ? (mode as EntryType) : lastEntry
+
+  const saved = (transaction: Transaction, feedback: string) => {
+    close()
+    showLoggedToast([transaction], feedback, () => void invalidateFinancialData(qc), me?.settings.mascot_outfit)
+  }
+
+  const title = mode === "describe" ? "Type it out" : mode === "receipt" ? "Scan a receipt" : mode === "manual" ? "All details" : "New transaction"
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl max-sm:top-auto max-sm:bottom-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:rounded-t-3xl">
-        <DialogHeader className="border-b px-5 pt-5 pb-4 text-left">
-          <DialogTitle>Add transaction</DialogTitle>
-          <DialogDescription>Describe it, enter it, or scan a receipt. You'll confirm before anything is saved.</DialogDescription>
-        </DialogHeader>
-        <Tabs value={mode} onValueChange={(v) => onModeChange(v as AddMode)} className="flex min-h-0 flex-1 flex-col gap-0">
-          <div className="px-5 pt-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="describe"><MessageSquareText /> Describe</TabsTrigger>
-              <TabsTrigger value="manual"><Keyboard /> Manual</TabsTrigger>
-              <TabsTrigger value="receipt"><Camera /> Receipt</TabsTrigger>
-            </TabsList>
+    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (!next) setManualInitial(null) }}>
+      <DialogContent showCloseButton={false} aria-describedby={undefined}
+        className={cn("flex flex-col gap-0 overflow-hidden rounded-[1.75rem] bg-background p-0 ring-0",
+          "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:h-[94dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none",
+          keypad ? "sm:h-[min(52rem,94dvh)] sm:max-w-[27rem]" : "sm:max-h-[92dvh] sm:max-w-2xl")}>
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted-foreground/25 sm:hidden" aria-hidden />
+        <div className="flex items-center gap-2 px-3 pt-2 pb-2 sm:pt-3">
+          {keypad ? (
+            <button type="button" onClick={close} aria-label="Close" className="pressable flex size-10 shrink-0 items-center justify-center rounded-full border bg-card text-muted-foreground">
+              <X className="size-5" />
+            </button>
+          ) : (
+            <button type="button" onClick={() => onModeChange(entryType)} className="pressable flex h-10 shrink-0 items-center gap-0.5 rounded-full pr-3 pl-1.5 text-sm font-semibold text-primary">
+              <ChevronLeft className="size-5" /> Back
+            </button>
+          )}
+          <div className="flex min-w-0 flex-1 justify-center">
+            {keypad ? (
+              <Segmented label="Transaction type" value={mode as EntryType} onChange={(v) => { setLastEntry(v); onModeChange(v) }}
+                options={[{ value: "expense", label: "Expense", tone: "expense" }, { value: "income", label: "Income", tone: "income" }, { value: "transfer", label: "Transfer" }]} size="sm" />
+            ) : <p className="truncate text-[0.95rem] font-bold">{title}</p>}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-6">
-            <TabsContent value="describe"><DescribeTab onDone={close} /></TabsContent>
-            <TabsContent value="manual">
-              <TransactionForm busy={save.isPending} onCancel={close} onSubmit={(input) => save.mutate({ data: input }, {
-                onSuccess: () => { toast.success("Transaction saved"); close() },
+          {keypad ? (
+            <div className="flex shrink-0 gap-1.5">
+              <button type="button" onClick={() => { setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
+                className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-primary"><MessageCircle className="size-[1.15rem]" /></button>
+              <button type="button" onClick={() => { setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan receipt"
+                className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-primary"><ScanLine className="size-[1.15rem]" /></button>
+            </div>
+          ) : <span className="w-16" />}
+        </div>
+        <DialogDescription className="sr-only">Log an expense, income or transfer.</DialogDescription>
+        {keypad ? (
+          <KeypadEntry key={mode} type={mode as EntryType} preset={preset} onSaved={saved}
+            onMoreDetails={(values) => { setLastEntry(values.type); setManualInitial(values); onModeChange("manual") }} />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+            {mode === "describe" && <DescribeTab onDone={close} />}
+            {mode === "receipt" && <ReceiptTab key={receipt?.id ?? "new"} onDone={close} initialReceipt={receipt} />}
+            {mode === "manual" && (
+              <TransactionForm initial={manualInitial ? {
+                type: manualInitial.type, amount_minor: manualInitial.amount_minor ?? null, occurred_on: manualInitial.occurred_on,
+                account_id: manualInitial.account_id ?? null, to_account_id: manualInitial.to_account_id ?? null,
+                category_id: manualInitial.category_id ?? null, subcategory_id: manualInitial.subcategory_id ?? null, notes: manualInitial.notes ?? null,
+              } : undefined} busy={save.isPending} onCancel={() => onModeChange(entryType)} onSubmit={(input) => save.mutate({ data: input }, {
+                onSuccess: (transaction) => saved(transaction, `Saved ${formatMoney(transaction.amount_minor, transaction.currency)} with all the details.`),
                 onError: (error) => toast.error(error.message),
               })} />
-            </TabsContent>
-            <TabsContent value="receipt"><ReceiptTab key={receipt?.id ?? "new"} onDone={close} initialReceipt={receipt} /></TabsContent>
+            )}
           </div>
-        </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   )

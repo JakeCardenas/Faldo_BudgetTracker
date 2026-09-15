@@ -45,9 +45,14 @@ class AccountOut(OutModel):
     credit_limit_minor: int | None
     color: str | None
     archived: bool
+    sort_order: int
     transaction_count: int
     last_activity_on: date | None
     updated_at: datetime
+
+
+class AccountOrderIn(ApiModel):
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=200)
 
 
 class CategoryIn(ApiModel):

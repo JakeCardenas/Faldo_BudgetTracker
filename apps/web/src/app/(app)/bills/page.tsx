@@ -191,7 +191,7 @@ export default function BillsPage() {
         <div className="card-surface"><EmptyState icon={CalendarClock} title="No recurring payments yet" description="Add rent, Meralco, internet or Netflix so Faldo can forecast your month accurately." action={<Button onClick={() => setDialog({ mode: "new" })}><Plus /> Add your first bill</Button>} /></div>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Monthly commitments</p><Money minor={monthly} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">{formatMoney(monthly * 12)} a year</p></div>
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Subscriptions</p><Money minor={subscriptions} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">per month</p></div>
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Due in 7 days</p><Money minor={dueSoon} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">{outflows.filter((i) => i.days_until_due <= 7).length} payments</p></div>

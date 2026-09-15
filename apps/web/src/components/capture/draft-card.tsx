@@ -15,7 +15,7 @@ function Chip({ icon: Icon, children, warn }: { icon: typeof Tag; children: Reac
   )
 }
 
-export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; onChange: (draft: CaptureDraft) => void; onEdit: () => void }) {
+export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; onChange: (draft: CaptureDraft) => void; onEdit?: () => void }) {
   const fields = new Set(draft.issues.map((i) => i.field))
 
   function choose(field: string, id: string, label: string) {
@@ -94,7 +94,7 @@ export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; on
       )}
 
       <div className="flex justify-end">
-        <Button variant="ghost" size="sm" onClick={onEdit}><Pencil /> Edit details</Button>
+        {onEdit && <Button variant="ghost" size="sm" onClick={onEdit}><Pencil /> Edit details</Button>}
       </div>
     </div>
   )

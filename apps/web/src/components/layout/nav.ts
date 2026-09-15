@@ -1,6 +1,5 @@
 import {
-  ArrowLeftRight, BarChart3, CalendarClock, HandCoins, Home, Landmark, Lightbulb, LineChart, PiggyBank, Settings,
-  Sparkles, Target, type LucideIcon,
+  BarChart3, BookOpen, Flame, History, Home, Lightbulb, MessageCircle, PiggyBank, Settings, Wallet, Wrench, type LucideIcon,
 } from "lucide-react"
 
 export interface NavItem {
@@ -9,36 +8,23 @@ export interface NavItem {
   icon: LucideIcon
 }
 
+export const TAB_ITEMS: NavItem[] = [
+  { href: "/", label: "Home", icon: Home },
+  { href: "/accounts", label: "Wallet", icon: Wallet },
+  { href: "/plan", label: "Plan", icon: PiggyBank },
+  { href: "/transactions", label: "History", icon: History },
+]
+
 export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  { label: "Money", items: [...TAB_ITEMS, { href: "/reports", label: "Statistics", icon: BarChart3 }] },
   {
-    label: "Overview",
+    label: "Companion",
     items: [
-      { href: "/", label: "Home", icon: Home },
-      { href: "/assistant", label: "Assistant", icon: Sparkles },
+      { href: "/assistant", label: "Talk to Faldo", icon: MessageCircle },
       { href: "/insights", label: "Insights", icon: Lightbulb },
-    ],
-  },
-  {
-    label: "Money",
-    items: [
-      { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-      { href: "/accounts", label: "Accounts", icon: Landmark },
-      { href: "/bills", label: "Bills & recurring", icon: CalendarClock },
-    ],
-  },
-  {
-    label: "Plan",
-    items: [
-      { href: "/budgets", label: "Budgets", icon: PiggyBank },
-      { href: "/goals", label: "Goals", icon: Target },
-      { href: "/debts", label: "Money owed", icon: HandCoins },
-    ],
-  },
-  {
-    label: "Analyze",
-    items: [
-      { href: "/forecast", label: "Forecast", icon: LineChart },
-      { href: "/reports", label: "Reports", icon: BarChart3 },
+      { href: "/streaks", label: "Streaks & rewards", icon: Flame },
+      { href: "/learn", label: "Learn", icon: BookOpen },
+      { href: "/tools", label: "Tools", icon: Wrench },
     ],
   },
 ]
@@ -47,6 +33,10 @@ export const SETTINGS_ITEM: NavItem = { href: "/settings", label: "Settings", ic
 
 export const ALL_NAV = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS_ITEM]
 
+const PLAN_ROUTES = ["/plan", "/budgets", "/goals", "/bills", "/debts", "/forecast"]
+
 export function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`)
+  if (href === "/") return pathname === "/"
+  if (href === "/plan") return PLAN_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))
+  return pathname === href || pathname.startsWith(`${href}/`)
 }

@@ -4,10 +4,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { api } from "@/lib/api"
 import type {
   Account,
+  BalancePoint,
   Budget,
   Category,
   Dashboard,
   Debt,
+  Engagement,
+  FinancialNote,
   Forecast,
   Goal,
   Health,
@@ -37,11 +40,14 @@ export const keys = {
   forecast: (horizon: string) => ["forecast", horizon] as const,
   report: (month: string) => ["report", month] as const,
   health: ["health"] as const,
+  engagement: ["engagement"] as const,
+  balanceHistory: (days: number) => ["balance-history", days] as const,
+  notes: ["notes"] as const,
 }
 
 export async function invalidateFinancialData(qc: QueryClient) {
   const roots = ["dashboard", "pulse", "accounts", "transactions", "budget", "goals", "recurring", "upcoming", "debts",
-    "insights", "forecast", "report", "health", "account-history", "tags", "receipts"]
+    "insights", "forecast", "report", "health", "account-history", "tags", "receipts", "engagement", "balance-history"]
   for (const root of roots) void qc.invalidateQueries({ queryKey: [root] })
 }
 
@@ -140,5 +146,28 @@ export function useDeleteTransaction() {
   return useMutation({
     mutationFn: (id: string) => api.delete(`/transactions/${id}`),
     onSuccess: () => invalidateFinancialData(qc),
+  })
+}
+
+export function useEngagement() {
+  return useQuery({ queryKey: keys.engagement, queryFn: () => api.get<Engagement>("/engagement"), staleTime: 60_000 })
+}
+
+export function useBalanceHistory(days = 7) {
+  return useQuery({ queryKey: keys.balanceHistory(days), queryFn: () => api.get<BalancePoint[]>("/accounts/balance-history", { days }) })
+}
+
+export function useNotes() {
+  return useQuery({ queryKey: keys.notes, queryFn: () => api.get<FinancialNote[]>("/notes") })
+}
+
+export function useUpdateSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Partial<Me["settings"]> & { display_name?: string }) => api.patch<Me>("/me/settings", data),
+    onSuccess: (me) => {
+      qc.setQueryData(keys.me, me)
+      void qc.invalidateQueries({ queryKey: keys.engagement })
+    },
   })
 }

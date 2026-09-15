@@ -3,7 +3,14 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Brain, Download, KeyRound, Monitor, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { useTheme } from "next-themes"
+import { Brain, ChevronRight, Download, Flame, KeyRound, LayoutGrid, Monitor, Moon, Pencil, Plus, ShieldCheck, Smartphone, Sun, Trash2 } from "lucide-react"
+import { Mascot } from "@/components/brand/mascot"
+import { Scene } from "@/components/brand/scene"
+import { Segmented } from "@/components/ios/segmented"
+import { resolveQuickActions } from "@/components/layout/actions-catalog"
+import { BACKGROUND_INFO, OUTFIT_INFO } from "@/lib/catalog"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
@@ -18,11 +25,62 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { FREQUENCY_LABELS, minorToInput, timeAgo, toMinor } from "@/lib/format"
-import { invalidateFinancialData, useAccounts, useCategories, useMe } from "@/lib/queries"
+import { invalidateFinancialData, useAccounts, useCategories, useMe, useUpdateSettings } from "@/lib/queries"
 import type { Category, Me } from "@/lib/types"
 
 const NONE = "__none__"
 const TIMEZONES = ["Asia/Manila", "Asia/Singapore", "Asia/Tokyo", "Asia/Dubai", "Europe/London", "America/New_York", "America/Los_Angeles", "Australia/Sydney"]
+
+function Appearance({ me }: { me: Me }) {
+  const update = useUpdateSettings()
+  const { setTheme } = useTheme()
+  const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Classic sprout"
+  const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Leafy green"
+  const actions = resolveQuickActions(me.settings.quick_actions)
+  return (
+    <SectionCard title="Appearance & companion" description="Make Faldo feel like yours.">
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <p className="eyebrow">Theme</p>
+          <Segmented label="Theme" className="w-full sm:w-auto" value={me.settings.theme} onChange={(theme) => {
+            setTheme(theme)
+            update.mutate({ theme }, { onError: (e) => toast.error(e.message) })
+          }} options={[
+            { value: "system", label: <span className="inline-flex items-center gap-1.5"><Smartphone className="size-3.5" /> System</span> },
+            { value: "light", label: <span className="inline-flex items-center gap-1.5"><Sun className="size-3.5" /> Light</span> },
+            { value: "dark", label: <span className="inline-flex items-center gap-1.5"><Moon className="size-3.5" /> Dark</span> },
+          ]} />
+        </div>
+        <div className="ios-group divide-y divide-border/60">
+          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
+            <Mascot outfit={me.settings.mascot_outfit} coin={false} className="w-10 shrink-0" />
+            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Mascot outfit</span><span className="block text-xs text-muted-foreground">{outfit}</span></span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </Link>
+          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
+            <span className="h-10 w-10 shrink-0 overflow-hidden rounded-xl"><Scene id={me.settings.home_background} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Home background</span><span className="block text-xs text-muted-foreground">{background}</span></span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </Link>
+          <Link href="/" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><LayoutGrid className="size-5" /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Quick actions</span><span className="block truncate text-xs text-muted-foreground">{actions.map((a) => a.label).join(", ")} · edit with the pencil on Home</span></span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </Link>
+          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff0e0] text-[#c75a12] dark:bg-[#3a2716] dark:text-[#ffb26b]"><Flame className="size-5" /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Streaks & badges</span><span className="block text-xs text-muted-foreground">Rewards unlock as you keep logging</span></span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </Link>
+        </div>
+        <p className="flex items-start gap-2 rounded-2xl bg-muted/60 px-4 py-3 text-xs text-muted-foreground">
+          <Smartphone className="mt-0.5 size-4 shrink-0" />
+          <span>Use Faldo like an app: on iPhone, open it in Safari, tap Share, then <b>Add to Home Screen</b>. On Android, tap the menu and choose <b>Install app</b>.</span>
+        </p>
+      </div>
+    </SectionCard>
+  )
+}
 
 function Preferences({ me }: { me: Me }) {
   const qc = useQueryClient()
@@ -57,7 +115,7 @@ function Preferences({ me }: { me: Me }) {
 
   return (
     <SectionCard title="Profile & preferences" description="These shape your forecast, safe-to-spend and AI answers.">
-      <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
+      <form onSubmit={save} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor="s-name">First name</Label><Input id="s-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Email</Label><Input value={me.email} disabled /></div>
         <div className="space-y-1.5"><Label>Currency</Label><Input value={`${s.currency} (₱)`} disabled /><p className="text-xs text-muted-foreground">Set during onboarding. Faldo tracks one currency per profile.</p></div>
@@ -128,7 +186,7 @@ function Security() {
 
   return (
     <SectionCard title={<span className="flex items-center gap-2"><KeyRound className="size-4 text-primary" /> Security</span>} description="Your password and the devices signed in to your account.">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <form onSubmit={changePassword} className="space-y-3">
           <p className="text-sm font-medium">Change password</p>
           <div className="space-y-1.5"><Label htmlFor="pw-current">Current password</Label><Input id="pw-current" type="password" autoComplete="current-password" required value={current} onChange={(e) => setCurrent(e.target.value)} /></div>
@@ -265,7 +323,7 @@ function Categories() {
         {parent === NONE && <Select value={kind} onValueChange={(v) => setKind(v as "expense" | "income")}><SelectTrigger className="sm:w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="expense">Expense</SelectItem><SelectItem value="income">Income</SelectItem></SelectContent></Select>}
         <Button type="submit" variant="outline"><Plus /> Add</Button>
       </form>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {tops.map((c) => (
           <button key={c.id} type="button" onClick={() => setEditing(c)}
             className="flex items-start gap-3 rounded-xl border p-3 text-left transition hover:border-primary/30 hover:bg-accent/40">
@@ -359,6 +417,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-5 pt-2">
       <PageHeader title="Settings" description="Preferences, categories, AI memory and your data." />
+      <Appearance me={me} />
       <Preferences me={me} />
       <Security />
       <Memory />

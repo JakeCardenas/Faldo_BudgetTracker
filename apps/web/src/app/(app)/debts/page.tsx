@@ -118,7 +118,7 @@ export default function DebtsPage() {
   return (
     <div className="space-y-5 pt-2">
       <PageHeader title="Money owed" description="What you owe and what others owe you." actions={<Button onClick={() => setCreating(true)}><Plus /> Add record</Button>} />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="card-surface p-5"><p className="text-sm text-muted-foreground">You owe</p><Money minor={iOwe} className="text-2xl font-semibold tracking-tight" /></div>
         <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Owed to you</p><Money minor={owedToMe} className="text-2xl font-semibold tracking-tight text-emerald" /></div>
       </div>
@@ -126,7 +126,7 @@ export default function DebtsPage() {
       {isLoading ? <Skeleton className="h-64 rounded-2xl" /> : list.length === 0 ? (
         <div className="card-surface"><EmptyState icon={HandCoins} title={tab === "open" ? "Nothing owed right now" : "No settled records"} description="Track loans, bill splits and IOUs so nothing slips through." action={tab === "open" ? <Button variant="outline" onClick={() => setCreating(true)}><Plus /> Add record</Button> : undefined} /></div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {list.map((debt) => (
             <div key={debt.id} className="card-surface space-y-3 p-5">
               <div className="flex items-start justify-between gap-3">

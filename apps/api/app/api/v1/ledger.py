@@ -11,6 +11,7 @@ from app.models import FinancialNote
 from app.models.enums import TransactionType
 from app.schemas.ledger import (
     AccountIn,
+    AccountOrderIn,
     AccountOut,
     AccountUpdate,
     CategoryIn,
@@ -44,6 +45,17 @@ async def create_account(data: AccountIn, ctx: CtxDep) -> AccountOut:
         ctx.settings.default_account_id = account.id
     balances = await account_service.account_balances(ctx.db, ctx.user_id)
     return account_service.to_out(next(b for b in balances if b.account.id == account.id))
+
+
+@router.get("/accounts/balance-history", tags=["accounts"])
+async def balance_history(ctx: CtxDep, days: Annotated[int, Query(ge=6, le=365)] = 30) -> list[dict]:
+    return await account_service.balance_history(ctx.db, ctx.user_id, ctx.today, days)
+
+
+@router.put("/accounts/order", status_code=204, tags=["accounts"])
+async def reorder_accounts(data: AccountOrderIn, ctx: CtxDep) -> Response:
+    await account_service.reorder_accounts(ctx.db, ctx.user_id, data.ids)
+    return Response(status_code=204)
 
 
 @router.get("/accounts/{account_id}", response_model=AccountOut, tags=["accounts"])

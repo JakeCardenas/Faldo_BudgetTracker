@@ -3,26 +3,30 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import Link from "next/link"
 import {
-  ArrowUp, BookText, Check, ChevronDown, CircleAlert, Loader2, MessageSquarePlus, PanelLeft, ShieldCheck, Sparkles, Square, Trash2, Wrench,
+  ArrowUp, BookText, Check, ChevronDown, ChevronLeft, CircleAlert, History, Loader2, Mic, MicOff, PenSquare, ShieldCheck, Square, Trash2, Wrench,
 } from "lucide-react"
-import { LogoMark } from "@/components/brand/logo"
+import { toast } from "sonner"
+import { Mascot } from "@/components/brand/mascot"
 import { BlockView } from "@/components/assistant/blocks"
+import { LoggedCard, ReviewCard, draftToInput, looksLikeLogging } from "@/components/assistant/logged-card"
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { api, streamPost } from "@/lib/api"
 import { formatDate, timeAgo } from "@/lib/format"
-import type { Block, ChatMessage, Source, ToolCallRecord } from "@/lib/types"
+import { invalidateFinancialData, useMe } from "@/lib/queries"
+import type { Block, CaptureDraft, CaptureResult, ChatMessage, Source, ToolCallRecord, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface Step { id: string; tool: string; label: string; state: "running" | "done" | "error" }
-interface LiveMessage extends ChatMessage { steps?: Step[]; streaming?: boolean; error?: string }
+interface LiveMessage extends ChatMessage { steps?: Step[]; streaming?: boolean; error?: string; logged?: Transaction[]; drafts?: CaptureDraft[] }
 
 const SUGGESTIONS = [
-  { group: "Understand", items: ["Where did my money go this month?", "Have I been spending more than last month?", "How much have I spent on shoes this year?"] },
-  { group: "Decide", items: ["Can I afford a ₱3,000 purchase?", "When can I afford my MacBook?", "What happens if I spend ₱5,000 this weekend?"] },
-  { group: "Improve", items: ["Why am I running out of money?", "What should I reduce this month?", "What subscriptions do I have?"] },
+  { group: "Log it", items: ["Spent 250 on lunch", "Grab 180 and coffee 140 from GCash", "Salary 30k"] },
+  { group: "Understand", items: ["Where did my money go this month?", "Have I been spending more than last month?", "What subscriptions do I have?"] },
+  { group: "Decide", items: ["Can I afford a ₱3,000 purchase?", "When can I afford my MacBook?", "What should I reduce this month?"] },
 ]
 
 const TOOL_NAMES: Record<string, string> = {
@@ -82,7 +86,7 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
           {sources.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">Sources & context</p>
-              <ul className="grid gap-1.5 sm:grid-cols-2">
+              <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 {sources.map((s) => {
                   const txnId = s.type === "transaction" ? s.id : s.type === "transaction_item" ? (s as Source & { transaction_id?: string }).transaction_id : undefined
                   return (
@@ -114,14 +118,22 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
   )
 }
 
-function AssistantMessage({ message, onFollowUp, onOpenTransaction }: { message: LiveMessage; onFollowUp: (q: string) => void; onOpenTransaction: (id: string) => void }) {
+function AssistantMessage({ message, onFollowUp, onOpenTransaction, onDraftsLogged, outfit }: {
+  message: LiveMessage
+  onFollowUp: (q: string) => void
+  onOpenTransaction: (id: string) => void
+  onDraftsLogged: (transactions: Transaction[]) => void
+  outfit?: string
+}) {
   const runningStep = message.steps?.find((s) => s.state === "running")
   return (
-    <div className="flex gap-3">
-      <LogoMark className="mt-0.5 size-7 shrink-0" />
+    <div className="flex gap-2.5">
+      <Mascot outfit={outfit} coin={false} className="mt-auto w-9 shrink-0" />
       <div className="min-w-0 flex-1 space-y-3">
+        {message.logged && <LoggedCard transactions={message.logged} onOpen={onOpenTransaction} />}
+        {message.drafts && <ReviewCard drafts={message.drafts} onLogged={onDraftsLogged} />}
         {message.steps && message.steps.length > 0 && message.streaming && !message.content && (
-          <ul className="space-y-1.5" aria-live="polite">
+          <ul className="space-y-1.5 rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3" aria-live="polite">
             {message.steps.map((step) => (
               <li key={step.id} className="flex items-center gap-2 text-sm text-muted-foreground">
                 {step.state === "running" ? <Loader2 className="size-3.5 animate-spin text-primary" /> : <Check className="size-3.5 text-primary" />}
@@ -131,10 +143,16 @@ function AssistantMessage({ message, onFollowUp, onOpenTransaction }: { message:
           </ul>
         )}
         {message.streaming && !message.content && !runningStep && !message.steps?.length && (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> Thinking about your data…</p>
+          <p className="flex w-fit items-center gap-1.5 rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3" aria-label="Thinking">
+            {[0, 1, 2].map((i) => <span key={i} className="size-2 animate-bounce rounded-full bg-muted-foreground/50" style={{ animationDelay: `${i * 120}ms` }} />)}
+          </p>
         )}
-        {message.error && <p className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-destructive">{message.error}</p>}
-        {message.content && <RichText text={message.content} sources={message.sources ?? []} onOpenTransaction={onOpenTransaction} />}
+        {message.error && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">{message.error}</p>}
+        {message.content && (
+          <div className="rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3 shadow-(--shadow-card)">
+            <RichText text={message.content} sources={message.sources ?? []} onOpenTransaction={onOpenTransaction} />
+          </div>
+        )}
         {message.blocks?.length > 0 && (
           <div className={cn("grid items-start gap-3", message.blocks.length > 1 && "xl:grid-cols-2")}>
             {message.blocks.map((block: Block, i: number) => (
@@ -144,11 +162,11 @@ function AssistantMessage({ message, onFollowUp, onOpenTransaction }: { message:
             ))}
           </div>
         )}
-        {!message.streaming && <Details message={message} onOpenTransaction={onOpenTransaction} />}
+        {!message.streaming && !message.logged && !message.drafts && <Details message={message} onOpenTransaction={onOpenTransaction} />}
         {!message.streaming && message.follow_ups?.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {message.follow_ups.map((q) => (
-              <button key={q} type="button" onClick={() => onFollowUp(q)} className="rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground transition hover:border-primary/30 hover:text-foreground">{q}</button>
+              <button key={q} type="button" onClick={() => onFollowUp(q)} className="pressable rounded-full border bg-card px-3 py-1.5 text-xs font-semibold text-foreground/80 hover:border-primary/30">{q}</button>
             ))}
           </div>
         )}
@@ -162,7 +180,7 @@ function Conversations({ activeId, onSelect, onNew }: { activeId: string | null;
   const { data = [] } = useQuery({ queryKey: ["conversations"], queryFn: () => api.get<{ id: string; title: string; updated_at: string }[]>("/assistant/conversations") })
   return (
     <div className="flex h-full flex-col gap-3">
-      <Button variant="outline" onClick={onNew} className="justify-start bg-card"><MessageSquarePlus /> New conversation</Button>
+      <Button variant="outline" onClick={onNew} className="h-11 justify-start rounded-full bg-card font-bold"><PenSquare /> New chat</Button>
       <ul className="-mx-1 flex-1 space-y-0.5 overflow-y-auto px-1">
         {data.length === 0 && <li className="px-2 py-4 text-xs text-muted-foreground">Your conversations appear here.</li>}
         {data.map((c) => (
@@ -183,10 +201,39 @@ function Conversations({ activeId, onSelect, onNew }: { activeId: string | null;
   )
 }
 
+type SpeechRecognitionLike = { start: () => void; stop: () => void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; interimResults: boolean; lang: string; continuous: boolean }
+
+function useDictation(onText: (text: string) => void) {
+  const [listening, setListening] = useState(false)
+  const [supported] = useState(() => {
+    if (typeof window === "undefined") return false
+    const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
+    return Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition)
+  })
+  const recognition = useRef<SpeechRecognitionLike | null>(null)
+  function toggle() {
+    if (listening) { recognition.current?.stop(); return }
+    const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike }
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition
+    if (!Ctor) return
+    const r = new Ctor()
+    r.lang = "en-PH"
+    r.interimResults = false
+    r.continuous = false
+    r.onresult = (e) => onText(Array.from(e.results).map((res) => res[0].transcript).join(" "))
+    r.onend = () => setListening(false)
+    recognition.current = r
+    setListening(true)
+    try { r.start() } catch { setListening(false) }
+  }
+  return { listening, supported, toggle }
+}
+
 function AssistantView() {
   const params = useSearchParams()
   const router = useRouter()
   const qc = useQueryClient()
+  const { data: me } = useMe()
   const { openTransaction } = useAppActions()
   const [messages, setMessages] = useState<LiveMessage[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -198,6 +245,7 @@ function AssistantView() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const initialAsked = useRef(false)
+  const dictation = useDictation((text) => setInput((current) => (current ? `${current} ${text}` : text)))
 
   useEffect(() => {
     api.get<{ is_development: boolean }>("/assistant/status").then((s) => setDevProvider(s.is_development)).catch(() => undefined)
@@ -207,11 +255,43 @@ function AssistantView() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [messages])
 
+  const tryLog = useCallback(async (text: string): Promise<boolean> => {
+    if (!looksLikeLogging(text)) return false
+    let result: CaptureResult
+    try {
+      result = await api.post<CaptureResult>("/capture/parse", { text })
+    } catch {
+      return false
+    }
+    if (!result.is_financial || !result.drafts.length || result.drafts.some((d) => !d.amount_minor)) return false
+    const now = new Date().toISOString()
+    const base = { blocks: [], sources: [], follow_ups: [], tool_calls: [], provider: null, validation: null, created_at: now }
+    const needsReview = result.drafts.some((d) => d.issues.some((i) => i.blocking) || !d.account_id)
+    if (needsReview) {
+      setMessages((prev) => [...prev, { ...base, id: `u-${Date.now()}`, role: "user", content: text }, { ...base, id: `r-${Date.now()}`, role: "assistant", content: "", drafts: result.drafts }])
+      return true
+    }
+    try {
+      const created = await api.post<Transaction[]>("/capture/confirm", { transactions: result.drafts.map(draftToInput) })
+      await invalidateFinancialData(qc)
+      setMessages((prev) => [...prev, { ...base, id: `u-${Date.now()}`, role: "user", content: text }, { ...base, id: `l-${Date.now()}`, role: "assistant", content: "", logged: created }])
+      return true
+    } catch (error) {
+      toast.error((error as Error).message || "Couldn't log that.")
+      return true
+    }
+  }, [qc])
+
   const ask = useCallback(async (question: string) => {
     const text = question.trim()
     if (!text || busy) return
     setInput("")
     setBusy(true)
+    if (await tryLog(text)) {
+      setBusy(false)
+      textareaRef.current?.focus()
+      return
+    }
     const now = new Date().toISOString()
     const assistantId = `live-${Date.now()}`
     setMessages((prev) => [
@@ -252,7 +332,7 @@ function AssistantView() {
       qc.invalidateQueries({ queryKey: ["conversations"] })
       textareaRef.current?.focus()
     }
-  }, [busy, conversationId, qc])
+  }, [busy, conversationId, qc, tryLog])
 
   useEffect(() => {
     const q = params.get("q")
@@ -277,40 +357,47 @@ function AssistantView() {
     setHistoryOpen(false)
   }
 
+  const outfit = me?.settings.mascot_outfit
+
   return (
-    <div className="flex h-[calc(100dvh-3.5rem-4.5rem-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-4rem)]">
-      <aside className="hidden w-64 shrink-0 border-r px-4 py-4 xl:block">
+    <div className="flex h-dvh lg:h-[calc(100dvh-4rem)]">
+      <aside className="hidden w-72 shrink-0 border-r px-4 py-4 xl:block">
         <Conversations activeId={conversationId} onSelect={loadConversation} onNew={newConversation} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-2 border-b px-4 py-2.5 sm:px-6">
-          <Button variant="ghost" size="icon" className="xl:hidden" onClick={() => setHistoryOpen(true)} aria-label="Conversations"><PanelLeft /></Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="size-4 text-primary" /> Faldo Assistant</h1>
-            <p className="truncate text-xs text-muted-foreground">Answers come from your records and Faldo's calculations, never guesses.</p>
+        <div className="glass z-10 flex items-center gap-2 border-b border-border/60 px-3 pt-safe sm:px-6">
+          <div className="flex h-16 w-full items-center gap-2">
+            <Link href="/" aria-label="Back to home" className="pressable flex size-10 shrink-0 items-center justify-center rounded-full border bg-card text-primary shadow-(--shadow-card) lg:hidden">
+              <ChevronLeft className="size-5" />
+            </Link>
+            <Mascot outfit={outfit} coin={false} className="w-10 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base font-extrabold tracking-tight">Chat with Faldo</h1>
+              <p className="truncate text-xs text-muted-foreground">Ask questions or log money in plain language.</p>
+            </div>
+            {devProvider && <span className="hidden rounded-full bg-warning-soft px-2.5 py-1 text-[0.65rem] font-bold text-warning sm:inline">Dev AI</span>}
+            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-foreground/80 xl:hidden"><History className="size-4.5" /></button>
+            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-foreground/80"><PenSquare className="size-4.5" /></button>
           </div>
-          {devProvider && <span className="hidden rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-[0.7rem] font-medium text-warning sm:inline">Development AI provider</span>}
-          {messages.length > 0 && <Button variant="ghost" size="sm" onClick={newConversation}><MessageSquarePlus /> <span className="hidden sm:inline">New</span></Button>}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl space-y-8 py-6">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-6">
+          <div className="mx-auto max-w-3xl space-y-5 py-5">
             {messages.length === 0 ? (
-              <div className="animate-rise space-y-8 pt-4 sm:pt-10">
-                <div className="space-y-3 text-center">
-                  <div className="relative mx-auto w-fit">
-                    <div className="absolute inset-0 scale-150 rounded-full bg-mint blur-2xl" aria-hidden />
-                    <LogoMark className="relative size-12" />
+              <div className="animate-rise space-y-6">
+                <div className="flex gap-2.5">
+                  <Mascot outfit={outfit} coin={false} className="mt-auto w-12 shrink-0" />
+                  <div className="rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3 text-[0.95rem] leading-relaxed shadow-(--shadow-card)">
+                    <p>Hi {me?.display_name ?? "there"}! Ask me about your money, balances, or a specific account.</p>
+                    <p className="mt-2">You can also type or dictate transactions like <b>&ldquo;Spent 250 on food&rdquo;</b> or <b>&ldquo;Salary 15000&rdquo;</b> and I&apos;ll log them for you.</p>
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Ask about your money</h2>
-                  <p className="mx-auto max-w-md text-sm text-muted-foreground">Faldo looks up your transactions, budgets, goals and bills, calculates exact figures, and explains what they mean.</p>
                 </div>
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   {SUGGESTIONS.map((group) => (
                     <div key={group.group} className="space-y-2">
-                      <p className="px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{group.group}</p>
+                      <p className="eyebrow px-1">{group.group}</p>
                       {group.items.map((q) => (
-                        <button key={q} type="button" onClick={() => ask(q)} className="block w-full rounded-xl border bg-card px-3.5 py-3 text-left text-sm shadow-(--shadow-card) transition hover:-translate-y-0.5 hover:border-primary/25">
+                        <button key={q} type="button" onClick={() => ask(q)} className="pressable block w-full rounded-2xl border bg-card px-3.5 py-3 text-left text-sm font-medium shadow-(--shadow-card) hover:border-primary/25">
                           {q}
                         </button>
                       ))}
@@ -321,20 +408,21 @@ function AssistantView() {
               </div>
             ) : (
               messages.map((m) => m.role === "user" ? (
-                <div key={m.id} className="flex justify-end">
-                  <p className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-[0.95rem] text-primary-foreground">{m.content}</p>
+                <div key={m.id} className="flex justify-end pl-10">
+                  <p className="rounded-[1.4rem] rounded-br-md bg-primary px-4 py-2.5 text-[0.95rem] whitespace-pre-wrap text-primary-foreground shadow-(--shadow-card)">{m.content}</p>
                 </div>
               ) : (
-                <AssistantMessage key={m.id} message={m} onFollowUp={ask} onOpenTransaction={openTransaction} />
+                <AssistantMessage key={m.id} message={m} onFollowUp={ask} onOpenTransaction={openTransaction} outfit={outfit}
+                  onDraftsLogged={(logged) => setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, drafts: undefined, logged } : x)))} />
               ))
             )}
             <div ref={bottomRef} />
           </div>
         </div>
 
-        <div className="border-t bg-background/80 px-4 py-3 backdrop-blur sm:px-6">
-          <form onSubmit={(e) => { e.preventDefault(); ask(input) }} className="relative mx-auto max-w-3xl">
-            <label htmlFor="assistant-input" className="sr-only">Ask Faldo</label>
+        <div className="glass border-t border-border/60 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
+          <form onSubmit={(e) => { e.preventDefault(); ask(input) }} className="mx-auto max-w-3xl rounded-[1.5rem] border bg-card p-2 shadow-(--shadow-card)">
+            <label htmlFor="assistant-input" className="sr-only">Ask Faldo or log a transaction</label>
             <textarea
               id="assistant-input"
               ref={textareaRef}
@@ -343,14 +431,22 @@ function AssistantView() {
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input) } }}
               rows={1}
               maxLength={1000}
-              placeholder="Ask anything about your finances…"
-              className="max-h-40 min-h-12 w-full resize-none rounded-2xl border border-input bg-card py-3 pr-14 pl-4 text-[0.95rem] shadow-(--shadow-card) outline-none field-sizing-content placeholder:text-muted-foreground/70 focus:border-ring focus:ring-3 focus:ring-ring/25"
+              placeholder="Ask a question or type an expense…"
+              className="max-h-40 min-h-11 w-full resize-none bg-transparent px-2.5 py-2 text-base outline-none field-sizing-content placeholder:text-muted-foreground/70 sm:text-[0.95rem]"
             />
-            {busy ? (
-              <Button type="button" size="icon" variant="secondary" className="absolute right-2 bottom-2 rounded-xl" onClick={() => abortRef.current?.abort()} aria-label="Stop"><Square className="size-3.5" /></Button>
-            ) : (
-              <Button type="submit" size="icon" className="absolute right-2 bottom-2 rounded-xl" disabled={!input.trim()} aria-label="Send"><ArrowUp /></Button>
-            )}
+            <div className="flex items-center justify-end gap-2">
+              {dictation.supported && (
+                <button type="button" onClick={dictation.toggle} aria-label={dictation.listening ? "Stop dictation" : "Dictate"} aria-pressed={dictation.listening}
+                  className={cn("pressable flex size-9 items-center justify-center rounded-full", dictation.listening ? "animate-pulse bg-expense-soft text-expense" : "text-primary hover:bg-secondary")}>
+                  {dictation.listening ? <MicOff className="size-4.5" /> : <Mic className="size-4.5" />}
+                </button>
+              )}
+              {busy ? (
+                <Button type="button" size="icon" variant="secondary" className="size-9 rounded-full" onClick={() => abortRef.current?.abort()} aria-label="Stop"><Square className="size-3.5" /></Button>
+              ) : (
+                <Button type="submit" size="icon" className="size-9 rounded-full" disabled={!input.trim()} aria-label="Send"><ArrowUp /></Button>
+              )}
+            </div>
           </form>
         </div>
       </div>

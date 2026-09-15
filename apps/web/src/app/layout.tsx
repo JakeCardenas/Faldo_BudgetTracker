@@ -8,11 +8,17 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: { default: "Faldo", template: "%s · Faldo" },
-  description: "Your AI financial copilot.",
+  description: "Your personal money companion. Track spending, plan ahead and grow your savings.",
+  applicationName: "Faldo",
+  appleWebApp: { capable: true, title: "Faldo", statusBarStyle: "default" },
+  formatDetection: { telephone: false, email: false, address: false },
 }
 
 export const viewport: Viewport = {
-  themeColor: "#f1f4ee",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f4f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d110e" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -20,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" className={`${jakarta.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <body className="min-h-dvh">
         <Providers>{children}</Providers>
       </body>

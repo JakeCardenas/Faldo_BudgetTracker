@@ -36,7 +36,7 @@ export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTr
     case "stats":
       return (
         <Frame title={block.title}>
-          <dl className="grid gap-3 sm:grid-cols-3">
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {block.items.map((item) => (
               <div key={item.label} className="space-y-0.5">
                 <dt className="text-xs text-muted-foreground">{item.label}</dt>
@@ -138,7 +138,7 @@ export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTr
           {block.score === null ? <p className="text-sm text-muted-foreground">Not enough history yet ({block.history_days} days).</p> : (
             <div className="space-y-3">
               <p><span className="text-3xl font-semibold">{block.score}</span> <span className="text-sm text-muted-foreground">/ 100 · {block.label}</span></p>
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {block.components.filter((c) => c.counted).map((c) => (
                   <li key={c.key} className="text-sm"><div className="flex justify-between"><span>{c.label}</span><span className="tabular">{c.score}</span></div><ProgressBar value={c.score ?? 0} label={c.label} className="mt-1 h-1.5" /></li>
                 ))}

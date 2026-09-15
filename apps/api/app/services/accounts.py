@@ -1,11 +1,11 @@
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import Conflict
+from app.core.errors import AppError, Conflict
 from app.models import Account, Transaction
 from app.models.enums import AccountType
 from app.schemas.ledger import AccountIn, AccountOut, AccountUpdate
@@ -55,7 +55,7 @@ async def account_balances(
         .outerjoin(Transaction, join_cond)
         .where(Account.user_id == user_id)
         .group_by(Account.id)
-        .order_by(Account.created_at)
+        .order_by(Account.sort_order, Account.created_at)
     )
     if not include_archived:
         stmt = stmt.where(Account.archived_at.is_(None))
@@ -78,7 +78,7 @@ def to_out(b: AccountBalance) -> AccountOut:
         id=a.id, name=a.name, type=a.type, custom_type=a.custom_type, institution=a.institution,
         currency=a.currency, opening_balance_minor=a.opening_balance_minor, balance_minor=b.balance_minor,
         is_spendable=a.is_spendable, credit_limit_minor=a.credit_limit_minor, color=a.color,
-        archived=a.archived_at is not None, transaction_count=b.transaction_count,
+        archived=a.archived_at is not None, sort_order=a.sort_order, transaction_count=b.transaction_count,
         last_activity_on=b.last_activity_on, updated_at=a.updated_at,
     )
 
@@ -98,6 +98,8 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, currency: str, da
         is_spendable=data.is_spendable if data.is_spendable is not None else SPENDABLE_DEFAULTS[data.type],
         credit_limit_minor=data.credit_limit_minor,
         color=data.color,
+        sort_order=int(await db.scalar(select(func.coalesce(func.max(Account.sort_order) + 1, 0))
+                                       .where(Account.user_id == user_id)) or 0),
     )
     db.add(account)
     await db.flush()
@@ -129,3 +131,27 @@ async def delete_account(db: AsyncSession, user_id: uuid.UUID, account_id: uuid.
     if used:
         raise Conflict("This account has transactions. Archive it instead of deleting it.")
     await db.delete(account)
+
+
+async def reorder_accounts(db: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID]) -> None:
+    accounts = {a.id: a for a in (await db.execute(select(Account).where(Account.user_id == user_id))).scalars()}
+    if len(set(ids)) != len(ids) or any(i not in accounts for i in ids):
+        raise AppError("The order must list your own accounts once each.")
+    remaining = sorted((a for a in accounts.values() if a.id not in ids), key=lambda a: (a.sort_order, a.created_at))
+    for position, account in enumerate([*(accounts[i] for i in ids), *remaining]):
+        account.sort_order = position
+    await db.flush()
+
+
+async def balance_history(db: AsyncSession, user_id: uuid.UUID, today: date, days: int) -> list[dict]:
+    step = max(1, days // 30)
+    offsets = sorted({*range(days, -1, -step), 0}, reverse=True)
+    points = []
+    for offset in offsets:
+        day = today - timedelta(days=offset)
+        balances = await account_balances(db, user_id, as_of=day, include_archived=False)
+        assets = sum(b.balance_minor for b in balances if b.balance_minor > 0)
+        liabilities = sum(-b.balance_minor for b in balances if b.balance_minor < 0)
+        points.append({"date": day.isoformat(), "assets_minor": assets, "liabilities_minor": liabilities,
+                       "net_minor": assets - liabilities})
+    return points

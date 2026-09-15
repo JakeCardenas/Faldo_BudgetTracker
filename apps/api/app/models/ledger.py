@@ -41,6 +41,7 @@ class Account(UUIDPk, UserOwned, Timestamps, Base):
     is_spendable: Mapped[bool] = mapped_column(Boolean, default=True)
     credit_limit_minor: Mapped[int | None] = mapped_column(BigInteger)
     color: Mapped[str | None] = mapped_column(String(16))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 

@@ -24,7 +24,7 @@ export const AmountInput = forwardRef<HTMLInputElement, Omit<React.ComponentProp
           const next = e.target.value.replace(/[^\d.,]/g, "")
           if (/^[\d,]*(\.\d{0,2})?$/.test(next)) onValueChange(next)
         }}
-        className={cn("tabular w-full bg-transparent outline-none placeholder:text-muted-foreground/60", size === "lg" ? "text-2xl font-semibold" : "text-sm")}
+        className={cn("tabular w-full bg-transparent outline-none placeholder:text-muted-foreground/60", size === "lg" ? "text-2xl font-semibold" : "text-base sm:text-sm")}
         {...props}
       />
     </div>

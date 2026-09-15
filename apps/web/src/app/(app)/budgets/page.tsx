@@ -121,7 +121,7 @@ export default function BudgetsPage() {
         </div>
       ) : (
         <div className="stagger space-y-4">
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_1fr]">
             <div className="card-surface space-y-4 p-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -162,7 +162,7 @@ export default function BudgetsPage() {
             </div>
           )}
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {lines.map((line) => {
               const vsLast = line.previous_spent_minor ? ((line.spent_minor - line.previous_spent_minor) / line.previous_spent_minor) * 100 : null
               return (

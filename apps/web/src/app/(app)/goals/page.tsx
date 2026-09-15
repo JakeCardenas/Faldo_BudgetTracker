@@ -214,7 +214,7 @@ export default function GoalsPage() {
     <div className="space-y-5 pt-2">
       <PageHeader title="Savings goals" description="Targets, required monthly savings and projected dates, calculated from your data."
         actions={<><Button variant="outline" asChild className="hidden sm:inline-flex"><Link href="/assistant?q=When%20can%20I%20afford%20my%20MacBook%3F"><Sparkles /> Ask about goals</Link></Button><Button onClick={() => setCreating(true)}><Plus /> New goal</Button></>} />
-      {isLoading ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-96 rounded-2xl" />)}</div> : !goals?.length ? (
+      {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-96 rounded-2xl" />)}</div> : !goals?.length ? (
         <div className="card-surface"><EmptyState icon={Target} title="What are you saving for?" description="A MacBook, an emergency fund, a trip to Japan. Faldo tells you how much to set aside and when you'll get there." action={<Button onClick={() => setCreating(true)}><Plus /> Create your first goal</Button>} /></div>
       ) : (
         <>

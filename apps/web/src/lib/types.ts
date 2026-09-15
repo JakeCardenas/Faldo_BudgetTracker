@@ -13,6 +13,11 @@ export interface Settings {
   safe_to_spend_buffer_minor: number
   default_account_id: string | null
   onboarding_completed_at: string | null
+  theme: "system" | "light" | "dark"
+  mascot_outfit: string
+  home_background: string
+  quick_actions: string[]
+  completed_lessons: string[]
 }
 
 export interface Me {
@@ -36,6 +41,7 @@ export interface Account {
   credit_limit_minor: number | null
   color: string | null
   archived: boolean
+  sort_order: number
   transaction_count: number
   last_activity_on: string | null
   updated_at: string
@@ -509,4 +515,49 @@ export interface SearchResults {
   goals: { id: string; name: string }[]
   accounts: { id: string; name: string; type: AccountType }[]
   memory: { entity_type: string; entity_id: string; title: string; snippet: string; date: string | null }[]
+}
+
+export interface Badge {
+  id: string
+  name: string
+  description: string
+  group: "streak" | "milestone"
+  threshold: number
+  earned: boolean
+  progress: number
+}
+
+export interface Reward {
+  id: string
+  required_badge: string | null
+  unlocked: boolean
+}
+
+export interface Engagement {
+  current_streak: number
+  best_streak: number
+  logged_today: boolean
+  restores_left: number
+  restores_per_month: number
+  logged_days_total: number
+  week: { date: string; logged: boolean }[]
+  badges: Badge[]
+  earned_count: number
+  next_badge: Badge | null
+  outfits: Reward[]
+  backgrounds: Reward[]
+}
+
+export interface BalancePoint {
+  date: string
+  assets_minor: number
+  liabilities_minor: number
+  net_minor: number
+}
+
+export interface FinancialNote {
+  id: string
+  content: string
+  related_goal_id: string | null
+  created_at: string
 }

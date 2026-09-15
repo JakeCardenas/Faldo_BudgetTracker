@@ -190,7 +190,7 @@ export default function OnboardingPage() {
           {step === 1 && (
             <div className="space-y-6">
               <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-tight">Choose your currency</h1><p className="text-muted-foreground">Faldo stores exact amounts, down to the centavo.</p></div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {CURRENCIES.map((c) => (
                   <Choice key={c.code} selected={currency === c.code} onClick={() => setCurrency(c.code)}>
                     <span className="text-2xl font-semibold">{c.symbol}</span>
@@ -211,7 +211,7 @@ export default function OnboardingPage() {
                   </Choice>
                 ))}
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5"><Label htmlFor="ob-acc">Account name</Label><Input id="ob-acc" value={accountName} onChange={(e) => setAccountName(e.target.value)} disabled={!!accountId} /></div>
                 <div className="space-y-1.5"><Label htmlFor="ob-bal">{ACCOUNT_PRESETS[accountPreset].type === "credit_card" ? "Amount owed" : "Current balance"}</Label><AmountInput id="ob-bal" value={accountBalance} onValueChange={setAccountBalance} placeholder="0" disabled={!!accountId} /></div>
               </div>
@@ -241,7 +241,7 @@ export default function OnboardingPage() {
                   <button key={g} type="button" onClick={() => setGoalName(g)} className={cn("rounded-full border px-3.5 py-1.5 text-sm", goalName === g ? "border-primary bg-accent text-primary" : "bg-card")}>{g}</button>
                 ))}
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5 sm:col-span-3"><Label htmlFor="ob-goal">Goal name</Label><Input id="ob-goal" value={goalName} onChange={(e) => setGoalName(e.target.value)} maxLength={80} /></div>
                 <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ob-target">Target amount</Label><AmountInput id="ob-target" value={goalTarget} onValueChange={setGoalTarget} placeholder="0" /></div>
                 <div className="space-y-1.5"><Label htmlFor="ob-date">Target date</Label><Input id="ob-date" type="date" min={todayISO()} value={goalDate} onChange={(e) => setGoalDate(e.target.value)} /></div>

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 export function TransactionRow({ transaction: t, onClick, showDate }: { transaction: Transaction; onClick?: () => void; showDate?: boolean }) {
   const isTransfer = t.type === "transfer"
-  const title = isTransfer ? `${t.account_name} → ${t.to_account_name}` : t.merchant ?? t.category_name ?? "Transaction"
+  const title = isTransfer ? `${t.account_name} → ${t.to_account_name}` : t.merchant ?? t.notes ?? t.category_name ?? "Transaction"
   const subtitle = isTransfer ? t.notes ?? "Transfer" : [t.subcategory_name ?? t.category_name ?? "Uncategorized", t.account_name].join(" · ")
   const amount = t.type === "income" ? formatMoney(t.amount_minor, t.currency, { signed: true }) : isTransfer
     ? formatMoney(t.amount_minor, t.currency) : formatMoney(-t.amount_minor, t.currency)

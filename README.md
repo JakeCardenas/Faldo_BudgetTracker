@@ -28,8 +28,17 @@ PostgreSQL 17 + pgvector + pg_trgm, row-level security
 
 ## What's built
 
+Faldo is designed like a native iOS app on phones (large collapsing titles, a floating tab bar for Home, Wallet, Plan and History, bottom sheets, and a round add button) and like a desktop companion app on larger screens (sidebar, multi-column home). It supports light and dark mode and can be installed from the browser (Add to Home Screen on iPhone, Install app on Android and desktop).
+
+- **Home:** streak counter, greeting with the Faldo mascot and a daily money tip, editable quick actions, category breakdown, today / week / month totals, last 7 days, days until payday, upcoming income and expenses, budgets, goals, net worth with a 30-day trend, safe-to-spend and quick notes.
+- **Logging sheet:** a calculator keypad (+ − × ÷ %), expense / income / transfer, notes, recent-expense templates, category chips that show budget progress, date shortcuts, account picker, keyboard support on desktop, and feedback with Undo after saving. "Type it out" and receipt scanning live in the same sheet.
+- **Wallet:** net worth / assets / liabilities, insight and daily balance cards, accounts grouped by type with totals, colorful account cards with quick actions, press-and-hold to rearrange, grid and list views, and ready-made templates for common PH banks and e-wallets.
+- **Plan:** "Can I afford it?" check, budgets, goals, bills and subscriptions, installments and loans (with payments left), debt and money owed, salary schedule and the cashflow forecast.
+- **Streaks & rewards:** daily logging streak with monthly restores, streak and milestone badges, and unlockable mascot outfits and home backgrounds.
+- **Learn:** ten short money lessons written for the Philippines, each with takeaways and a quick check; progress is saved to your account.
+- **Tools:** split a bill (creates "owed to you" entries), loan and installment calculator with true yearly cost and one-tap tracking, PH income tax calculator, currency converter, emergency fund planner, 50/30/20 planner against real spending, and quick notes.
+- **Talk to Faldo:** chat that logs plain-language entries straight away ("Paid 70 on the bus from Cash") with a Cancel button, answers questions with tools and calculations, and supports voice dictation where the browser allows it.
 - **Auth:** email/password (argon2id), server-side sessions in an httpOnly SameSite=Lax cookie, CSRF header + Origin checks, login throttling, password reset by email, password change, and active-session management.
-- **Home dashboard:** total balance, income, expenses, saved, safe-to-spend, spending by category with time range, budget health, recent transactions, goals with projections, upcoming bills, and an AI financial pulse generated from real facts.
 - **Transactions:** full CRUD, income/expense/transfer, merchant, category + subcategory, account, payment method, notes, tags, **item-level purchases**, search (merchant, items, notes, tags, categories), filters (type, account, category, tag, dates), sorting, infinite loading, detail sheet, and a queue for receipts awaiting review.
 - **Natural-language entry:** "Bought Nike shoes for ₱4,500 yesterday", Taglish ("nag-grab 180 kanina"), multiple transactions per message. Drafts show a confirmation card; unclear accounts, categories, dates and possible duplicates are highlighted with one-tap fixes. Merchant categories are learned from history.
 - **Receipt scanning:** upload/camera → EXIF-stripped re-encoded image → vision extraction (merchant, date, items, total) → validation (totals, dates, currency) → review form → transaction → RAG indexing. Without a vision provider the upload is stored and the UI honestly asks for manual entry.
@@ -41,7 +50,7 @@ PostgreSQL 17 + pgvector + pg_trgm, row-level security
 - **Forecast:** Monte Carlo projection from scheduled events and weekday spending patterns, P10–P90 range, lowest point, safe-to-spend breakdown, assumptions.
 - **What-if simulator:** multiple adjustments, calculated breakdown, risk level with reasons, budget impact, savings at risk, goal delay, baseline vs scenario chart.
 - **Insights:** budget exceeded/at risk, category spending spikes, overall spending changes, unusual transactions (robust z-score), bill reminders, cash-flow warnings, goal progress, savings rate. Every insight stores the facts it came from.
-- **Reports:** monthly overview, income vs expenses (12 months), category breakdown and biggest changes, daily spending, top merchants, top purchase items, AI summary written from the page's figures, and a transparent financial health score.
+- **Statistics:** spent / income / net flow / transaction tiles, expense distribution, net worth trend over 30 days to a year, cashflow forecast summary, printable income statement, monthly overview, income vs expenses (12 months), category breakdown and biggest changes, daily spending, top merchants, top purchase items, AI summary written from the page's figures, and a transparent financial health score.
 - **AI Assistant:** dedicated page with conversations, live tool steps, streamed answers, calculation cards labelled "Calculated by Faldo", clickable transaction citations, sources, "How Faldo answered" tool trace, and follow-up suggestions.
 - **Global search (⌘K / Ctrl K):** transactions, merchants, items, categories, goals, accounts and financial memory, plus quick actions.
 - **Onboarding:** welcome, currency, first account, income, goal, budget, first transaction, assistant intro.
@@ -53,8 +62,8 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 
 | Table | Purpose |
 |---|---|
-| `users`, `user_settings`, `sessions` | identity, preferences, hashed session tokens |
-| `accounts` | manual accounts with opening balance; balances are computed from transactions |
+| `users`, `user_settings`, `sessions` | identity, preferences (including theme, mascot outfit, home background, quick actions and completed lessons), hashed session tokens |
+| `accounts` | manual accounts with opening balance and a user-defined sort order; balances are computed from transactions |
 | `categories` | expense/income categories with subcategories (`parent_id`) |
 | `merchants` | normalized merchants with learned default category |
 | `transactions`, `transaction_items`, `tags`, `transaction_tags` | ledger with item-level detail |
@@ -178,7 +187,7 @@ Tenant isolation holds with a single database role: every user-owned table uses 
 ## Quality checks
 
 ```bash
-make test        # 62 backend tests
+make test        # 67 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build
@@ -186,9 +195,12 @@ make build       # Next.js production build
 
 GitHub Actions (`.github/workflows/ci.yml`) runs migrations, ruff, mypy and pytest against pgvector Postgres, plus lint, type check and build for the web app.
 
-The backend suite covers the finance engine (exact money math, periods, pacing, goals, recurring dates, deterministic forecasts, scenario arithmetic, safe calculator, health score), API behaviour (auth, CSRF, CRUD, balances across transfers and credit cards, validation, pagination), tenant isolation at the API and RLS layers, RAG indexing and cross-user retrieval isolation, natural-language parsing, every example assistant question, numeric repair and fallback, prompt-injection output handling, receipt handling without vision, OpenAI response mapping, password reset and session revocation, category deletion, the database rate limiter and storage, inline job processing, the cron secret, and database URL normalization.
+The backend suite covers the finance engine (exact money math, periods, pacing, goals, recurring dates, deterministic forecasts, scenario arithmetic, safe calculator, health score), API behaviour (auth, CSRF, CRUD, balances across transfers and credit cards, validation, pagination), tenant isolation at the API and RLS layers, RAG indexing and cross-user retrieval isolation, natural-language parsing, every example assistant question, numeric repair and fallback, prompt-injection output handling, receipt handling without vision, OpenAI response mapping, password reset and session revocation, category deletion, the database rate limiter and storage, inline job processing, the cron secret, database URL normalization, streaks with restores, badge and reward unlocking, account ordering and balance history.
 
 ## Known limitations
+
+- Streaks count days that have at least one transaction dated on them, so backdated entries also fill a day.
+- Currency converter rates are editable references, not live market data.
 
 - The OpenAI path is implemented against the Responses API and covered with mocked clients, but hasn't been run against a live key in this repository's tests. Model names are configurable.
 - The development provider's answers are template-based; relevance judgement for semantic topics uses heuristics.
