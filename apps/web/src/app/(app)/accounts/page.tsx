@@ -22,7 +22,7 @@ function AccountCard({ account }: { account: Account }) {
   return (
     <Link href={`/accounts/${account.id}`} className="card-surface group flex flex-col gap-5 p-5 transition hover:-translate-y-0.5 hover:shadow-(--shadow-float)">
       <div className="flex items-start justify-between">
-        <span className="flex size-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${account.color ?? "#0f5c3f"}14`, color: account.color ?? "#0f5c3f" }}>
+        <span className="flex size-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${account.color ?? "#3e7b4d"}14`, color: account.color ?? "#3e7b4d" }}>
           <Icon className="size-5" strokeWidth={1.8} />
         </span>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{account.custom_type ?? ACCOUNT_TYPE_LABELS[account.type]}</span>

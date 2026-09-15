@@ -18,12 +18,12 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex h-9 items-center gap-3 rounded-lg px-2.5 text-[0.9rem] text-muted-foreground transition-colors",
+        "group flex h-10 items-center gap-3 rounded-2xl px-3 text-[0.9rem] font-medium text-muted-foreground transition-colors",
         "hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none",
-        active && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+        active && "bg-primary font-semibold text-primary-foreground shadow-(--shadow-card) hover:bg-primary hover:text-primary-foreground",
       )}
     >
-      <Icon className={cn("size-[1.05rem] shrink-0", active ? "text-primary" : "text-muted-foreground/80 group-hover:text-foreground")} strokeWidth={1.9} />
+      <Icon className={cn("size-[1.05rem] shrink-0", active ? "text-primary-foreground" : "text-muted-foreground/80 group-hover:text-foreground")} strokeWidth={1.9} />
       {item.label}
     </Link>
   )
@@ -38,14 +38,14 @@ export function Sidebar() {
         <Link href="/" aria-label="Faldo home"><Logo /></Link>
       </div>
       <div className="px-3 pb-3">
-        <Button className="h-10 w-full justify-start gap-2 rounded-xl px-3 shadow-(--shadow-card)" onClick={() => openAddTransaction()}>
+        <Button className="h-11 w-full justify-center gap-2 rounded-full px-4 font-semibold shadow-(--shadow-card)" onClick={() => openAddTransaction()}>
           <Plus className="size-4" /> Add transaction
         </Button>
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2 scrollbar-none" aria-label="Main">
         {NAV_GROUPS.map((group) => (
           <div key={group.label} className="space-y-0.5">
-            <p className="px-2.5 pb-1 text-[0.7rem] font-medium tracking-wide text-muted-foreground/70 uppercase">{group.label}</p>
+            <p className="px-2.5 pb-1 text-[0.68rem] font-bold tracking-[0.12em] text-muted-foreground/70 uppercase">{group.label}</p>
             {group.items.map((item) => <NavLink key={item.href} item={item} pathname={pathname} />)}
           </div>
         ))}

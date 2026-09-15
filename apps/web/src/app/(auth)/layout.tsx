@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       <aside className="relative hidden overflow-hidden bg-primary p-10 text-primary-foreground lg:flex lg:flex-col">
         <div className="absolute -top-40 -right-40 size-[32rem] rounded-full bg-emerald/25 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-32 -left-24 size-96 rounded-full bg-[#8fd9b3]/10 blur-3xl" aria-hidden />
+        <div className="absolute -bottom-32 -left-24 size-96 rounded-full bg-leaf/15 blur-3xl" aria-hidden />
         <div className="relative flex items-center gap-2.5">
           <span className="flex size-8 items-center justify-center rounded-xl bg-primary-foreground/10 font-semibold">F</span>
           <span className="text-lg font-semibold tracking-tight">Faldo</span>
