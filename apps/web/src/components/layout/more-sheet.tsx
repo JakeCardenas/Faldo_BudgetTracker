@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { IosSheet } from "@/components/ios/sheet"
 import { useAppActions } from "@/components/layout/app-context"
 import { QUICK_ACTIONS, type QuickAction } from "@/components/layout/actions-catalog"
+import { play } from "@/lib/sound"
 
 const GROUPS: QuickAction["group"][] = ["Log", "Plan", "Understand", "Tools"]
 
@@ -11,7 +12,7 @@ export function ActionTile({ action, onPick, highlight, compact }: { action: Qui
   const Icon = action.icon
   const tileSize = compact ? "size-11 sm:size-13" : "size-13"
   return (
-    <button type="button" onClick={() => onPick(action)} className="group pressable flex min-w-0 flex-col items-center gap-1.5 rounded-2xl py-1.5 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none">
+    <button type="button" onClick={() => { play("tap"); onPick(action) }} className="group pressable flex min-w-0 flex-col items-center gap-1.5 rounded-2xl py-1.5 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none">
       <span className={highlight
         ? `flex ${tileSize} items-center justify-center rounded-[1.1rem] bg-primary text-primary-foreground shadow-(--shadow-card)`
         : `flex ${tileSize} items-center justify-center rounded-[1.1rem] border bg-card text-primary shadow-(--shadow-card) transition-colors group-hover:bg-secondary`}>

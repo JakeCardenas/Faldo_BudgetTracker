@@ -17,6 +17,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { api, streamPost } from "@/lib/api"
 import { formatDate, timeAgo } from "@/lib/format"
 import { invalidateFinancialData, useMe } from "@/lib/queries"
+import { play } from "@/lib/sound"
 import type { Block, CaptureDraft, CaptureResult, ChatMessage, Source, ToolCallRecord, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -274,6 +275,7 @@ function AssistantView() {
     try {
       const created = await api.post<Transaction[]>("/capture/confirm", { transactions: result.drafts.map(draftToInput) })
       await invalidateFinancialData(qc)
+      play("success")
       setMessages((prev) => [...prev, { ...base, id: `u-${Date.now()}`, role: "user", content: text }, { ...base, id: `l-${Date.now()}`, role: "assistant", content: "", logged: created }])
       return true
     } catch (error) {
@@ -285,6 +287,7 @@ function AssistantView() {
   const ask = useCallback(async (question: string) => {
     const text = question.trim()
     if (!text || busy) return
+    play("send")
     setInput("")
     setBusy(true)
     if (await tryLog(text)) {

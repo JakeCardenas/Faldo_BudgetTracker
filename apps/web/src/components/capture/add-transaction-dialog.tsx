@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { api, ApiError } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
+import { play } from "@/lib/sound"
 import { invalidateFinancialData, useMe, useSaveTransaction } from "@/lib/queries"
 import type { CaptureDraft, CaptureResult, Receipt, Transaction, TransactionInput } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -279,6 +280,7 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
 }
 
 export function showLoggedToast(transactions: Transaction[], message: string, onUndone?: () => void, outfit?: string) {
+  play("success")
   toast.custom((id) => (
     <div className="flex w-[min(24rem,calc(100vw-2rem))] items-center gap-3 rounded-[1.4rem] border bg-popover p-3 pr-2 text-popover-foreground shadow-(--shadow-float)">
       <Mascot mood="proud" outfit={outfit} coin={false} className="w-11 shrink-0" />
@@ -287,6 +289,7 @@ export function showLoggedToast(transactions: Transaction[], message: string, on
         <p className="text-sm leading-snug">{message}</p>
       </div>
       <button type="button" onClick={async () => {
+        play("undo")
         toast.dismiss(id)
         try {
           await Promise.all(transactions.map((t) => api.delete(`/transactions/${t.id}`)))
@@ -325,7 +328,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
   const title = mode === "describe" ? "Type it out" : mode === "receipt" ? "Scan a receipt" : mode === "manual" ? "All details" : "New transaction"
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (!next) setManualInitial(null) }}>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) { play("close"); setManualInitial(null) } onOpenChange(next) }}>
       <DialogContent showCloseButton={false} aria-describedby={undefined}
         className={cn("flex flex-col gap-0 overflow-hidden rounded-[1.75rem] bg-background p-0 ring-0",
           "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:h-[94dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none",
@@ -334,7 +337,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted-foreground/25 sm:hidden" aria-hidden />
         <div className="flex items-center gap-2 px-3 pt-2 pb-2 sm:pt-3">
           {keypad ? (
-            <button type="button" onClick={close} aria-label="Close" className="pressable flex size-10 shrink-0 items-center justify-center rounded-full border bg-card text-muted-foreground">
+            <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable flex size-10 shrink-0 items-center justify-center rounded-full border bg-card text-muted-foreground">
               <X className="size-5" />
             </button>
           ) : (
@@ -350,9 +353,9 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
           </div>
           {keypad ? (
             <div className="flex shrink-0 gap-1.5">
-              <button type="button" onClick={() => { setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
+              <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
                 className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-primary"><MessageCircle className="size-[1.15rem]" /></button>
-              <button type="button" onClick={() => { setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan receipt"
+              <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan receipt"
                 className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-primary"><ScanLine className="size-[1.15rem]" /></button>
             </div>
           ) : <span className="w-16" />}

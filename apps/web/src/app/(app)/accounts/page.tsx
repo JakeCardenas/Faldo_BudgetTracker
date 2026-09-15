@@ -21,6 +21,7 @@ import { api } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
 import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights, useMe } from "@/lib/queries"
 import type { Account, AccountType } from "@/lib/types"
+import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 type View = "all" | "assets" | "liabilities"
@@ -120,6 +121,7 @@ export default function AccountsPage() {
   const trend = monthAgo ? ((net - monthAgo) / Math.abs(monthAgo)) * 100 : null
 
   function startArranging() {
+    play("select")
     setOrder(active.map((a) => a.id))
     setArranging(true)
   }
@@ -140,6 +142,7 @@ export default function AccountsPage() {
     const index = groupIds.indexOf(id)
     const target = groupIds[index + direction]
     if (!target) return
+    play("tap")
     setOrder((current) => {
       const next = [...current]
       const a = next.indexOf(id)

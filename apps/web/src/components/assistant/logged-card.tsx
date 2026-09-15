@@ -9,6 +9,7 @@ import { CategoryIcon } from "@/components/finance/category-icon"
 import { api, ApiError } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
 import { invalidateFinancialData } from "@/lib/queries"
+import { play } from "@/lib/sound"
 import type { CaptureDraft, Transaction, TransactionInput } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -39,6 +40,7 @@ export function LoggedCard({ transactions, onOpen }: { transactions: Transaction
   const qc = useQueryClient()
   const [state, setState] = useState<"logged" | "cancelling" | "cancelled">("logged")
   async function cancel() {
+    play("undo")
     setState("cancelling")
     try {
       await Promise.all(transactions.map((t) => api.delete(`/transactions/${t.id}`)))
@@ -93,6 +95,7 @@ export function ReviewCard({ drafts: initial, onLogged }: { drafts: CaptureDraft
     try {
       const created = await api.post<Transaction[]>("/capture/confirm", { transactions: drafts.map(draftToInput) })
       await invalidateFinancialData(qc)
+      play("success")
       onLogged(created)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't save.")

@@ -9,6 +9,7 @@ import { LargeTitle } from "@/components/ios/nav-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BACKGROUND_INFO, BADGE_ART, OUTFIT_INFO } from "@/lib/catalog"
 import { useEngagement, useMe, useUpdateSettings } from "@/lib/queries"
+import { play } from "@/lib/sound"
 import type { Badge } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -32,9 +33,9 @@ export default function StreaksPage() {
   const update = useUpdateSettings()
 
   function wear(kind: "mascot_outfit" | "home_background", id: string, unlocked: boolean, hint: string) {
-    if (!unlocked) { toast(`Locked · ${hint}`); return }
+    if (!unlocked) { play("disabled"); toast(`Locked · ${hint}`); return }
     update.mutate({ [kind]: id }, {
-      onSuccess: () => toast.success(kind === "mascot_outfit" ? "New look equipped!" : "Background updated"),
+      onSuccess: () => { play("celebrate"); toast(kind === "mascot_outfit" ? "New look equipped!" : "Background updated") },
       onError: (e) => toast.error(e.message),
     })
   }

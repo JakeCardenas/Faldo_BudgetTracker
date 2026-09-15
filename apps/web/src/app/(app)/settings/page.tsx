@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useTheme } from "next-themes"
-import { Brain, ChevronRight, Download, Flame, KeyRound, LayoutGrid, Monitor, Moon, Pencil, Plus, ShieldCheck, Smartphone, Sun, Trash2 } from "lucide-react"
+import { Brain, ChevronRight, Download, Flame, KeyRound, LayoutGrid, Monitor, Moon, Pencil, Plus, ShieldCheck, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
 import { Mascot } from "@/components/brand/mascot"
 import { Scene } from "@/components/brand/scene"
 import { Segmented } from "@/components/ios/segmented"
@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { FREQUENCY_LABELS, minorToInput, timeAgo, toMinor } from "@/lib/format"
 import { invalidateFinancialData, useAccounts, useCategories, useMe, useUpdateSettings } from "@/lib/queries"
+import { setSoundsEnabled, soundsEnabled } from "@/lib/sound"
 import type { Category, Me } from "@/lib/types"
 
 const NONE = "__none__"
@@ -34,6 +35,7 @@ const TIMEZONES = ["Asia/Manila", "Asia/Singapore", "Asia/Tokyo", "Asia/Dubai", 
 function Appearance({ me }: { me: Me }) {
   const update = useUpdateSettings()
   const { setTheme } = useTheme()
+  const [sounds, setSounds] = useState(soundsEnabled)
   const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Classic sprout"
   const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Leafy green"
   const actions = resolveQuickActions(me.settings.quick_actions)
@@ -51,6 +53,14 @@ function Appearance({ me }: { me: Me }) {
             { value: "dark", label: <span className="inline-flex items-center gap-1.5"><Moon className="size-3.5" /> Dark</span> },
           ]} />
         </div>
+        <label className="flex items-center gap-3 rounded-[1.25rem] border border-border/70 bg-card px-4 py-3 shadow-(--shadow-card)">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><Volume2 className="size-5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.95rem] font-bold">Sounds</span>
+            <span className="block text-xs text-muted-foreground">Soft taps and chimes for navigation, logging and rewards. Saved on this device.</span>
+          </span>
+          <Switch checked={sounds} onCheckedChange={(next) => { setSoundsEnabled(next); setSounds(next) }} aria-label="Sounds" />
+        </label>
         <div className="ios-group divide-y divide-border/60">
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
             <Mascot outfit={me.settings.mascot_outfit} coin={false} className="w-10 shrink-0" />

@@ -9,6 +9,7 @@ import { Mascot } from "@/components/brand/mascot"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { LESSONS, lessonBySlug } from "@/lib/lessons"
 import { useMe, useUpdateSettings } from "@/lib/queries"
+import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 export default function LessonPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -27,7 +28,7 @@ export default function LessonPage({ params }: { params: Promise<{ slug: string 
 
   function complete() {
     update.mutate({ completed_lessons: [...done, lesson!.slug] }, {
-      onSuccess: () => toast.success("Lesson complete! 🎓"),
+      onSuccess: () => { play("celebrate"); toast("Lesson complete! 🎓") },
       onError: (e) => toast.error(e.message),
     })
   }
@@ -65,7 +66,7 @@ export default function LessonPage({ params }: { params: Promise<{ slug: string 
             const picked = choice === i
             const show = choice !== null
             return (
-              <button key={option} type="button" disabled={show} onClick={() => setChoice(i)}
+              <button key={option} type="button" disabled={show} onClick={() => { play(i === lesson.quiz.answer ? "success" : "error"); setChoice(i) }}
                 className={cn("pressable flex w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left text-sm font-semibold transition-colors",
                   show && i === lesson.quiz.answer && "border-income bg-income-soft",
                   show && picked && i !== lesson.quiz.answer && "border-expense bg-expense-soft")}>

@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { useEffect, useState } from "react"
+import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 export function SplashContent({ animated = false, className }: { animated?: boolean; className?: string }) {
@@ -32,6 +33,7 @@ export function SplashContent({ animated = false, className }: { animated?: bool
 export function Splash() {
   const [mounted, setMounted] = useState(true)
   useEffect(() => {
+    if (document.documentElement.dataset.splash !== "skip") play("open")
     const timer = setTimeout(() => setMounted(false), 3000)
     return () => clearTimeout(timer)
   }, [])

@@ -1,5 +1,6 @@
 "use client"
 
+import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 export function Segmented<T extends string>({ value, onChange, options, className, size = "md", label }: {
@@ -15,7 +16,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
       {options.map((option) => {
         const active = option.value === value
         return (
-          <button key={option.value} type="button" role="radio" aria-checked={active} onClick={() => onChange(option.value)}
+          <button key={option.value} type="button" role="radio" aria-checked={active} onClick={() => { if (!active) play("select"); onChange(option.value) }}
             className={cn("flex-1 rounded-full font-semibold whitespace-nowrap transition-all duration-200",
               size === "sm" ? "h-7 px-3 text-xs" : "h-9 px-4 text-sm",
               active
@@ -31,9 +32,9 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
   )
 }
 
-export function Chip({ active, className, children, ...props }: React.ComponentProps<"button"> & { active?: boolean }) {
+export function Chip({ active, className, children, onClick, ...props }: React.ComponentProps<"button"> & { active?: boolean }) {
   return (
-    <button type="button" aria-pressed={active} className={cn("pressable h-8 shrink-0 rounded-full border px-3.5 text-xs font-semibold whitespace-nowrap transition-colors",
+    <button type="button" aria-pressed={active} onClick={(e) => { play("select"); onClick?.(e) }} className={cn("pressable h-8 shrink-0 rounded-full border px-3.5 text-xs font-semibold whitespace-nowrap transition-colors",
       active ? "border-primary bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted", className)} {...props}>
       {children}
     </button>

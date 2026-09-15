@@ -15,6 +15,7 @@ import { MoreSheet } from "@/components/layout/more-sheet"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Topbar } from "@/components/layout/topbar"
 import { useMe } from "@/lib/queries"
+import { play } from "@/lib/sound"
 import type { Receipt } from "@/lib/types"
 
 const ADD_MODES: AddModeOption[] = ["expense", "income", "transfer", "describe", "manual", "receipt"]
@@ -46,6 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setPreset(options?.preset)
     setAddMode(options?.receipt ? "receipt" : options?.mode ?? "expense")
     setAddOpen(true)
+    play("open")
   }, [])
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const actions = useMemo(() => ({
     openAddTransaction,
-    openMore: () => setMoreOpen(true),
+    openMore: () => { play("open"); setMoreOpen(true) },
     openSearch: () => setSearchOpen(true),
     openTransaction: (id: string) => setTransactionId(id),
   }), [openAddTransaction])

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { Plus } from "lucide-react"
 import { useAppActions } from "@/components/layout/app-context"
 import { TAB_ITEMS, isActive } from "@/components/layout/nav"
+import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 export function MobileNav() {
@@ -20,7 +21,7 @@ export function MobileNav() {
             const active = isActive(pathname, item.href)
             const Icon = item.icon
             return (
-              <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}
+              <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => play("tap")}
                 className={cn("pressable flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[0.64rem] font-bold transition-colors",
                   active ? "bg-secondary text-primary" : "text-muted-foreground")}>
                 <Icon className="size-[1.2rem]" strokeWidth={active ? 2.4 : 1.9} />

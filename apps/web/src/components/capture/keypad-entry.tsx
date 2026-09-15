@@ -12,6 +12,7 @@ import { api, ApiError } from "@/lib/api"
 import { evaluate, formatExpression, hasOperation, pressKey } from "@/lib/calculator"
 import { currencySymbol, formatMoney, monthKey, todayISO } from "@/lib/format"
 import { invalidateFinancialData, useAccounts, useBudget, useCategories, useMe, useTransactions } from "@/lib/queries"
+import { play } from "@/lib/sound"
 import type { Account, Category, Transaction, TransactionInput } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -196,6 +197,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
   const canSave = amountMinor > 0 && Boolean(fromId) && (type !== "transfer" || (Boolean(toId) && toId !== fromId))
 
   function press(key: string) {
+    play(key === "=" ? "select" : key === "AC" || key === "⌫" ? "tap" : "type")
     if (key === "=") {
       if (value !== null) setExpr(value > 0 ? String(value) : "")
       return
@@ -298,6 +300,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
               {templates.map((t) => (
                 <button key={t.id} type="button" onClick={() => {
+                  play("select")
                   setExpr(String(t.amount_minor / 100))
                   setNote(t.notes ?? t.merchant ?? "")
                   setCategoryId(t.category_id ?? "")
@@ -323,7 +326,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
                 const selected = category.id === categoryId
                 return (
                   <button key={category.id} type="button" aria-pressed={selected}
-                    onClick={() => { setCategoryId(selected ? "" : category.id); setSubcategoryId("") }}
+                    onClick={() => { play("select"); setCategoryId(selected ? "" : category.id); setSubcategoryId("") }}
                     className={cn("pressable flex h-11 items-center gap-2 rounded-2xl border bg-card pr-3.5 pl-1.5 text-left shadow-(--shadow-card) transition-colors",
                       selected && "border-primary bg-secondary ring-2 ring-primary/20")}>
                     <span className="relative flex size-8 items-center justify-center">

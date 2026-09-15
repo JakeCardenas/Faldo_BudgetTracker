@@ -8,6 +8,7 @@ import { Mascot } from "@/components/brand/mascot"
 import { useAppActions } from "@/components/layout/app-context"
 import { NAV_GROUPS, SETTINGS_ITEM, isActive, type NavItem } from "@/components/layout/nav"
 import { UserMenu } from "@/components/layout/user-menu"
+import { play } from "@/lib/sound"
 import { useEngagement, useMe } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 
@@ -15,7 +16,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const active = isActive(pathname, item.href)
   const Icon = item.icon
   return (
-    <Link href={item.href} aria-current={active ? "page" : undefined}
+    <Link href={item.href} aria-current={active ? "page" : undefined} onClick={() => play("tap")}
       className={cn("group flex h-10 items-center gap-3 rounded-2xl px-3 text-[0.9rem] font-semibold text-muted-foreground transition-colors",
         "hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none",
         active && "bg-primary text-primary-foreground shadow-(--shadow-card) hover:bg-primary hover:text-primary-foreground")}>
