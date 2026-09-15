@@ -9,6 +9,14 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 ON_VERCEL = bool(os.environ.get("VERCEL"))
 
 
+def _origin(value: str) -> str:
+    value = value.strip().strip("'\"").strip()
+    if "://" not in value:
+        value = f"https://{value}"
+    scheme, rest = value.split("://", 1)
+    return f"{scheme.lower()}://{rest.split('/', 1)[0].lower()}"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=(".env", "../../.env"), extra="ignore", env_ignore_empty=True)
 
@@ -67,13 +75,16 @@ class Settings(BaseSettings):
                 parsed = json.loads(value)
             else:
                 parsed = [part.strip() for part in value.split(",") if part.strip()]
-            data["allowed_origins"] = [origin.rstrip("/") for origin in parsed]
+            data["allowed_origins"] = [_origin(origin) for origin in parsed]
+        for key in ("public_app_url", "PUBLIC_APP_URL"):
+            if isinstance(data.get(key), str) and data[key].strip():
+                data[key] = _origin(data[key])
         return data
 
     @model_validator(mode="after")
     def production_checks(self) -> Self:
-        if self.environment == "production" and self.public_app_url.rstrip("/") not in self.allowed_origins:
-            self.allowed_origins = [*self.allowed_origins, self.public_app_url.rstrip("/")]
+        if self.environment == "production" and self.public_app_url not in self.allowed_origins:
+            self.allowed_origins = [*self.allowed_origins, self.public_app_url]
         return self
 
     @computed_field  # type: ignore[prop-decorator]

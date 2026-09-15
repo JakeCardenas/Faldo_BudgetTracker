@@ -69,7 +69,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health", include_in_schema=False)
     async def health() -> dict[str, str]:
-        return {"status": "ok"}
+        return {"status": "ok", "app_origin": settings.public_app_url}
 
     return app
 
