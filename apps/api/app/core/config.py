@@ -10,7 +10,7 @@ ON_VERCEL = bool(os.environ.get("VERCEL"))
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=(".env", "../../.env"), extra="ignore")
+    model_config = SettingsConfigDict(env_file=(".env", "../../.env"), extra="ignore", env_ignore_empty=True)
 
     environment: Literal["development", "test", "production"] = "production" if ON_VERCEL else "development"
 
