@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Splash } from "@/components/brand/splash"
 
 export const WELCOME_KEY = "faldo:welcome"
@@ -11,17 +11,21 @@ export function markWelcome() {
   } catch {}
 }
 
-function consumeWelcome() {
+function hasWelcome() {
   try {
-    const pending = window.sessionStorage.getItem(WELCOME_KEY) === "1"
-    window.sessionStorage.removeItem(WELCOME_KEY)
-    return pending
+    return window.sessionStorage.getItem(WELCOME_KEY) === "1"
   } catch {
     return false
   }
 }
 
 export default function WelcomeSplash() {
-  const [show] = useState(consumeWelcome)
+  const [show] = useState(hasWelcome)
+  useEffect(() => {
+    if (!show) return
+    try {
+      window.sessionStorage.removeItem(WELCOME_KEY)
+    } catch {}
+  }, [show])
   return show ? <Splash force /> : null
 }

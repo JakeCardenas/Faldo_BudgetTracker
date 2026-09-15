@@ -21,6 +21,8 @@ const FILES: Record<SoundName, string[]> = {
 
 const VOLUME: Partial<Record<SoundName, number>> = { type: 0.35, tap: 0.4, celebrate: 0.5, success: 0.55 }
 const STORAGE_KEY = "faldo:sounds"
+const TAP_KEY = "faldo:splash-tap"
+const GESTURES = ["pointerdown", "touchend", "click", "keydown"] as const
 
 type Cue = { at: number; sound: SoundName; volume?: number } | { at: number; note: number; volume?: number; length?: number }
 
@@ -51,6 +53,31 @@ export function setSoundsEnabled(enabled: boolean) {
   try {
     window.localStorage.setItem(STORAGE_KEY, enabled ? "on" : "off")
   } catch {}
+}
+
+export function splashTapEnabled() {
+  if (typeof window === "undefined") return false
+  try {
+    return window.localStorage.getItem(TAP_KEY) !== "off"
+  } catch {
+    return true
+  }
+}
+
+export function setSplashTapEnabled(enabled: boolean) {
+  try {
+    window.localStorage.setItem(TAP_KEY, enabled ? "on" : "off")
+  } catch {}
+}
+
+export function audioRunning() {
+  return getContext()?.state === "running"
+}
+
+export function onFirstGesture(handler: () => void) {
+  const run = () => handler()
+  for (const type of GESTURES) window.addEventListener(type, run, { capture: true, passive: true })
+  return () => { for (const type of GESTURES) window.removeEventListener(type, run, { capture: true }) }
 }
 
 function getContext() {
@@ -135,7 +162,7 @@ export function playSplash(getElapsed: () => number) {
     const now = ctx.currentTime
     for (const cue of SPLASH_CUES) {
       const delay = (cue.at - elapsed) / 1000
-      if (delay < -(cue.at < 600 ? 0.5 : 0.12)) continue
+      if (delay < -(cue.at < 600 ? 0.7 : 0.12)) continue
       const when = now + Math.max(0, delay)
       if ("sound" in cue) startBuffer(ctx, cue.sound, when, cue.volume)
       else startNote(ctx, cue.note, when, cue.volume, cue.length)
@@ -146,13 +173,10 @@ export function playSplash(getElapsed: () => number) {
     if (ctx.state === "running") schedule()
     else void ctx.resume().then(schedule).catch(() => undefined)
   })
-  const onGesture = () => { void ctx.resume().then(() => preloadSounds()).then(schedule).catch(() => undefined) }
-  window.addEventListener("pointerdown", onGesture, { capture: true, passive: true })
-  window.addEventListener("keydown", onGesture, { capture: true })
+  const removeGesture = onFirstGesture(() => { void ctx.resume().then(() => preloadSounds()).then(schedule).catch(() => undefined) })
 
   return () => {
     cancelled = true
-    window.removeEventListener("pointerdown", onGesture, { capture: true })
-    window.removeEventListener("keydown", onGesture, { capture: true })
+    removeGesture()
   }
 }

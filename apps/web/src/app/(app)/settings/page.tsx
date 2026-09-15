@@ -26,8 +26,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { FREQUENCY_LABELS, minorToInput, timeAgo, toMinor } from "@/lib/format"
 import { invalidateFinancialData, useAccounts, useCategories, useMe, useUpdateSettings } from "@/lib/queries"
-import { setSoundsEnabled, soundsEnabled } from "@/lib/sound"
+import { setSoundsEnabled, setSplashTapEnabled, soundsEnabled, splashTapEnabled } from "@/lib/sound"
 import type { Category, Me } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 const NONE = "__none__"
 const TIMEZONES = ["Asia/Manila", "Asia/Singapore", "Asia/Tokyo", "Asia/Dubai", "Europe/London", "America/New_York", "America/Los_Angeles", "Australia/Sydney"]
@@ -36,6 +37,7 @@ function Appearance({ me }: { me: Me }) {
   const update = useUpdateSettings()
   const { setTheme } = useTheme()
   const [sounds, setSounds] = useState(soundsEnabled)
+  const [tapToStart, setTapToStart] = useState(splashTapEnabled)
   const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Classic sprout"
   const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Leafy green"
   const actions = resolveQuickActions(me.settings.quick_actions)
@@ -60,6 +62,14 @@ function Appearance({ me }: { me: Me }) {
             <span className="block text-xs text-muted-foreground">Soft taps and chimes for navigation, logging and rewards. Saved on this device.</span>
           </span>
           <Switch checked={sounds} onCheckedChange={(next) => { setSoundsEnabled(next); setSounds(next) }} aria-label="Sounds" />
+        </label>
+        <label className={cn("-mt-3 flex items-center gap-3 rounded-[1.25rem] border border-border/70 bg-card px-4 py-3 shadow-(--shadow-card)", !sounds && "opacity-50")}>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><Smartphone className="size-5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.95rem] font-bold">Tap to start with sound</span>
+            <span className="block text-xs text-muted-foreground">Browsers block sound until you tap. When that happens, the opening waits for your tap so you hear it.</span>
+          </span>
+          <Switch checked={tapToStart && sounds} disabled={!sounds} onCheckedChange={(next) => { setSplashTapEnabled(next); setTapToStart(next) }} aria-label="Tap to start with sound" />
         </label>
         <div className="ios-group divide-y divide-border/60">
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
