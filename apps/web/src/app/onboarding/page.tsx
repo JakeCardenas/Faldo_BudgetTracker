@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, ArrowRight, Banknote, Check, CreditCard, Landmark, Loader2, PiggyBank, Smartphone, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { Logo, MascotArt } from "@/components/brand/logo"
+import { markWelcome } from "@/components/brand/welcome-splash"
 import { AmountInput } from "@/components/finance/amount-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -153,6 +154,7 @@ export default function OnboardingPage() {
     setBusy(true)
     const updated = await api.post<Me>("/me/onboarding/complete")
     qc.setQueryData(["me"], updated)
+    markWelcome()
     router.replace(destination)
   }
 

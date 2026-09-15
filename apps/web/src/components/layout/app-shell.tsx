@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import dynamic from "next/dynamic"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { AddTransactionDialog, type AddMode } from "@/components/capture/add-transaction-dialog"
@@ -19,6 +20,7 @@ import { play } from "@/lib/sound"
 import type { Receipt } from "@/lib/types"
 
 const ADD_MODES: AddModeOption[] = ["expense", "income", "transfer", "describe", "manual", "receipt"]
+const WelcomeSplash = dynamic(() => import("@/components/brand/welcome-splash"), { ssr: false })
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -68,38 +70,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     openTransaction: (id: string) => setTransactionId(id),
   }), [openAddTransaction])
 
-  if (isLoading || !me || !me.settings.onboarding_completed_at) {
-    return (
-      <>
-        <SplashContent className="boot-full min-h-dvh" />
-        <div className="boot-quiet flex min-h-dvh items-center justify-center">
-          <Image src="/brand/faldo-icon.svg" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
-        </div>
-      </>
-    )
-  }
-
+  const booting = isLoading || !me || !me.settings.onboarding_completed_at
   const fullBleed = pathname.startsWith("/assistant")
 
   return (
-    <AppActionsContext.Provider value={actions}>
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow">Skip to content</a>
-      <div className="flex min-h-dvh">
-        <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar />
-          <main id="main" key={pathname} className={fullBleed
-            ? "w-full flex-1"
-            : "animate-rise mx-auto w-full max-w-[1200px] flex-1 px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-12"}>
-            {children}
-          </main>
-        </div>
-      </div>
-      <MobileNav />
-      <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} />
-      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
-      <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} onAddTransaction={() => openAddTransaction()} onOpenTransaction={setTransactionId} />
-      <TransactionSheet id={transactionId} onOpenChange={(open) => { if (!open) setTransactionId(null) }} />
-    </AppActionsContext.Provider>
+    <>
+      <WelcomeSplash />
+      {booting ? (
+        <>
+          <SplashContent className="boot-full min-h-dvh" />
+          <div className="boot-quiet flex min-h-dvh items-center justify-center">
+            <Image src="/brand/faldo-icon.svg" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
+          </div>
+        </>
+      ) : (
+        <AppActionsContext.Provider value={actions}>
+          <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow">Skip to content</a>
+          <div className="flex min-h-dvh">
+            <Sidebar />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Topbar />
+              <main id="main" key={pathname} className={fullBleed
+                ? "w-full flex-1"
+                : "animate-rise mx-auto w-full max-w-[1200px] flex-1 px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-12"}>
+                {children}
+              </main>
+            </div>
+          </div>
+          <MobileNav />
+          <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} />
+          <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
+          <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} onAddTransaction={() => openAddTransaction()} onOpenTransaction={setTransactionId} />
+          <TransactionSheet id={transactionId} onOpenChange={(open) => { if (!open) setTransactionId(null) }} />
+        </AppActionsContext.Provider>
+      )}
+    </>
   )
 }

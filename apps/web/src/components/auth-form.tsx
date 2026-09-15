@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { markWelcome } from "@/components/brand/welcome-splash"
 import { api, ApiError } from "@/lib/api"
 import type { Me } from "@/lib/types"
 
@@ -31,6 +32,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         ? await api.post<Me>("/auth/login", override ?? { email, password })
         : await api.post<Me>("/auth/register", { email, password, display_name: name })
       qc.setQueryData(["me"], me)
+      if (me.settings.onboarding_completed_at) markWelcome()
       const next = params.get("next")
       router.replace(!me.settings.onboarding_completed_at ? "/onboarding" : next?.startsWith("/") && !next.startsWith("//") ? next : "/")
     } catch (err) {

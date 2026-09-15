@@ -1,8 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import { useEffect, useState } from "react"
-import { play } from "@/lib/sound"
+import { useEffect, useRef, useState } from "react"
+import { playSplash } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 export function SplashContent({ animated = false, className }: { animated?: boolean; className?: string }) {
@@ -30,16 +30,26 @@ export function SplashContent({ animated = false, className }: { animated?: bool
   )
 }
 
-export function Splash() {
+export function Splash({ force = false }: { force?: boolean }) {
   const [mounted, setMounted] = useState(true)
+  const overlay = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    if (document.documentElement.dataset.splash !== "skip") play("open")
     const timer = setTimeout(() => setMounted(false), 3000)
-    return () => clearTimeout(timer)
-  }, [])
+    const skipped = !force && document.documentElement.dataset.splash === "skip"
+    const stop = skipped ? () => undefined : playSplash(() => {
+      const animation = overlay.current?.getAnimations().find((a) => (a as CSSAnimation).animationName === "splash-out")
+      return Number(animation?.currentTime ?? 0)
+    })
+    return () => {
+      clearTimeout(timer)
+      stop()
+    }
+  }, [force])
+
   if (!mounted) return null
   return (
-    <div aria-hidden className="splash-overlay fixed inset-0 z-[100] bg-background">
+    <div ref={overlay} aria-hidden data-force={force ? "" : undefined} className="splash-overlay fixed inset-0 z-[100] bg-background">
       <SplashContent animated className="h-full" />
     </div>
   )

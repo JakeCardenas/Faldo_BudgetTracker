@@ -390,7 +390,7 @@
   animation: splash-out 420ms ease-in 2350ms both;
 }
 
-html[data-splash="skip"] .splash-overlay,
+html[data-splash="skip"] .splash-overlay:not([data-force]),
 html[data-splash="skip"] .boot-full,
 html:not([data-splash="skip"]) .boot-quiet {
   display: none;
