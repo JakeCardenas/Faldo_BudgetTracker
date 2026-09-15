@@ -44,7 +44,7 @@ function defaultPayday() {
 function Choice({ selected, onClick, children, className }: { selected: boolean; onClick: () => void; children: React.ReactNode; className?: string }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={selected}
-      className={cn("relative rounded-2xl border bg-card p-4 text-left transition hover:border-primary/30", selected && "border-primary bg-accent ring-3 ring-primary/10", className)}>
+      className={cn("pressable relative rounded-xl border bg-card p-4 text-left hover:bg-accent/50", selected && "border-primary/50 bg-secondary/60 hover:bg-secondary/60", className)}>
       {selected && <span className="absolute top-3 right-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3" /></span>}
       {children}
     </button>
@@ -117,7 +117,7 @@ export default function OnboardingPage() {
   const saveGoal = () => run(async () => {
     const target = toMinor(goalTarget)
     if (!goalName || !target) return
-    await api.post("/goals", { name: goalName, target_minor: target, target_date: goalDate || null, emoji: "🎯" })
+    await api.post("/goals", { name: goalName, target_minor: target, target_date: goalDate || null, emoji: "target" })
   })
 
   const saveBudget = () => run(async () => {
@@ -175,23 +175,23 @@ export default function OnboardingPage() {
         <div key={step} className="animate-rise w-full max-w-xl space-y-8">
           {step === 0 && (
             <div className="space-y-6 text-center">
-              <div className="relative mx-auto w-fit"><div className="absolute inset-0 scale-110 rounded-full bg-mint blur-2xl" /><MascotArt className="animate-bob relative w-32" priority /></div>
+              <MascotArt className="mx-auto w-28" priority />
               <div className="space-y-3">
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Welcome to Faldo{me ? `, ${me.display_name}` : ""}.</h1>
+                <h1 className="text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">Welcome to Faldo{me ? `, ${me.display_name}` : ""}.</h1>
                 <p className="mx-auto max-w-md text-muted-foreground">Your AI financial copilot. Track your money, understand where it goes, and get answers grounded in your own numbers.</p>
               </div>
               <ul className="mx-auto grid max-w-md gap-2 text-left text-sm">
                 {["Log spending by typing it like a text message", "See budgets, goals and a month-end forecast", "Ask questions and get calculated, cited answers"].map((t) => (
-                  <li key={t} className="flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5"><Check className="size-4 text-primary" />{t}</li>
+                  <li key={t} className="flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5"><Check className="size-4 text-primary" />{t}</li>
                 ))}
               </ul>
-              <Button size="lg" className="h-11 px-6" onClick={next}>Set up in 2 minutes <ArrowRight /></Button>
+              <Button size="lg" className="px-6" onClick={next}>Set up in 2 minutes <ArrowRight /></Button>
             </div>
           )}
 
           {step === 1 && (
             <div className="space-y-6">
-              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-tight">Choose your currency</h1><p className="text-muted-foreground">Faldo stores exact amounts, down to the centavo.</p></div>
+              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Choose your currency</h1><p className="text-muted-foreground">Faldo stores exact amounts, down to the centavo.</p></div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {CURRENCIES.map((c) => (
                   <Choice key={c.code} selected={currency === c.code} onClick={() => setCurrency(c.code)}>
@@ -205,11 +205,11 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div className="space-y-6">
-              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-tight">Where do you keep your money?</h1><p className="text-muted-foreground">Start with one account. You can add the rest later. No bank connection required.</p></div>
+              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Where do you keep your money?</h1><p className="text-muted-foreground">Start with one account. You can add the rest later. No bank connection required.</p></div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {ACCOUNT_PRESETS.map((p, i) => (
                   <Choice key={p.name} selected={accountPreset === i} onClick={() => { setAccountPreset(i); setAccountName(p.name) }} className="p-3.5">
-                    <p.icon className="size-5 text-primary" /><span className="mt-2 block text-sm font-medium">{p.name}</span>
+                    <p.icon className="size-5 text-muted-foreground" strokeWidth={1.75} /><span className="mt-2 block text-sm font-medium">{p.name}</span>
                   </Choice>
                 ))}
               </div>
@@ -222,12 +222,12 @@ export default function OnboardingPage() {
 
           {step === 3 && (
             <div className="space-y-6">
-              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-tight">How much do you earn each month?</h1><p className="text-muted-foreground">Used for your forecast and safe-to-spend. Faldo adds it as expected income.</p></div>
+              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">How much do you earn each month?</h1><p className="text-muted-foreground">Used for your forecast and safe-to-spend. Faldo adds it as expected income.</p></div>
               <div className="space-y-1.5"><Label htmlFor="ob-income">Monthly take-home pay</Label><AmountInput id="ob-income" size="lg" value={income} onValueChange={setIncome} placeholder="0" /></div>
               <div className="space-y-2"><Label>How often are you paid?</Label>
                 <div className="flex flex-wrap gap-2">
                   {(["semi_monthly", "monthly", "biweekly", "weekly"] as Frequency[]).map((f) => (
-                    <button key={f} type="button" onClick={() => setFrequency(f)} className={cn("rounded-full border px-3.5 py-1.5 text-sm", frequency === f ? "border-primary bg-accent text-primary" : "bg-card")}>{FREQUENCY_LABELS[f]}</button>
+                    <button key={f} type="button" onClick={() => setFrequency(f)} className={cn("pressable rounded-lg border px-3.5 py-1.5 text-sm", frequency === f ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>{FREQUENCY_LABELS[f]}</button>
                   ))}
                 </div>
               </div>
@@ -237,10 +237,10 @@ export default function OnboardingPage() {
 
           {step === 4 && (
             <div className="space-y-6">
-              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-tight">Set a savings goal</h1><p className="text-muted-foreground">Faldo will calculate how much to save each month and when you'll get there.</p></div>
+              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Set a savings goal</h1><p className="text-muted-foreground">Faldo will calculate how much to save each month and when you'll get there.</p></div>
               <div className="flex flex-wrap gap-2">
                 {["Emergency fund", "New laptop", "Travel", "Tuition", "New phone"].map((g) => (
-                  <button key={g} type="button" onClick={() => setGoalName(g)} className={cn("rounded-full border px-3.5 py-1.5 text-sm", goalName === g ? "border-primary bg-accent text-primary" : "bg-card")}>{g}</button>
+                  <button key={g} type="button" onClick={() => setGoalName(g)} className={cn("pressable rounded-lg border px-3.5 py-1.5 text-sm", goalName === g ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>{g}</button>
                 ))}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -253,7 +253,7 @@ export default function OnboardingPage() {
 
           {step === 5 && (
             <div className="space-y-6">
-              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-tight">Create your first budget</h1><p className="text-muted-foreground">Set limits for a few categories. Faldo warns you before you overspend.</p></div>
+              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Create your first budget</h1><p className="text-muted-foreground">Set limits for a few categories. Faldo warns you before you overspend.</p></div>
               <div className="space-y-2">
                 {BUDGET_PRESETS.map((name) => (
                   <div key={name} className="flex items-center gap-3 rounded-xl border bg-card px-3 py-2">
@@ -267,21 +267,21 @@ export default function OnboardingPage() {
 
           {step === 6 && (
             <div className="space-y-6">
-              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-tight">Add your first transaction</h1><p className="text-muted-foreground">Just describe it. Faldo figures out the amount, merchant, category and date.</p></div>
+              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Add your first transaction</h1><p className="text-muted-foreground">Just describe it. Faldo figures out the amount, merchant, category and date.</p></div>
               {txSaved ? (
-                <div className="animate-rise flex items-center gap-3 rounded-2xl border border-primary/20 bg-mint/50 p-4">
+                <div className="animate-rise flex items-center gap-3 rounded-xl border bg-card p-4">
                   <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-4" /></span>
                   <div><p className="font-medium">Saved</p><p className="text-sm text-muted-foreground">{txSaved}</p></div>
                 </div>
               ) : (
                 <>
                   <div className="relative">
-                    <Input value={txText} onChange={(e) => setTxText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTransaction()} placeholder={`e.g. Spent ${symbol}350 at Jollibee`} className="h-14 rounded-2xl pr-28 text-base" aria-label="Describe a transaction" />
+                    <Input value={txText} onChange={(e) => setTxText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTransaction()} placeholder={`e.g. Spent ${symbol}350 at Jollibee`} className="h-14 rounded-lg pr-28 text-base" aria-label="Describe a transaction" />
                     <Button className="absolute top-2 right-2 h-10" onClick={addTransaction} disabled={busy || !txText.trim()}>{busy ? <Loader2 className="animate-spin" /> : "Add"}</Button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {["Spent ₱350 at Jollibee", "Grab ₱180 today", "Groceries ₱1,250 at SM"].map((ex) => (
-                      <button key={ex} type="button" onClick={() => setTxText(ex)} className="rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">{ex}</button>
+                      <button key={ex} type="button" onClick={() => setTxText(ex)} className="rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">{ex}</button>
                     ))}
                   </div>
                 </>
@@ -291,9 +291,9 @@ export default function OnboardingPage() {
 
           {step === 7 && (
             <div className="space-y-6 text-center">
-              <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground"><Sparkles className="size-6" /></div>
+              <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="size-6" /></div>
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">Meet your AI assistant</h1>
+                <h1 className="text-3xl font-semibold tracking-[-0.025em]">Meet your AI assistant</h1>
                 <p className="mx-auto max-w-md text-muted-foreground">Ask about your money in plain language. Faldo looks up your records, calculates exact figures and shows its sources. It never invents numbers.</p>
               </div>
               <div className="mx-auto grid max-w-md gap-2 text-left">

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useTheme } from "next-themes"
-import { Brain, ChevronRight, Download, Flame, KeyRound, LayoutGrid, Monitor, Moon, Pencil, Plus, ShieldCheck, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
+import { ChevronRight, Download, Flame, LayoutGrid, Monitor, Moon, Pencil, Plus, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
 import { Mascot } from "@/components/brand/mascot"
 import { Scene } from "@/components/brand/scene"
 import { Segmented } from "@/components/ios/segmented"
@@ -36,14 +36,14 @@ function Appearance({ me }: { me: Me }) {
   const update = useUpdateSettings()
   const { setTheme } = useTheme()
   const [sounds, setSounds] = useState(soundsEnabled)
-  const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Classic sprout"
+  const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Classic"
   const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Leafy green"
   const actions = resolveQuickActions(me.settings.quick_actions)
   return (
-    <SectionCard title="Appearance & companion" description="Make Faldo feel like yours.">
+    <SectionCard title="Appearance and companion" description="Make Faldo feel like yours.">
       <div className="space-y-5">
         <div className="space-y-2">
-          <p className="eyebrow">Theme</p>
+          <p className="text-[0.8125rem] font-medium text-muted-foreground">Theme</p>
           <Segmented label="Theme" className="w-full sm:w-auto" value={me.settings.theme} onChange={(theme) => {
             setTheme(theme)
             update.mutate({ theme }, { onError: (e) => toast.error(e.message) })
@@ -53,37 +53,37 @@ function Appearance({ me }: { me: Me }) {
             { value: "dark", label: <span className="inline-flex items-center gap-1.5"><Moon className="size-3.5" /> Dark</span> },
           ]} />
         </div>
-        <label className="flex items-center gap-3 rounded-[1.25rem] border border-border/70 bg-card px-4 py-3 shadow-(--shadow-card)">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><Volume2 className="size-5" /></span>
+        <label className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/75"><Volume2 className="size-4" strokeWidth={1.75} /></span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[0.95rem] font-bold">Sounds</span>
+            <span className="block text-[0.9375rem]">Sounds</span>
             <span className="block text-xs text-muted-foreground">Soft taps and chimes for navigation, logging and rewards. Saved on this device.</span>
           </span>
           <Switch checked={sounds} onCheckedChange={(next) => { setSoundsEnabled(next); setSounds(next) }} aria-label="Sounds" />
         </label>
         <div className="ios-group divide-y divide-border/60">
-          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
-            <Mascot outfit={me.settings.mascot_outfit} coin={false} className="w-10 shrink-0" />
-            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Mascot outfit</span><span className="block text-xs text-muted-foreground">{outfit}</span></span>
-            <ChevronRight className="size-4 text-muted-foreground" />
+          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
+            <span className="flex size-8 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-secondary"><Mascot outfit={me.settings.mascot_outfit} coin={false} className="-mb-0.5 w-8" /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Mascot outfit</span><span className="block text-xs text-muted-foreground">{outfit}</span></span>
+            <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
-          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
-            <span className="h-10 w-10 shrink-0 overflow-hidden rounded-xl"><Scene id={me.settings.home_background} /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Home background</span><span className="block text-xs text-muted-foreground">{background}</span></span>
-            <ChevronRight className="size-4 text-muted-foreground" />
+          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
+            <span className="size-8 shrink-0 overflow-hidden rounded-lg"><Scene id={me.settings.home_background} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Home background</span><span className="block text-xs text-muted-foreground">{background}</span></span>
+            <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
-          <Link href="/" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><LayoutGrid className="size-5" /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Quick actions</span><span className="block truncate text-xs text-muted-foreground">{actions.map((a) => a.label).join(", ")} · edit with the pencil on Home</span></span>
-            <ChevronRight className="size-4 text-muted-foreground" />
+          <Link href="/" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/75"><LayoutGrid className="size-4" strokeWidth={1.75} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Shortcuts</span><span className="block truncate text-xs text-muted-foreground">{actions.map((a) => a.label).join(", ")} · edit with the pencil on Home</span></span>
+            <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
-          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff0e0] text-[#c75a12] dark:bg-[#3a2716] dark:text-[#ffb26b]"><Flame className="size-5" /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[0.95rem] font-bold">Streaks & badges</span><span className="block text-xs text-muted-foreground">Rewards unlock as you keep logging</span></span>
-            <ChevronRight className="size-4 text-muted-foreground" />
+          <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/75"><Flame className="size-4" strokeWidth={1.75} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Streaks & badges</span><span className="block text-xs text-muted-foreground">Rewards unlock as you keep logging</span></span>
+            <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
         </div>
-        <p className="flex items-start gap-2 rounded-2xl bg-muted/60 px-4 py-3 text-xs text-muted-foreground">
+        <p className="flex items-start gap-2 px-1 text-xs leading-relaxed text-muted-foreground">
           <Smartphone className="mt-0.5 size-4 shrink-0" />
           <span>Use Faldo like an app: on iPhone, open it in Safari, tap Share, then <b>Add to Home Screen</b>. On Android, tap the menu and choose <b>Install app</b>.</span>
         </p>
@@ -124,7 +124,7 @@ function Preferences({ me }: { me: Me }) {
   }
 
   return (
-    <SectionCard title="Profile & preferences" description="These shape your forecast, safe-to-spend and AI answers.">
+    <SectionCard title="Profile and preferences" description="These shape your forecast, safe-to-spend and AI answers.">
       <form onSubmit={save} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor="s-name">First name</Label><Input id="s-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Email</Label><Input value={me.email} disabled /></div>
@@ -195,7 +195,7 @@ function Security() {
   }
 
   return (
-    <SectionCard title={<span className="flex items-center gap-2"><KeyRound className="size-4 text-primary" /> Security</span>} description="Your password and the devices signed in to your account.">
+    <SectionCard title="Security" description="Your password and the devices signed in to your account.">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <form onSubmit={changePassword} className="space-y-3">
           <p className="text-sm font-medium">Change password</p>
@@ -208,12 +208,12 @@ function Security() {
             <p className="text-sm font-medium">Active sessions</p>
             {sessions.length > 1 && <Button variant="ghost" size="sm" onClick={() => revoke()}>Sign out others</Button>}
           </div>
-          <ul className="divide-y rounded-xl border">
+          <ul className="divide-y rounded-lg border">
             {sessions.map((s) => (
               <li key={s.id} className="flex items-center gap-3 px-3 py-2.5">
                 <Monitor className="size-4 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{device(s.user_agent)} {s.current && <span className="ml-1 rounded-full bg-mint px-2 py-0.5 text-[0.65rem] text-mint-foreground">This device</span>}</p>
+                  <p className="truncate text-sm font-medium">{device(s.user_agent)} {s.current && <span className="ml-1 rounded-md bg-secondary px-1.5 py-0.5 text-[0.6875rem] text-secondary-foreground">This device</span>}</p>
                   <p className="text-xs text-muted-foreground">Active {timeAgo(s.last_seen_at)} · signed in {timeAgo(s.created_at)}</p>
                 </div>
                 {!s.current && <Button variant="ghost" size="sm" onClick={() => revoke(s.id)}>Sign out</Button>}
@@ -265,7 +265,7 @@ function CategoryDialog({ category, subcategories, onClose }: { category: Catego
         <form onSubmit={save} className="space-y-4">
           <div className="space-y-1.5"><Label htmlFor="cat-name">Name</Label><Input id="cat-name" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} /></div>
           {category.kind === "expense" && (
-            <label className="flex items-center justify-between gap-3 rounded-xl border p-3">
+            <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
               <span><span className="block text-sm font-medium">Essential spending</span><span className="block text-xs text-muted-foreground">Used by the health score and “what should I reduce” answers</span></span>
               <Switch checked={essential} onCheckedChange={setEssential} />
             </label>
@@ -273,7 +273,7 @@ function CategoryDialog({ category, subcategories, onClose }: { category: Catego
           {subcategories.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">Subcategories</p>
-              <ul className="divide-y rounded-xl border">
+              <ul className="divide-y rounded-lg border">
                 {subcategories.map((sub) => (
                   <li key={sub.id} className="flex items-center justify-between px-3 py-2 text-sm">
                     {sub.name}
@@ -336,10 +336,10 @@ function Categories() {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {tops.map((c) => (
           <button key={c.id} type="button" onClick={() => setEditing(c)}
-            className="flex items-start gap-3 rounded-xl border p-3 text-left transition hover:border-primary/30 hover:bg-accent/40">
+            className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent/60">
             <CategoryIcon icon={c.icon} color={c.color} size="sm" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">{c.name} <span className="text-xs font-normal text-muted-foreground">· {c.kind}{c.is_essential && " · essential"}</span></p>
+              <p className="text-sm font-medium">{c.name} <span className="text-xs font-normal text-muted-foreground">{c.kind}{c.is_essential && ", essential"}</span></p>
               <p className="truncate text-xs text-muted-foreground">{categories.filter((s) => s.parent_id === c.id).map((s) => s.name).join(", ") || "No subcategories"}</p>
             </div>
             <Pencil className="mt-0.5 size-3.5 text-muted-foreground" />
@@ -368,12 +368,12 @@ function Memory() {
     qc.invalidateQueries({ queryKey: ["notes"] })
   }
   return (
-    <SectionCard title={<span className="flex items-center gap-2"><Brain className="size-4 text-primary" /> AI & financial memory</span>}
+    <SectionCard title="AI and financial memory"
       description="Notes give the assistant context your numbers can't, like why a month was unusual. They're searchable only by you.">
       <div className="mb-4 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full border px-2.5 py-1">Provider: <span className="font-medium">{status?.provider ?? "…"}</span></span>
-        {status?.is_development && <span className="rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-warning">Development mode: rule-based answers, local embeddings</span>}
-        <span className="rounded-full border px-2.5 py-1">Receipt reading: {status?.supports_vision ? "enabled" : "not configured"}</span>
+        <span className="rounded-lg border px-2.5 py-1">Provider: <span className="font-medium">{status?.provider ?? "…"}</span></span>
+        {status?.is_development && <span className="rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-1 text-warning">Development mode: rule-based answers, local embeddings</span>}
+        <span className="rounded-lg border px-2.5 py-1">Receipt reading: {status?.supports_vision ? "enabled" : "not configured"}</span>
       </div>
       <form onSubmit={add} className="mb-3 flex flex-col gap-2 sm:flex-row">
         <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={2} maxLength={1000} required placeholder="e.g. Lent ₱3,000 to my brother in August; he'll pay back in October." />
@@ -401,7 +401,7 @@ function DataPrivacy() {
     router.replace("/register")
   }
   return (
-    <SectionCard title={<span className="flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /> Data & privacy</span>} description="Your data stays in your account. Faldo never sells it or connects to your bank.">
+    <SectionCard title="Data and privacy" description="Your data stays in your account. Faldo never sells it or connects to your bank.">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><p className="text-sm font-medium">Export your data</p><p className="text-xs text-muted-foreground">Accounts, transactions, budgets, goals, bills, debts and notes as JSON.</p></div>
         <Button variant="outline" asChild><a href="/api/v1/me/export"><Download /> Download export</a></Button>
@@ -425,8 +425,8 @@ export default function SettingsPage() {
   const { data: me } = useMe()
   if (!me) return null
   return (
-    <div className="space-y-5 pt-2">
-      <PageHeader title="Settings" description="Preferences, categories, AI memory and your data." />
+    <div className="space-y-5">
+      <PageHeader title="Settings" description="Preferences, categories, AI memory and your data" />
       <Appearance me={me} />
       <Preferences me={me} />
       <Security />

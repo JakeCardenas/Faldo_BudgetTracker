@@ -56,7 +56,7 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] sm:max-w-md">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{account ? "Edit account" : "Add account"}</DialogTitle>
           <DialogDescription>Faldo uses manual accounts. It never connects to your bank or e-wallet.</DialogDescription>
@@ -70,8 +70,8 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
                   <button key={t.name} type="button" onClick={() => {
                     setName(t.name); setType(t.type); setInstitution(t.institution); setColor(t.color)
                     setSpendable(t.type !== "savings" && t.type !== "credit_card")
-                  }} className={cn("pressable flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-xs font-semibold", name === t.name && "border-primary bg-secondary")}>
-                    <span className="flex size-6 items-center justify-center rounded-full text-[0.55rem] font-extrabold text-white" style={{ backgroundColor: t.color }}>{t.name.slice(0, 2).toUpperCase()}</span>
+                  }} className={cn("pressable flex shrink-0 items-center gap-2 rounded-lg border py-1 pr-2.5 pl-1 text-xs font-medium hover:bg-accent/60", name === t.name && "border-primary/45 bg-secondary hover:bg-secondary")}>
+                    <span className="flex size-6 items-center justify-center rounded-md text-[0.5625rem] font-semibold text-white" style={{ backgroundColor: t.color }}>{t.name.slice(0, 2).toUpperCase()}</span>
                     {t.name}
                   </button>
                 ))}
@@ -122,7 +122,7 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
             </div>
           )}
           {type !== "credit_card" && type !== "savings" && (
-            <label className="flex items-center justify-between gap-3 rounded-xl border p-3">
+            <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
               <span>
                 <span className="block text-sm font-medium">Spendable money</span>
                 <span className="block text-xs text-muted-foreground">Include in safe-to-spend and forecasts</span>

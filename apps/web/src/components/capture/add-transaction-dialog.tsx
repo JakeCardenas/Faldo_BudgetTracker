@@ -8,6 +8,7 @@ import { DraftCard } from "@/components/capture/draft-card"
 import { TransactionForm, type TransactionFormValues } from "@/components/finance/transaction-form"
 import { KeypadEntry, type EntryPreset, type EntryType } from "@/components/capture/keypad-entry"
 import { Mascot } from "@/components/brand/mascot"
+import { SHEET_CLASSES } from "@/components/ios/sheet"
 import { Segmented } from "@/components/ios/segmented"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -68,7 +69,7 @@ function DescribeTab({ onDone }: { onDone: () => void }) {
       const created = await api.post<Transaction[]>("/capture/confirm", { transactions: list.map(draftToInput) })
       await invalidateFinancialData(qc)
       const total = created.reduce((sum, t) => sum + t.amount_minor, 0)
-      showLoggedToast(created, created.length > 1 ? `Logged ${created.length} transactions worth ${formatMoney(total)}.` : `Logged ${formatMoney(total)}. Nice and quick!`,
+      showLoggedToast(created, created.length > 1 ? `Logged ${created.length} transactions worth ${formatMoney(total)}.` : `Logged ${formatMoney(total)}.`,
         () => void invalidateFinancialData(qc))
       onDone()
     } catch (error) {
@@ -122,20 +123,20 @@ function DescribeTab({ onDone }: { onDone: () => void }) {
           maxLength={500}
           autoFocus
           placeholder="e.g. Grab ₱180 and Starbucks ₱210 via GCash"
-          className="w-full resize-none rounded-2xl border border-input bg-card px-4 py-3.5 pr-14 text-[0.95rem] shadow-(--shadow-card) outline-none transition placeholder:text-muted-foreground/70 focus:border-ring focus:ring-3 focus:ring-ring/25"
+          className="w-full resize-none rounded-xl border border-input bg-card px-4 py-3.5 pr-14 text-[0.9375rem] leading-relaxed outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/80 focus:border-ring focus:ring-3 focus:ring-ring/25"
         />
-        <Button type="submit" size="icon" className="absolute right-3 bottom-3.5 rounded-xl" disabled={busy || !text.trim()} aria-label="Read transaction">
+        <Button type="submit" size="icon" className="absolute right-3 bottom-3.5" disabled={busy || !text.trim()} aria-label="Read transaction">
           {busy ? <Loader2 className="animate-spin" /> : <ArrowUp />}
         </Button>
       </form>
 
       {!result && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">Write it the way you'd text a friend. English or Taglish works.</p>
+          <p className="text-[0.8125rem] text-muted-foreground">Write it the way you'd text a friend. English or Taglish works.</p>
           <div className="flex flex-wrap gap-1.5">
             {EXAMPLES.map((example) => (
               <button key={example} type="button" onClick={() => { setText(example); parse(example) }}
-                className="rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground">
+                className="pressable rounded-lg border bg-card px-3 py-1.5 text-[0.8125rem] text-muted-foreground hover:bg-accent/60 hover:text-foreground">
                 {example}
               </button>
             ))}
@@ -144,7 +145,7 @@ function DescribeTab({ onDone }: { onDone: () => void }) {
       )}
 
       {result && !result.is_financial && (
-        <p className="rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+        <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
           I couldn't find an amount in that. Try something like “Lunch ₱250 at Mang Inasal”.
         </p>
       )}
@@ -163,7 +164,7 @@ function DescribeTab({ onDone }: { onDone: () => void }) {
           ))}
           <div className="flex items-center justify-between gap-3 pt-1">
             <p className="text-xs text-muted-foreground">
-              {result?.parser === "rules" ? "Read by Faldo's on-device parser" : "Read by AI"} · nothing is saved until you confirm
+              {result?.parser === "rules" ? "Read by Faldo's on-device parser" : "Read by AI"}. Nothing is saved until you confirm.
             </p>
             <Button onClick={() => save(drafts)} disabled={busy || blocking}>
               {busy ? "Saving…" : drafts.length > 1 ? `Save ${drafts.length}` : unresolved ? "Confirm & save" : "Save"}
@@ -217,8 +218,8 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
         <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) upload(f) }}
-          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed bg-muted/40 px-6 py-10 text-center transition-colors hover:border-primary/30 hover:bg-accent/50">
-          {uploading ? <Loader2 className="size-6 animate-spin text-primary" /> : <FileImage className="size-6 text-primary" />}
+          className="flex w-full flex-col items-center gap-3 rounded-xl border border-dashed border-input bg-muted/30 px-6 py-12 text-center transition-colors hover:border-ring hover:bg-muted/50">
+          {uploading ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : <FileImage className="size-6 text-muted-foreground" strokeWidth={1.75} />}
           <span className="text-sm font-medium">{uploading ? "Uploading securely…" : "Drop a receipt photo or browse"}</span>
           <span className="text-xs text-muted-foreground">JPEG, PNG or WebP up to 8 MB. Location data is removed.</span>
         </button>
@@ -232,16 +233,16 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,14rem)_1fr]">
       <div className="space-y-2">
-        {preview && <img src={preview} alt="Receipt preview" className="max-h-80 w-full rounded-xl border object-contain bg-muted" />}
+        {preview && <img src={preview} alt="Receipt preview" className="max-h-80 w-full rounded-lg border bg-muted object-contain" />}
         <p className="text-xs text-muted-foreground">
           {receipt.status === "processing" && "Reading merchant, date, items and total…"}
-          {receipt.status === "needs_review" && `Extracted${extraction?.amount_minor ? ` · total ${formatMoney(extraction.amount_minor)}` : ""}. Review before saving.`}
+          {receipt.status === "needs_review" && `Extracted${extraction?.amount_minor ? `, total ${formatMoney(extraction.amount_minor)}` : ""}. Review before saving.`}
           {receipt.status === "unavailable" && receipt.error}
           {receipt.status === "failed" && receipt.error}
         </p>
       </div>
       {receipt.status === "processing" ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border bg-muted/30 p-10 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 rounded-xl border bg-muted/30 p-10 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Scanning receipt
         </div>
       ) : (
@@ -282,12 +283,11 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
 export function showLoggedToast(transactions: Transaction[], message: string, onUndone?: () => void, outfit?: string) {
   play("success")
   toast.custom((id) => (
-    <div className="flex w-[min(24rem,calc(100vw-2rem))] items-center gap-3 rounded-[1.4rem] border bg-popover p-3 pr-2 text-popover-foreground shadow-(--shadow-float)">
-      <Mascot mood="proud" outfit={outfit} coin={false} className="w-11 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold text-primary">Faldo</p>
-        <p className="text-sm leading-snug">{message}</p>
-      </div>
+    <div className="flex w-[min(24rem,calc(100vw-2rem))] items-center gap-3 rounded-xl border bg-popover p-2.5 pr-2 text-popover-foreground shadow-(--shadow-float)">
+      <span className="relative flex size-10 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-secondary" aria-hidden>
+        <Mascot mood="proud" outfit={outfit} coin={false} className="-mb-1 w-10" />
+      </span>
+      <p className="min-w-0 flex-1 text-sm leading-snug">{message}</p>
       <button type="button" onClick={async () => {
         play("undo")
         toast.dismiss(id)
@@ -298,7 +298,7 @@ export function showLoggedToast(transactions: Transaction[], message: string, on
         } catch {
           toast.error("Couldn't undo that.")
         }
-      }} className="pressable h-9 shrink-0 rounded-full bg-secondary px-3.5 text-xs font-bold text-secondary-foreground">Undo</button>
+      }} className="pressable h-8 shrink-0 rounded-md px-3 text-[0.8125rem] font-medium text-primary hover:bg-accent">Undo</button>
     </div>
   ), { duration: 6000 })
 }
@@ -330,18 +330,18 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) { play("close"); setManualInitial(null) } onOpenChange(next) }}>
       <DialogContent showCloseButton={false} aria-describedby={undefined}
-        className={cn("flex flex-col gap-0 overflow-hidden rounded-[1.75rem] bg-background p-0 ring-0",
-          "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:h-[94dvh] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none",
+        onOpenAutoFocus={(e) => { if (keypad) { e.preventDefault(); (e.currentTarget as HTMLElement).focus() } }}
+        className={cn("flex flex-col gap-0 overflow-hidden bg-popover p-0 max-sm:h-[94dvh]", SHEET_CLASSES,
           keypad ? "sm:h-[min(52rem,94dvh)] sm:max-w-[27rem]" : "sm:max-h-[92dvh] sm:max-w-2xl")}>
         <DialogTitle className="sr-only">{title}</DialogTitle>
-        <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted-foreground/25 sm:hidden" aria-hidden />
-        <div className="flex items-center gap-2 px-3 pt-2 pb-2 sm:pt-3">
+        <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-foreground/15 sm:hidden" aria-hidden />
+        <div className="flex items-center gap-2 px-3 pt-2 pb-2 sm:px-4 sm:pt-4">
           {keypad ? (
-            <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable flex size-10 shrink-0 items-center justify-center rounded-full border bg-card text-muted-foreground">
-              <X className="size-5" />
+            <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
+              <X className="size-5" strokeWidth={1.85} />
             </button>
           ) : (
-            <button type="button" onClick={() => onModeChange(entryType)} className="pressable flex h-10 shrink-0 items-center gap-0.5 rounded-full pr-3 pl-1.5 text-sm font-semibold text-primary">
+            <button type="button" onClick={() => onModeChange(entryType)} className="pressable flex h-9 shrink-0 items-center gap-0.5 rounded-lg pr-2.5 pl-1 text-sm font-medium text-primary hover:bg-accent">
               <ChevronLeft className="size-5" /> Back
             </button>
           )}
@@ -349,23 +349,23 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
             {keypad ? (
               <Segmented label="Transaction type" value={mode as EntryType} onChange={(v) => { setLastEntry(v); onModeChange(v) }}
                 options={[{ value: "expense", label: "Expense", tone: "expense" }, { value: "income", label: "Income", tone: "income" }, { value: "transfer", label: "Transfer" }]} size="sm" />
-            ) : <p className="truncate text-[0.95rem] font-bold">{title}</p>}
+            ) : <p className="truncate text-[0.9375rem] font-semibold">{title}</p>}
           </div>
           {keypad ? (
             <div className="flex shrink-0 gap-1.5">
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
-                className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-primary"><MessageCircle className="size-[1.15rem]" /></button>
+                className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><MessageCircle className="size-[1.15rem]" strokeWidth={1.85} /></button>
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan receipt"
-                className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-primary"><ScanLine className="size-[1.15rem]" /></button>
+                className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><ScanLine className="size-[1.15rem]" strokeWidth={1.85} /></button>
             </div>
-          ) : <span className="w-16" />}
+          ) : <span className="w-[4.5rem]" />}
         </div>
         <DialogDescription className="sr-only">Log an expense, income or transfer.</DialogDescription>
         {keypad ? (
           <KeypadEntry key={mode} type={mode as EntryType} preset={preset} onSaved={saved}
             onMoreDetails={(values) => { setLastEntry(values.type); setManualInitial(values); onModeChange("manual") }} />
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6">
             {mode === "describe" && <DescribeTab onDone={close} />}
             {mode === "receipt" && <ReceiptTab key={receipt?.id ?? "new"} onDone={close} initialReceipt={receipt} />}
             {mode === "manual" && (

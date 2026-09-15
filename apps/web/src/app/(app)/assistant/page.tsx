@@ -42,7 +42,7 @@ const TOOL_NAMES: Record<string, string> = {
 function RichText({ text, sources, onOpenTransaction }: { text: string; sources: Source[]; onOpenTransaction: (id: string) => void }) {
   const parts = text.split(/(\[[tmi]\d{1,3}\])/g)
   return (
-    <p className="text-[0.95rem] leading-relaxed whitespace-pre-wrap text-foreground">
+    <p className="text-[0.9375rem] leading-[1.65] whitespace-pre-wrap text-foreground">
       {parts.map((part, i) => {
         const match = part.match(/^\[([tmi]\d{1,3})\]$/)
         if (!match) return <span key={i}>{part}</span>
@@ -50,8 +50,8 @@ function RichText({ text, sources, onOpenTransaction }: { text: string; sources:
         const txnId = source?.type === "transaction" ? source.id : source?.type === "transaction_item" ? (source as Source & { transaction_id?: string }).transaction_id : undefined
         return (
           <button key={i} type="button" onClick={() => txnId && onOpenTransaction(txnId)} disabled={!txnId}
-            title={source ? `${source.label}${source.date ? ` · ${source.date}` : ""}` : undefined}
-            className="mx-0.5 inline-flex -translate-y-px items-center rounded-md border bg-secondary px-1.5 align-middle font-mono text-[0.68rem] text-primary transition hover:border-primary/30 disabled:cursor-default">
+            title={source ? `${source.label}${source.date ? `, ${source.date}` : ""}` : undefined}
+            className="mx-0.5 inline-flex -translate-y-px items-center rounded border bg-muted px-1 align-middle font-mono text-[0.6875rem] text-muted-foreground transition-colors enabled:hover:border-input enabled:hover:text-foreground disabled:cursor-default">
             {match[1]}
           </button>
         )
@@ -66,10 +66,10 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
   const sources = message.sources ?? []
   if (!tools.length && !sources.length) return null
   return (
-    <div className="rounded-xl border bg-surface">
+    <div className="rounded-lg border bg-card">
       <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-foreground" aria-expanded={open}>
         <Wrench className="size-3.5" />
-        <span className="flex-1 text-left">How Faldo answered · {tools.length} tool{tools.length === 1 ? "" : "s"}{sources.length > 0 && ` · ${sources.length} source${sources.length === 1 ? "" : "s"}`}</span>
+        <span className="flex-1 text-left">How Faldo answered: {tools.length} tool{tools.length === 1 ? "" : "s"}{sources.length > 0 && `, ${sources.length} source${sources.length === 1 ? "" : "s"}`}</span>
         <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
@@ -86,18 +86,18 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
           </ol>
           {sources.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">Sources & context</p>
+              <p className="text-xs font-medium text-muted-foreground">Sources and context</p>
               <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 {sources.map((s) => {
                   const txnId = s.type === "transaction" ? s.id : s.type === "transaction_item" ? (s as Source & { transaction_id?: string }).transaction_id : undefined
                   return (
                     <li key={s.ref}>
                       <button type="button" disabled={!txnId} onClick={() => txnId && onOpenTransaction(txnId)}
-                        className="flex w-full items-start gap-2 rounded-lg border bg-card p-2 text-left text-xs transition enabled:hover:border-primary/30">
-                        <span className="rounded bg-muted px-1 font-mono text-[0.62rem] text-muted-foreground">{s.ref}</span>
+                        className="flex w-full items-start gap-2 rounded-md border bg-card p-2 text-left text-xs transition-colors enabled:hover:bg-accent/60">
+                        <span className="rounded bg-muted px-1 font-mono text-[0.625rem] text-muted-foreground">{s.ref}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{s.label}</span>
-                          <span className="block truncate text-muted-foreground">{s.type.replace(/_/g, " ")}{s.date && ` · ${formatDate(s.date, "MMM d, yyyy")}`}</span>
+                          <span className="block truncate text-muted-foreground">{s.type.replace(/_/g, " ")}{s.date && `, ${formatDate(s.date, "MMM d, yyyy")}`}</span>
                         </span>
                       </button>
                     </li>
@@ -106,7 +106,7 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
               </ul>
             </div>
           )}
-          <p className="flex items-center gap-1.5 text-[0.7rem] text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
             <ShieldCheck className="size-3" />
             {message.validation === "passed" && "Every figure in this answer was checked against tool results."}
             {message.validation === "repaired" && "The answer was rewritten after an unsupported figure was detected."}
@@ -128,29 +128,31 @@ function AssistantMessage({ message, onFollowUp, onOpenTransaction, onDraftsLogg
 }) {
   const runningStep = message.steps?.find((s) => s.state === "running")
   return (
-    <div className="flex gap-2.5">
-      <Mascot outfit={outfit} coin={false} className="mt-auto w-9 shrink-0" />
-      <div className="min-w-0 flex-1 space-y-3">
+    <div className="flex gap-3">
+      <span className="flex size-8 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-secondary" aria-hidden>
+        <Mascot outfit={outfit} coin={false} className="-mb-0.5 w-8" />
+      </span>
+      <div className="min-w-0 flex-1 space-y-3 pt-1">
         {message.logged && <LoggedCard transactions={message.logged} onOpen={onOpenTransaction} />}
         {message.drafts && <ReviewCard drafts={message.drafts} onLogged={onDraftsLogged} />}
         {message.steps && message.steps.length > 0 && message.streaming && !message.content && (
-          <ul className="space-y-1.5 rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3" aria-live="polite">
+          <ul className="space-y-1.5 py-0.5" aria-live="polite">
             {message.steps.map((step) => (
               <li key={step.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                {step.state === "running" ? <Loader2 className="size-3.5 animate-spin text-primary" /> : <Check className="size-3.5 text-primary" />}
+                {step.state === "running" ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : <Check className="size-3.5 text-primary" />}
                 {step.label}
               </li>
             ))}
           </ul>
         )}
         {message.streaming && !message.content && !runningStep && !message.steps?.length && (
-          <p className="flex w-fit items-center gap-1.5 rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3" aria-label="Thinking">
-            {[0, 1, 2].map((i) => <span key={i} className="size-2 animate-bounce rounded-full bg-muted-foreground/50" style={{ animationDelay: `${i * 120}ms` }} />)}
+          <p className="flex h-6 w-fit items-center gap-1" aria-label="Thinking">
+            {[0, 1, 2].map((i) => <span key={i} className="size-1.5 animate-pulse rounded-full bg-muted-foreground/60" style={{ animationDelay: `${i * 160}ms` }} />)}
           </p>
         )}
-        {message.error && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">{message.error}</p>}
+        {message.error && <p className="rounded-lg border border-destructive/20 bg-danger-soft px-4 py-3 text-sm text-destructive">{message.error}</p>}
         {message.content && (
-          <div className="rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3 shadow-(--shadow-card)">
+          <div>
             <RichText text={message.content} sources={message.sources ?? []} onOpenTransaction={onOpenTransaction} />
           </div>
         )}
@@ -167,7 +169,7 @@ function AssistantMessage({ message, onFollowUp, onOpenTransaction, onDraftsLogg
         {!message.streaming && message.follow_ups?.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {message.follow_ups.map((q) => (
-              <button key={q} type="button" onClick={() => onFollowUp(q)} className="pressable rounded-full border bg-card px-3 py-1.5 text-xs font-semibold text-foreground/80 hover:border-primary/30">{q}</button>
+              <button key={q} type="button" onClick={() => onFollowUp(q)} className="pressable rounded-lg border bg-card px-3 py-1.5 text-[0.8125rem] text-foreground/85 hover:bg-accent/60">{q}</button>
             ))}
           </div>
         )}
@@ -181,18 +183,18 @@ function Conversations({ activeId, onSelect, onNew }: { activeId: string | null;
   const { data = [] } = useQuery({ queryKey: ["conversations"], queryFn: () => api.get<{ id: string; title: string; updated_at: string }[]>("/assistant/conversations") })
   return (
     <div className="flex h-full flex-col gap-3">
-      <Button variant="outline" onClick={onNew} className="h-11 justify-start rounded-full bg-card font-bold"><PenSquare /> New chat</Button>
+      <Button variant="outline" onClick={onNew} className="justify-start"><PenSquare className="text-muted-foreground" /> New chat</Button>
       <ul className="-mx-1 flex-1 space-y-0.5 overflow-y-auto px-1">
         {data.length === 0 && <li className="px-2 py-4 text-xs text-muted-foreground">Your conversations appear here.</li>}
         {data.map((c) => (
           <li key={c.id} className="group relative">
             <button type="button" onClick={() => onSelect(c.id)}
-              className={cn("w-full rounded-lg px-2.5 py-2 pr-8 text-left text-sm transition-colors hover:bg-muted", activeId === c.id && "bg-accent text-accent-foreground")}>
+              className={cn("w-full rounded-lg px-2.5 py-2 pr-8 text-left text-sm transition-colors hover:bg-accent", activeId === c.id && "bg-accent font-medium")}>
               <span className="block truncate">{c.title}</span>
-              <span className="block text-xs text-muted-foreground">{timeAgo(c.updated_at)}</span>
+              <span className="block text-xs font-normal text-muted-foreground">{timeAgo(c.updated_at)}</span>
             </button>
             <button type="button" aria-label="Delete conversation" onClick={async () => { await api.delete(`/assistant/conversations/${c.id}`); qc.invalidateQueries({ queryKey: ["conversations"] }); if (activeId === c.id) onNew() }}
-              className="absolute top-2.5 right-1.5 rounded p-1 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100">
+              className="absolute top-2.5 right-1.5 rounded p-1 text-muted-foreground transition hover:text-destructive focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
               <Trash2 className="size-3.5" />
             </button>
           </li>
@@ -363,56 +365,55 @@ function AssistantView() {
   const outfit = me?.settings.mascot_outfit
 
   return (
-    <div className="flex h-dvh lg:h-[calc(100dvh-4rem)]">
-      <aside className="hidden w-72 shrink-0 border-r px-4 py-4 xl:block">
+    <div className="flex h-dvh">
+      <aside className="hidden w-64 shrink-0 border-r px-3 py-4 xl:block">
         <Conversations activeId={conversationId} onSelect={loadConversation} onNew={newConversation} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="glass z-10 flex items-center gap-2 border-b border-border/60 px-3 pt-safe sm:px-6">
-          <div className="flex h-16 w-full items-center gap-2">
-            <Link href="/" aria-label="Back to home" className="pressable flex size-10 shrink-0 items-center justify-center rounded-full border bg-card text-primary shadow-(--shadow-card) lg:hidden">
+        <div className="glass z-10 flex items-center gap-2 border-b border-border/70 px-3 pt-safe sm:px-6">
+          <div className="flex h-14 w-full items-center gap-2">
+            <Link href="/" aria-label="Back to home" className="pressable -ml-1 flex size-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-accent lg:hidden">
               <ChevronLeft className="size-5" />
             </Link>
-            <Mascot outfit={outfit} coin={false} className="w-10 shrink-0" />
             <div className="min-w-0 flex-1">
-              <h1 className="text-base font-extrabold tracking-tight">Chat with Faldo</h1>
-              <p className="truncate text-xs text-muted-foreground">Ask questions or log money in plain language.</p>
+              <h1 className="text-[0.9375rem] font-semibold">Chat with Faldo</h1>
+              <p className="truncate text-xs text-muted-foreground">Ask questions or log money in plain language</p>
             </div>
-            {devProvider && <span className="hidden rounded-full bg-warning-soft px-2.5 py-1 text-[0.65rem] font-bold text-warning sm:inline">Dev AI</span>}
-            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-foreground/80 xl:hidden"><History className="size-4.5" /></button>
-            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable flex size-10 items-center justify-center rounded-full border bg-card text-foreground/80"><PenSquare className="size-4.5" /></button>
+            {devProvider && <span className="hidden rounded-md bg-warning-soft px-2 py-1 text-[0.6875rem] font-medium text-warning sm:inline">Dev AI</span>}
+            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"><History className="size-[1.1rem]" strokeWidth={1.85} /></button>
+            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><PenSquare className="size-[1.1rem]" strokeWidth={1.85} /></button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 sm:px-6">
-          <div className="mx-auto max-w-3xl space-y-5 py-5">
+          <div className="mx-auto max-w-3xl space-y-6 py-6">
             {messages.length === 0 ? (
               <div className="animate-rise space-y-6">
-                <div className="flex gap-2.5">
-                  <Mascot outfit={outfit} coin={false} className="mt-auto w-12 shrink-0" />
-                  <div className="rounded-[1.4rem] rounded-bl-md border bg-card px-4 py-3 text-[0.95rem] leading-relaxed shadow-(--shadow-card)">
-                    <p>Hi {me?.display_name ?? "there"}! Ask me about your money, balances, or a specific account.</p>
-                    <p className="mt-2">You can also type or dictate transactions like <b>&ldquo;Spent 250 on food&rdquo;</b> or <b>&ldquo;Salary 15000&rdquo;</b> and I&apos;ll log them for you.</p>
-                  </div>
+                <div className="flex flex-col items-center pt-4 text-center sm:pt-10">
+                  <span className="flex size-16 items-end justify-center overflow-hidden rounded-xl bg-secondary" aria-hidden>
+                    <Mascot outfit={outfit} coin={false} className="-mb-1 w-15" />
+                  </span>
+                  <h2 className="mt-4 text-xl font-semibold tracking-[-0.02em]">Hi {me?.display_name?.split(" ")[0] ?? "there"}, how can I help?</h2>
+                  <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">Ask about your balances, spending or goals. You can also log money the way you&apos;d text it, like &ldquo;Spent 250 on food&rdquo;.</p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   {SUGGESTIONS.map((group) => (
                     <div key={group.group} className="space-y-2">
-                      <p className="eyebrow px-1">{group.group}</p>
+                      <p className="px-1 text-[0.8125rem] font-medium text-muted-foreground">{group.group}</p>
                       {group.items.map((q) => (
-                        <button key={q} type="button" onClick={() => ask(q)} className="pressable block w-full rounded-2xl border bg-card px-3.5 py-3 text-left text-sm font-medium shadow-(--shadow-card) hover:border-primary/25">
+                        <button key={q} type="button" onClick={() => ask(q)} className="pressable block w-full rounded-lg border bg-card px-3.5 py-2.5 text-left text-sm hover:bg-accent/60">
                           {q}
                         </button>
                       ))}
                     </div>
                   ))}
                 </div>
-                <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground"><BookText className="size-3.5" /> Faldo is not a licensed financial advisor. For investments, loans or insurance, talk to a professional.</p>
+                <p className="flex items-start justify-center gap-1.5 text-center text-xs text-muted-foreground"><BookText className="mt-px size-3.5 shrink-0" /> Faldo is not a licensed financial advisor. For investments, loans or insurance, talk to a professional.</p>
               </div>
             ) : (
               messages.map((m) => m.role === "user" ? (
                 <div key={m.id} className="flex justify-end pl-10">
-                  <p className="rounded-[1.4rem] rounded-br-md bg-primary px-4 py-2.5 text-[0.95rem] whitespace-pre-wrap text-primary-foreground shadow-(--shadow-card)">{m.content}</p>
+                  <p className="rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground">{m.content}</p>
                 </div>
               ) : (
                 <AssistantMessage key={m.id} message={m} onFollowUp={ask} onOpenTransaction={openTransaction} outfit={outfit}
@@ -423,8 +424,8 @@ function AssistantView() {
           </div>
         </div>
 
-        <div className="glass border-t border-border/60 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
-          <form onSubmit={(e) => { e.preventDefault(); ask(input) }} className="mx-auto max-w-3xl rounded-[1.5rem] border bg-card p-2 shadow-(--shadow-card)">
+        <div className="px-3 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-5">
+          <form onSubmit={(e) => { e.preventDefault(); ask(input) }} className="mx-auto max-w-3xl rounded-xl border bg-card p-2 shadow-(--shadow-float) transition-[border-color] focus-within:border-input">
             <label htmlFor="assistant-input" className="sr-only">Ask Faldo or log a transaction</label>
             <textarea
               id="assistant-input"
@@ -434,27 +435,27 @@ function AssistantView() {
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input) } }}
               rows={1}
               maxLength={1000}
-              placeholder="Ask a question or type an expense…"
-              className="max-h-40 min-h-11 w-full resize-none bg-transparent px-2.5 py-2 text-base outline-none field-sizing-content placeholder:text-muted-foreground/70 sm:text-[0.95rem]"
+              placeholder="Ask a question or type an expense"
+              className="max-h-40 min-h-11 w-full resize-none bg-transparent px-2.5 py-2 text-base outline-none field-sizing-content placeholder:text-muted-foreground/80 sm:text-[0.9375rem]"
             />
             <div className="flex items-center justify-end gap-2">
               {dictation.supported && (
                 <button type="button" onClick={dictation.toggle} aria-label={dictation.listening ? "Stop dictation" : "Dictate"} aria-pressed={dictation.listening}
-                  className={cn("pressable flex size-9 items-center justify-center rounded-full", dictation.listening ? "animate-pulse bg-expense-soft text-expense" : "text-primary hover:bg-secondary")}>
+                  className={cn("pressable flex size-9 items-center justify-center rounded-lg", dictation.listening ? "animate-pulse bg-expense-soft text-expense" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
                   {dictation.listening ? <MicOff className="size-4.5" /> : <Mic className="size-4.5" />}
                 </button>
               )}
               {busy ? (
-                <Button type="button" size="icon" variant="secondary" className="size-9 rounded-full" onClick={() => abortRef.current?.abort()} aria-label="Stop"><Square className="size-3.5" /></Button>
+                <Button type="button" size="icon" variant="secondary" onClick={() => abortRef.current?.abort()} aria-label="Stop"><Square className="size-3.5" /></Button>
               ) : (
-                <Button type="submit" size="icon" className="size-9 rounded-full" disabled={!input.trim()} aria-label="Send"><ArrowUp /></Button>
+                <Button type="submit" size="icon" disabled={!input.trim()} aria-label="Send"><ArrowUp /></Button>
               )}
             </div>
           </form>
         </div>
       </div>
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="left" className="w-80 p-4">
+        <SheetContent side="left" className="w-80 bg-popover p-4">
           <SheetHeader className="p-0"><SheetTitle>Conversations</SheetTitle></SheetHeader>
           <Conversations activeId={conversationId} onSelect={loadConversation} onNew={newConversation} />
         </SheetContent>

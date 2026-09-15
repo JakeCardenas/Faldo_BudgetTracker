@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils"
 
 function Frame({ title, children, badge = true }: { title: string; children: React.ReactNode; badge?: boolean }) {
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2.5">
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
         <p className="truncate text-sm font-medium">{title}</p>
-        {badge && <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[0.68rem] font-medium text-primary">From your data</span>}
+        {badge && <span className="shrink-0 text-xs text-muted-foreground">From your data</span>}
       </div>
       <div className="p-4">{children}</div>
     </div>
@@ -27,9 +27,9 @@ export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTr
     case "risk": {
       const Icon = block.level === "low" ? ShieldCheck : block.level === "medium" ? ShieldQuestion : ShieldAlert
       return (
-        <div className={cn("space-y-2 rounded-2xl border p-4", block.level === "high" && "border-destructive/20 bg-danger-soft/50", block.level === "medium" && "border-warning/20 bg-warning-soft/50", block.level === "low" && "bg-mint/40")}>
+        <div className={cn("space-y-2 rounded-lg border p-4", block.level === "high" && "border-destructive/20 bg-danger-soft/50", block.level === "medium" && "border-warning/20 bg-warning-soft/50", block.level === "low" && "bg-secondary/50")}>
           <div className="flex items-center gap-2"><Icon className="size-4" /><RiskBadge level={block.level} verdict={block.verdict} /></div>
-          {block.reasons.length > 0 && <ul className="space-y-1 text-sm text-muted-foreground">{block.reasons.map((r) => <li key={r}>• {r}</li>)}</ul>}
+          {block.reasons.length > 0 && <ul className="space-y-1 text-sm text-muted-foreground">{block.reasons.map((r) => <li key={r} className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" />{r}</li>)}</ul>}
         </div>
       )
     }
@@ -69,7 +69,7 @@ export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTr
               <li key={t.id}>
                 <button type="button" onClick={() => onOpenTransaction?.(t.id)} className="flex w-full items-center gap-3 py-2 text-left text-sm hover:text-primary">
                   <span className="rounded bg-muted px-1.5 font-mono text-[0.65rem] text-muted-foreground">{t.ref}</span>
-                  <span className="min-w-0 flex-1 truncate">{t.merchant ?? t.category ?? "Transaction"} <span className="text-xs text-muted-foreground">· {formatDate(t.date, "MMM d")} · {t.account}</span></span>
+                  <span className="min-w-0 flex-1 truncate">{t.merchant ?? t.category ?? "Transaction"} <span className="text-xs text-muted-foreground">{formatDate(t.date, "MMM d")}, {t.account}</span></span>
                   <span className="tabular">{formatMoney(t.type === "expense" ? -t.amount_minor : t.amount_minor)}</span>
                 </button>
               </li>
@@ -123,7 +123,7 @@ export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTr
             {block.items.slice(0, 12).map((item, i) => (
               <li key={`${item.label}-${i}`} className="flex items-center gap-3 py-2 text-sm">
                 <span className="min-w-0 flex-1"><span className="block truncate">{item.label}</span>{item.hint && <span className="block truncate text-xs text-muted-foreground">{item.hint}</span>}</span>
-                <span className={cn("tabular", item.amount_minor > 0 && block.title !== "Counted in this total" && block.title !== "Recurring payments" && "text-emerald")}>{formatMoney(item.amount_minor)}</span>
+                <span className={cn("tabular", item.amount_minor > 0 && block.title !== "Counted in this total" && block.title !== "Recurring payments" && "text-income")}>{formatMoney(item.amount_minor)}</span>
               </li>
             ))}
           </ul>
@@ -137,7 +137,7 @@ export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTr
         <Frame title="Financial health">
           {block.score === null ? <p className="text-sm text-muted-foreground">Not enough history yet ({block.history_days} days).</p> : (
             <div className="space-y-3">
-              <p><span className="text-3xl font-semibold">{block.score}</span> <span className="text-sm text-muted-foreground">/ 100 · {block.label}</span></p>
+              <p><span className="tabular text-3xl font-semibold tracking-[-0.02em]">{block.score}</span> <span className="text-sm text-muted-foreground">of 100, {block.label}</span></p>
               <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {block.components.filter((c) => c.counted).map((c) => (
                   <li key={c.key} className="text-sm"><div className="flex justify-between"><span>{c.label}</span><span className="tabular">{c.score}</span></div><ProgressBar value={c.score ?? 0} label={c.label} className="mt-1 h-1.5" /></li>

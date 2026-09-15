@@ -23,10 +23,10 @@ export function CategoryIcon({ icon, color, size = "md", className }: { icon?: s
         size === "lg" && "size-11 [&_svg]:size-5",
         className,
       )}
-      style={{ backgroundColor: `${tint}14`, color: tint }}
+      style={{ backgroundColor: `color-mix(in oklab, ${tint} 13%, transparent)`, color: tint }}
       aria-hidden
     >
-      <Icon strokeWidth={1.9} />
+      <Icon strokeWidth={1.85} />
     </span>
   )
 }

@@ -14,7 +14,6 @@ import { CommandSearch } from "@/components/layout/command-search"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { MoreSheet } from "@/components/layout/more-sheet"
 import { Sidebar } from "@/components/layout/sidebar"
-import { Topbar } from "@/components/layout/topbar"
 import { useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Receipt } from "@/lib/types"
@@ -80,19 +79,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <>
           <SplashContent className="boot-full min-h-dvh" />
           <div className="boot-quiet flex min-h-dvh items-center justify-center">
-            <Image src="/brand/faldo-icon.svg" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
+            <Image src="/brand/icon-512.png" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
           </div>
         </>
       ) : (
         <AppActionsContext.Provider value={actions}>
-          <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow">Skip to content</a>
+          <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
           <div className="flex min-h-dvh">
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col">
-              <Topbar />
               <main id="main" key={pathname} className={fullBleed
                 ? "w-full flex-1"
-                : "animate-rise mx-auto w-full max-w-[1200px] flex-1 px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-12"}>
+                : "animate-rise mx-auto w-full max-w-[1120px] flex-1 px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pb-16"}>
                 {children}
               </main>
             </div>

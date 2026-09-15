@@ -167,7 +167,7 @@ export default function BillsPage() {
         </p>
       </div>
       <div className="text-right">
-        <Money minor={item.kind === "income" ? item.amount_minor : -item.amount_minor} signed={item.kind === "income"} className={cn("text-sm font-medium", item.kind === "income" && "text-emerald")} />
+        <Money minor={item.kind === "income" ? item.amount_minor : -item.amount_minor} signed={item.kind === "income"} className={cn("text-sm font-medium", item.kind === "income" && "text-income")} />
         {item.is_amount_variable && <p className="text-[0.7rem] text-muted-foreground">varies</p>}
       </div>
       <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => setDialog({ mode: "pay", item })} disabled={!item.is_active}><Check /> {item.kind === "income" ? "Received" : "Paid"}</Button>
@@ -185,16 +185,16 @@ export default function BillsPage() {
   )
 
   return (
-    <div className="space-y-5 pt-2">
+    <div className="space-y-5">
       <PageHeader title="Bills & recurring" description="Rent, utilities, subscriptions, loans and expected income." actions={<Button onClick={() => setDialog({ mode: "new" })}><Plus /> Add recurring</Button>} />
-      {isLoading ? <Skeleton className="h-96 rounded-2xl" /> : !items?.length ? (
+      {isLoading ? <Skeleton className="h-96 rounded-xl" /> : !items?.length ? (
         <div className="card-surface"><EmptyState icon={CalendarClock} title="No recurring payments yet" description="Add rent, Meralco, internet or Netflix so Faldo can forecast your month accurately." action={<Button onClick={() => setDialog({ mode: "new" })}><Plus /> Add your first bill</Button>} /></div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Monthly commitments</p><Money minor={monthly} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">{formatMoney(monthly * 12)} a year</p></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Subscriptions</p><Money minor={subscriptions} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">per month</p></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Due in 7 days</p><Money minor={dueSoon} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">{outflows.filter((i) => i.days_until_due <= 7).length} payments</p></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Monthly commitments</p><Money minor={monthly} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">{formatMoney(monthly * 12)} a year</p></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Subscriptions</p><Money minor={subscriptions} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">per month</p></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Due in 7 days</p><Money minor={dueSoon} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">{outflows.filter((i) => i.days_until_due <= 7).length} payments</p></div>
           </div>
           <SectionCard title="Payments" bodyClassName="pt-1"><ul className="divide-y">{outflows.map(row)}</ul></SectionCard>
           {active.some((i) => i.kind === "income") && <SectionCard title="Expected income" bodyClassName="pt-1"><ul className="divide-y">{(items ?? []).filter((i) => i.kind === "income").map(row)}</ul></SectionCard>}

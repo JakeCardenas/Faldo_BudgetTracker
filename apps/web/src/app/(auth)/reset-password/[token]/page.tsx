@@ -38,7 +38,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
   return (
     <div className="space-y-7">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Choose a new password</h1>
+        <h1 className="text-2xl font-semibold tracking-[-0.025em]">Choose a new password</h1>
         <p className="text-sm text-muted-foreground">You'll be signed out on your other devices.</p>
       </div>
       <form onSubmit={submit} className="space-y-4">

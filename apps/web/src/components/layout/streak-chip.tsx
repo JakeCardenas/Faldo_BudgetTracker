@@ -10,10 +10,10 @@ export function StreakChip({ className }: { className?: string }) {
   const streak = data?.current_streak ?? 0
   return (
     <Link href="/streaks" aria-label={`${streak}-day streak`}
-      className={cn("pressable flex h-9 items-center gap-1 rounded-full px-3 text-sm font-extrabold",
-        data?.logged_today ? "bg-[#fff0e0] text-[#c75a12] dark:bg-[#3a2716] dark:text-[#ffb26b]" : "bg-muted text-muted-foreground", className)}>
-      <Flame className={cn("size-4", data?.logged_today && "animate-flicker fill-current")} strokeWidth={2.2} />
-      <span className="tabular">x{streak}</span>
+      className={cn("pressable flex h-8 items-center gap-1 rounded-lg px-2 text-[0.8125rem] font-semibold hover:bg-accent",
+        data?.logged_today ? "text-warning" : "text-muted-foreground", className)}>
+      <Flame className={cn("size-4", data?.logged_today && "fill-warning/20")} strokeWidth={2} />
+      <span className="tabular">{streak}</span>
     </Link>
   )
 }

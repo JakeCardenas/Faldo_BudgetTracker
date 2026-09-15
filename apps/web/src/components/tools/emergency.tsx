@@ -33,26 +33,26 @@ export function EmergencyFund() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="card-surface space-y-4 p-5">
-        <button type="button" onClick={useMyNumbers} className="pressable flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-secondary text-sm font-bold text-secondary-foreground">
-          <Wand2 className="size-4" /> Fill in from my Faldo data
+        <button type="button" onClick={useMyNumbers} className="pressable flex h-11 w-full items-center justify-center gap-2 rounded-lg border bg-card text-sm font-medium hover:bg-accent">
+          <Wand2 className="size-4 text-muted-foreground" /> Fill in from my Faldo data
         </button>
-        <Field label="Monthly essential expenses" hint="Rent, food, bills, transport and minimum debt payments."><AmountInput value={essentials} onValueChange={setEssentials} placeholder="15,000" className="h-12 rounded-2xl" /></Field>
-        <Field label="Already saved for emergencies"><AmountInput value={saved} onValueChange={setSaved} placeholder="0" className="h-12 rounded-2xl" /></Field>
-        <div className="space-y-1.5"><p className="eyebrow">Months of cover</p>
+        <Field label="Monthly essential expenses" hint="Rent, food, bills, transport and minimum debt payments."><AmountInput value={essentials} onValueChange={setEssentials} placeholder="15,000" className="h-11" /></Field>
+        <Field label="Already saved for emergencies"><AmountInput value={saved} onValueChange={setSaved} placeholder="0" className="h-11" /></Field>
+        <div className="space-y-1.5"><p className="text-[0.8125rem] text-muted-foreground">Months of cover</p>
           <Segmented label="Months of cover" className="w-full" value={months} onChange={setMonths} options={["3", "6", "9", "12"].map((m) => ({ value: m as "3", label: `${m} mo` }))} /></div>
-        <div className="space-y-1.5"><p className="eyebrow">Reach it in</p>
+        <div className="space-y-1.5"><p className="text-[0.8125rem] text-muted-foreground">Reach it in</p>
           <Segmented label="Timeline" className="w-full" value={timeline} onChange={setTimeline} options={[{ value: "6", label: "6 months" }, { value: "12", label: "1 year" }, { value: "24", label: "2 years" }]} /></div>
       </section>
       <section className="card-surface flex flex-col p-5">
-        <p className="eyebrow">Your emergency fund target</p>
-        <p className="tabular text-4xl font-extrabold tracking-tight text-primary">{formatMoney(target)}</p>
-        <div className="mt-3 h-3 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${pct}%` }} /></div>
+        <p className="text-[0.8125rem] text-muted-foreground">Your emergency fund target</p>
+        <p className="tabular mt-1 text-[2.25rem] leading-tight font-semibold tracking-[-0.03em]">{formatMoney(target)}</p>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${pct}%` }} /></div>
         <p className="mt-1 text-xs text-muted-foreground">{pct.toFixed(0)}% funded</p>
         <div className="mt-4 flex-1">
           <ResultRow label="Still to save" value={formatMoney(gap)} />
           <ResultRow label={`Save per month for ${timeline} months`} value={formatMoney(monthly)} strong />
         </div>
-        <Link href="/goals" className="pressable mt-4 flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground">Create an emergency fund goal <ArrowRight className="size-4" /></Link>
+        <Link href="/goals" className="pressable mt-4 flex h-11 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90">Create an emergency fund goal <ArrowRight className="size-4" /></Link>
       </section>
       <div className="lg:col-span-2"><Disclaimer>3 to 6 months of essentials is a common rule of thumb. Freelancers and single-income families often aim higher.</Disclaimer></div>
     </div>

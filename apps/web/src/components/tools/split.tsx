@@ -56,49 +56,49 @@ export function SplitBill() {
       <section className="card-surface space-y-4 p-5">
         <div className="grid grid-cols-[1fr_9rem] gap-3">
           <Field label="What for"><input value={what} onChange={(e) => setWhat(e.target.value)} maxLength={60} className={inputClass} /></Field>
-          <Field label="Total bill"><AmountInput value={total} onValueChange={setTotal} className="h-12 rounded-2xl" /></Field>
+          <Field label="Total bill"><AmountInput value={total} onValueChange={setTotal} className="h-11" /></Field>
         </div>
         <Segmented label="Split mode" className="w-full" value={mode} onChange={setMode} options={[{ value: "equal", label: "Split equally" }, { value: "custom", label: "Custom amounts" }]} />
-        <label className="flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3">
-          <span className="flex items-center gap-2 text-sm font-semibold"><UserRound className="size-4 text-primary" /> Include my share</span>
+        <label className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
+          <span className="flex items-center gap-2 text-sm"><UserRound className="size-4 text-muted-foreground" /> Include my share</span>
           <input type="checkbox" checked={includeMe} onChange={(e) => setIncludeMe(e.target.checked)} className="size-5 accent-[var(--primary)]" />
         </label>
         <div className="space-y-2">
-          <p className="eyebrow">Friends</p>
+          <p className="text-[0.8125rem] text-muted-foreground">Friends</p>
           {people.map((person, i) => (
             <div key={person.id} className="flex items-center gap-2">
               <input value={person.name} onChange={(e) => setPeople(people.map((p) => p.id === person.id ? { ...p, name: e.target.value } : p))}
                 placeholder="Name" maxLength={80} className={cn(inputClass, "flex-1")} aria-label={`Friend ${i + 1} name`} />
               {mode === "custom" ? (
-                <AmountInput value={person.custom} onValueChange={(v) => setPeople(people.map((p) => p.id === person.id ? { ...p, custom: v } : p))} className="h-12 w-32 rounded-2xl" aria-label={`${person.name} share`} />
-              ) : <span className="tabular w-24 text-right text-sm font-bold">{formatMoney(equalShare)}</span>}
+                <AmountInput value={person.custom} onValueChange={(v) => setPeople(people.map((p) => p.id === person.id ? { ...p, custom: v } : p))} className="h-11 w-32" aria-label={`${person.name} share`} />
+              ) : <span className="tabular w-24 text-right text-sm font-medium">{formatMoney(equalShare)}</span>}
               <button type="button" onClick={() => setPeople(people.filter((p) => p.id !== person.id))} aria-label="Remove friend" className="pressable flex size-10 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></button>
             </div>
           ))}
           <button type="button" onClick={() => setPeople([...people, { id: Date.now(), name: "", custom: mode === "custom" ? minorToInput(equalShare) : "" }])}
-            className="pressable flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-dashed text-sm font-bold text-primary"><Plus className="size-4" /> Add friend</button>
+            className="pressable flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed text-sm font-medium text-primary"><Plus className="size-4" /> Add friend</button>
         </div>
         <Field label="Pay back by (optional)"><input type="date" value={dueOn} min={todayISO()} onChange={(e) => setDueOn(e.target.value)} className={inputClass} /></Field>
       </section>
 
       <section className="card-surface flex flex-col p-5">
-        <div className="rounded-[1.4rem] bg-gradient-to-br from-hero to-hero-deep p-5 text-white">
-          <p className="text-xs font-semibold text-white/80">Friendly reminder from Faldo</p>
-          <p className="mt-1 text-lg font-extrabold">{people[0]?.name || "Your friend"} still owes you</p>
-          <p className="tabular text-3xl font-extrabold">{formatMoney(shares[0] ?? 0)}</p>
-          <p className="mt-1 text-xs text-white/75">For {what || "the bill"}</p>
+        <div className="rounded-lg bg-muted/60 p-4">
+          <p className="text-[0.8125rem] text-muted-foreground">Friendly reminder from Faldo</p>
+          <p className="mt-1 text-lg font-semibold">{people[0]?.name || "Your friend"} still owes you</p>
+          <p className="tabular text-3xl font-semibold">{formatMoney(shares[0] ?? 0)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">For {what || "the bill"}</p>
         </div>
         <ul className="mt-4 flex-1 divide-y divide-border/60">
-          {includeMe && <li className="flex justify-between py-2 text-sm"><span className="font-semibold">You</span><span className={cn("tabular font-bold", myShare < 0 && "text-expense")}>{formatMoney(myShare)}</span></li>}
-          {people.map((p, i) => <li key={p.id} className="flex justify-between py-2 text-sm"><span>{p.name || "Friend"}</span><span className="tabular font-bold text-income">{formatMoney(shares[i])}</span></li>)}
+          {includeMe && <li className="flex justify-between py-2 text-sm"><span className="font-semibold">You</span><span className={cn("tabular font-medium", myShare < 0 && "text-expense")}>{formatMoney(myShare)}</span></li>}
+          {people.map((p, i) => <li key={p.id} className="flex justify-between py-2 text-sm"><span>{p.name || "Friend"}</span><span className="tabular font-medium text-income">{formatMoney(shares[i])}</span></li>)}
         </ul>
         {!includeMe && myShare > 0 && mode === "equal" && <p className="text-xs text-muted-foreground">₱{(myShare / 100).toFixed(2)} left over from rounding stays with you.</p>}
         {myShare < 0 && <p className="text-xs font-semibold text-expense">The shares add up to more than the bill.</p>}
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <button type="button" onClick={() => openAddTransaction({ mode: "expense", preset: { amount_minor: totalMinor, note: what } })}
-            className="pressable flex h-12 items-center justify-center gap-2 rounded-2xl border bg-card text-sm font-bold"><Receipt className="size-4" /> Log the bill</button>
+            className="pressable flex h-11 items-center justify-center gap-2 rounded-lg border bg-card text-sm font-medium"><Receipt className="size-4" /> Log the bill</button>
           <button type="button" onClick={create} disabled={!valid || saving}
-            className="pressable flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-40"><Users className="size-4" /> {saving ? "Saving…" : "Track who owes"}</button>
+            className="pressable flex h-11 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"><Users className="size-4" /> {saving ? "Saving…" : "Track who owes"}</button>
         </div>
       </section>
       <div className="lg:col-span-2"><Disclaimer>Each friend's share is saved in Debt &amp; owed, where you can record payments as they pay you back.</Disclaimer></div>

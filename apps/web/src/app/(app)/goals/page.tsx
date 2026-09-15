@@ -19,18 +19,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, formatPct, minorToInput, toMinor, todayISO } from "@/lib/format"
+import { GOAL_ICONS, GoalIcon, goalIconId } from "@/lib/goal-icons"
 import { invalidateFinancialData, useAccounts, useGoals } from "@/lib/queries"
 import type { Goal } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 const NONE = "__none__"
-const EMOJIS = ["💻", "🛟", "✈️", "📱", "🎓", "🏠", "🚗", "💍", "🎯"]
 
 function GoalDialog({ goal, open, onOpenChange }: { goal?: Goal; open: boolean; onOpenChange: (open: boolean) => void }) {
   const qc = useQueryClient()
   const { data: accounts = [] } = useAccounts()
   const [name, setName] = useState(goal?.name ?? "")
-  const [emoji, setEmoji] = useState(goal?.emoji ?? "🎯")
+  const [emoji, setEmoji] = useState(goalIconId(goal?.emoji))
   const [target, setTarget] = useState(minorToInput(goal?.target_minor))
   const [date, setDate] = useState(goal?.target_date ?? "")
   const [monthly, setMonthly] = useState(minorToInput(goal?.monthly_contribution_minor))
@@ -63,11 +63,16 @@ function GoalDialog({ goal, open, onOpenChange }: { goal?: Goal; open: boolean; 
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>{goal ? "Edit goal" : "New savings goal"}</DialogTitle><DialogDescription>Faldo calculates the monthly amount and projected date for you.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div className="flex gap-1.5">
-            {EMOJIS.map((e) => (
-              <button key={e} type="button" onClick={() => setEmoji(e)} aria-label={`Icon ${e}`}
-                className={cn("flex size-9 items-center justify-center rounded-lg border text-lg transition", emoji === e ? "border-primary bg-accent" : "hover:bg-muted")}>{e}</button>
-            ))}
+          <div className="space-y-1.5">
+            <Label>Icon</Label>
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Goal icon">
+              {GOAL_ICONS.map(({ id, label, icon: Icon }) => (
+                <button key={id} type="button" role="radio" aria-checked={emoji === id} onClick={() => setEmoji(id)} aria-label={label} title={label}
+                  className={cn("pressable flex size-9 items-center justify-center rounded-lg border transition-colors", emoji === id ? "border-primary/50 bg-secondary text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
+                  <Icon className="size-4" strokeWidth={1.85} />
+                </button>
+              ))}
+            </div>
           </div>
           <div className="space-y-1.5"><Label htmlFor="goal-name">Name</Label><Input id="goal-name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. MacBook Air" /></div>
           <div className="grid grid-cols-2 gap-3">
@@ -162,10 +167,10 @@ function GoalCard({ goal, onEdit, onContribute }: { goal: Goal; onEdit: () => vo
     <div className="card-surface flex flex-col gap-4 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-xl" aria-hidden>{goal.emoji ?? "🎯"}</span>
+          <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-foreground/75" aria-hidden><GoalIcon value={goal.emoji} className="size-5" /></span>
           <div>
             <p className="font-semibold">{goal.name}</p>
-            <p className={cn("text-xs", goal.on_track === false ? "text-warning" : "text-muted-foreground")}>{tone}{goal.linked_account_name && ` · ${goal.linked_account_name}`}</p>
+            <p className={cn("text-xs", goal.on_track === false ? "text-warning" : "text-muted-foreground")}>{tone}{goal.linked_account_name && `, ${goal.linked_account_name}`}</p>
           </div>
         </div>
         <DropdownMenu>
@@ -179,21 +184,21 @@ function GoalCard({ goal, onEdit, onContribute }: { goal: Goal; onEdit: () => vo
       </div>
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-2">
-          <p><Money minor={goal.saved_minor} className="text-2xl font-semibold tracking-tight" /> <span className="text-sm text-muted-foreground">of {formatMoney(goal.target_minor)}</span></p>
+          <p><Money minor={goal.saved_minor} className="text-2xl font-semibold tracking-[-0.025em]" /> <span className="text-sm text-muted-foreground">of {formatMoney(goal.target_minor)}</span></p>
           <span className="tabular text-sm font-medium">{formatPct(goal.pct_complete)}</span>
         </div>
-        <ProgressBar value={goal.pct_complete} status={goal.on_track === false ? "behind" : "on_track"} className="h-2.5" label={`${goal.name} ${goal.pct_complete}% complete`} />
+        <ProgressBar value={goal.pct_complete} status={goal.on_track === false ? "behind" : "on_track"} className="h-1.5" label={`${goal.name} ${goal.pct_complete}% complete`} />
       </div>
-      <dl className="grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-3 text-xs">
-        <div><dt className="text-muted-foreground">Target date</dt><dd className="font-medium">{goal.target_date ? formatDate(goal.target_date, "MMM d, yyyy") : "—"}</dd></div>
+      <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/50 p-3 text-xs">
+        <div><dt className="text-muted-foreground">Target date</dt><dd className="font-medium">{goal.target_date ? formatDate(goal.target_date, "MMM d, yyyy") : "Not set"}</dd></div>
         <div><dt className="text-muted-foreground">Remaining</dt><dd className="tabular font-medium">{formatMoney(goal.remaining_minor)}</dd></div>
-        <div><dt className="text-muted-foreground">Required monthly</dt><dd className="tabular font-medium">{goal.required_monthly_minor ? formatMoney(goal.required_monthly_minor) : "—"}</dd></div>
+        <div><dt className="text-muted-foreground">Required monthly</dt><dd className="tabular font-medium">{goal.required_monthly_minor ? formatMoney(goal.required_monthly_minor) : "Not set"}</dd></div>
         <div><dt className="text-muted-foreground">{goal.monthly_contribution_minor ? "Planned monthly" : "Avg. monthly"}</dt><dd className="tabular font-medium">{formatMoney(goal.monthly_contribution_minor ?? goal.average_monthly_minor)}</dd></div>
       </dl>
       <div className="flex items-center gap-2 text-sm">
         {goal.projected_completion_on ? <CalendarCheck className="size-4 text-primary" /> : <TrendingUp className="size-4 text-muted-foreground" />}
         <span className="text-muted-foreground">
-          {goal.status === "completed" ? "Goal reached 🎉" : goal.projected_completion_on ? <>Estimated completion <span className="font-medium text-foreground">{formatDate(goal.projected_completion_on, "MMMM yyyy")}</span></> : "Add a contribution to see a projection"}
+          {goal.status === "completed" ? "Goal reached" : goal.projected_completion_on ? <>Estimated completion <span className="font-medium text-foreground">{formatDate(goal.projected_completion_on, "MMMM yyyy")}</span></> : "Add a contribution to see a projection"}
         </span>
       </div>
       <Button variant="outline" onClick={onContribute} className="mt-auto" disabled={goal.status === "completed"}><Plus /> {goal.linked_account_id ? "Transfer to savings" : "Add contribution"}</Button>
@@ -211,17 +216,17 @@ export default function GoalsPage() {
   const monthly = goals?.reduce((s, g) => s + (g.monthly_contribution_minor ?? 0), 0) ?? 0
 
   return (
-    <div className="space-y-5 pt-2">
-      <PageHeader title="Savings goals" description="Targets, required monthly savings and projected dates, calculated from your data."
-        actions={<><Button variant="outline" asChild className="hidden sm:inline-flex"><Link href="/assistant?q=When%20can%20I%20afford%20my%20MacBook%3F"><Sparkles /> Ask about goals</Link></Button><Button onClick={() => setCreating(true)}><Plus /> New goal</Button></>} />
-      {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-96 rounded-2xl" />)}</div> : !goals?.length ? (
+    <div className="space-y-5">
+      <PageHeader title="Goals" description="Targets, monthly savings and projected dates from your data"
+        actions={<><Button variant="outline" asChild className="hidden sm:inline-flex"><Link href="/assistant?q=When%20can%20I%20afford%20my%20MacBook%3F"><Sparkles className="text-muted-foreground" /> Ask about goals</Link></Button><Button onClick={() => setCreating(true)}><Plus /> New goal</Button></>} />
+      {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-96 rounded-xl" />)}</div> : !goals?.length ? (
         <div className="card-surface"><EmptyState icon={Target} title="What are you saving for?" description="A MacBook, an emergency fund, a trip to Japan. Faldo tells you how much to set aside and when you'll get there." action={<Button onClick={() => setCreating(true)}><Plus /> Create your first goal</Button>} /></div>
       ) : (
         <>
           <div className="card-surface grid gap-4 p-5 sm:grid-cols-3">
-            <div><p className="text-sm text-muted-foreground">Total saved</p><Money minor={totalSaved} className="text-2xl font-semibold tracking-tight" /></div>
-            <div><p className="text-sm text-muted-foreground">Across all targets</p><Money minor={totalTarget} className="text-2xl font-semibold tracking-tight" /></div>
-            <div><p className="text-sm text-muted-foreground">Planned per month</p><Money minor={monthly} className="text-2xl font-semibold tracking-tight" /></div>
+            <div><p className="text-[0.8125rem] text-muted-foreground">Total saved</p><Money minor={totalSaved} className="block text-2xl font-semibold tracking-[-0.025em]" /></div>
+            <div><p className="text-[0.8125rem] text-muted-foreground">Across all targets</p><Money minor={totalTarget} className="block text-2xl font-semibold tracking-[-0.025em]" /></div>
+            <div><p className="text-[0.8125rem] text-muted-foreground">Planned per month</p><Money minor={monthly} className="block text-2xl font-semibold tracking-[-0.025em]" /></div>
           </div>
           <div className="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {goals.map((g) => <GoalCard key={g.id} goal={g} onEdit={() => setEditing(g)} onContribute={() => setContributing(g)} />)}

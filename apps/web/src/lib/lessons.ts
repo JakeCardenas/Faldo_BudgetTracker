@@ -1,7 +1,11 @@
+import {
+  Calculator, CalendarRange, CreditCard, LifeBuoy, PiggyBank, ShieldCheck, ShoppingBag, Snowflake, TrendingDown, TrendingUp, type LucideIcon,
+} from "lucide-react"
+
 export interface Lesson {
   slug: string
   title: string
-  emoji: string
+  icon: LucideIcon
   level: "Foundations" | "Growing" | "Advanced"
   minutes: number
   summary: string
@@ -15,7 +19,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "budget-50-30-20",
     title: "50/30/20, but make it real",
-    emoji: "🧮",
+    icon: Calculator,
     level: "Foundations",
     minutes: 3,
     summary: "A simple way to split your income into needs, wants and savings.",
@@ -54,7 +58,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "emergency-fund",
     title: "Emergency fund first",
-    emoji: "🛟",
+    icon: LifeBuoy,
     level: "Foundations",
     minutes: 3,
     summary: "Why a cash cushion comes before investing, and how big it should be.",
@@ -79,7 +83,7 @@ export const LESSONS: Lesson[] = [
         ],
       },
     ],
-    takeaways: ["Target 3–6 months of essential expenses.", "Start small with a ₱10,000 mini fund.", "Keep it liquid and separate from daily spending."],
+    takeaways: ["Target 3 to 6 months of essential expenses.", "Start small with a ₱10,000 mini fund.", "Keep it liquid and separate from daily spending."],
     quiz: {
       question: "Your essential expenses are ₱20,000 a month. What's a solid emergency fund target?",
       options: ["₱5,000", "₱20,000", "₱60,000 to ₱120,000", "₱500,000"],
@@ -91,7 +95,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "compound-interest",
     title: "Compound interest works both ways",
-    emoji: "📈",
+    icon: TrendingUp,
     level: "Foundations",
     minutes: 4,
     summary: "Small, steady amounts grow big over time. Debt grows the same way.",
@@ -127,7 +131,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "credit-cards",
     title: "Credit cards without the debt trap",
-    emoji: "💳",
+    icon: CreditCard,
     level: "Growing",
     minutes: 4,
     summary: "Use cards for rewards and convenience, never as extra income.",
@@ -164,7 +168,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "debt-snowball-avalanche",
     title: "Snowball vs. avalanche",
-    emoji: "⛷️",
+    icon: Snowflake,
     level: "Growing",
     minutes: 3,
     summary: "Two proven ways to pay off several debts, and how to pick one.",
@@ -198,7 +202,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "sinking-funds",
     title: "Sinking funds for the big months",
-    emoji: "🎄",
+    icon: CalendarRange,
     level: "Growing",
     minutes: 3,
     summary: "Christmas, school fees and birthdays aren't surprises. Plan for them.",
@@ -229,7 +233,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "government-benefits",
     title: "SSS, PhilHealth and Pag-IBIG",
-    emoji: "🏛️",
+    icon: ShieldCheck,
     level: "Growing",
     minutes: 4,
     summary: "What your mandatory contributions are for, and why they're worth keeping up.",
@@ -267,7 +271,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "where-to-keep-money",
     title: "Where to keep your money",
-    emoji: "🏦",
+    icon: PiggyBank,
     level: "Growing",
     minutes: 3,
     summary: "E-wallets, digital banks and traditional banks each have a job.",
@@ -298,7 +302,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "inflation",
     title: "Why savings shrink: inflation",
-    emoji: "🎈",
+    icon: TrendingDown,
     level: "Advanced",
     minutes: 3,
     summary: "Prices rise every year. Your money needs to keep up.",
@@ -329,7 +333,7 @@ export const LESSONS: Lesson[] = [
   {
     slug: "impulse-spending",
     title: "Tame the impulse buy",
-    emoji: "🛍️",
+    icon: ShoppingBag,
     level: "Advanced",
     minutes: 3,
     summary: "Small tricks that stop sale notifications from draining your wallet.",

@@ -116,14 +116,14 @@ export default function DebtsPage() {
   }
 
   return (
-    <div className="space-y-5 pt-2">
+    <div className="space-y-5">
       <PageHeader title="Money owed" description="What you owe and what others owe you." actions={<Button onClick={() => setCreating(true)}><Plus /> Add record</Button>} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="card-surface p-5"><p className="text-sm text-muted-foreground">You owe</p><Money minor={iOwe} className="text-2xl font-semibold tracking-tight" /></div>
-        <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Owed to you</p><Money minor={owedToMe} className="text-2xl font-semibold tracking-tight text-emerald" /></div>
+        <div className="card-surface p-5"><p className="text-sm text-muted-foreground">You owe</p><Money minor={iOwe} className="text-2xl font-semibold tracking-[-0.025em]" /></div>
+        <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Owed to you</p><Money minor={owedToMe} className="text-2xl font-semibold tracking-[-0.025em] text-income" /></div>
       </div>
       <Tabs value={tab} onValueChange={setTab}><TabsList><TabsTrigger value="open">Open</TabsTrigger><TabsTrigger value="closed">Settled</TabsTrigger></TabsList></Tabs>
-      {isLoading ? <Skeleton className="h-64 rounded-2xl" /> : list.length === 0 ? (
+      {isLoading ? <Skeleton className="h-64 rounded-xl" /> : list.length === 0 ? (
         <div className="card-surface"><EmptyState icon={HandCoins} title={tab === "open" ? "Nothing owed right now" : "No settled records"} description="Track loans, bill splits and IOUs so nothing slips through." action={tab === "open" ? <Button variant="outline" onClick={() => setCreating(true)}><Plus /> Add record</Button> : undefined} /></div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -131,7 +131,7 @@ export default function DebtsPage() {
             <div key={debt.id} className="card-surface space-y-3 p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className={cn("text-xs font-medium", debt.direction === "i_owe" ? "text-warning" : "text-emerald")}>{debt.direction === "i_owe" ? "You owe" : "Owes you"}</p>
+                  <p className={cn("text-xs font-medium", debt.direction === "i_owe" ? "text-warning" : "text-income")}>{debt.direction === "i_owe" ? "You owe" : "Owes you"}</p>
                   <p className="font-semibold">{debt.counterparty}</p>
                   <p className={cn("text-xs text-muted-foreground", debt.is_overdue && "text-destructive")}>
                     {debt.status !== "open" ? `${debt.status[0].toUpperCase()}${debt.status.slice(1)}` : debt.due_on ? `${debt.is_overdue ? "Overdue since" : "Due"} ${formatDate(debt.due_on)}` : "No due date"}
@@ -146,7 +146,7 @@ export default function DebtsPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <p><Money minor={debt.outstanding_minor} className="text-2xl font-semibold tracking-tight" /> <span className="text-sm text-muted-foreground">of {formatMoney(debt.amount_minor)}</span></p>
+              <p><Money minor={debt.outstanding_minor} className="text-2xl font-semibold tracking-[-0.025em]" /> <span className="text-sm text-muted-foreground">of {formatMoney(debt.amount_minor)}</span></p>
               <ProgressBar value={(debt.paid_minor / debt.amount_minor) * 100} label={`${debt.counterparty} repaid`} />
               {debt.notes && <p className="text-sm text-muted-foreground">{debt.notes}</p>}
               {debt.payments.length > 0 && <p className="text-xs text-muted-foreground">{debt.payments.length} payment{debt.payments.length > 1 && "s"} · last {formatDate(debt.payments[debt.payments.length - 1].paid_on)}</p>}

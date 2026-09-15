@@ -3,22 +3,25 @@
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { Mascot } from "@/components/brand/mascot"
-import {
-  BreakdownCard, BudgetsCard, GoalsCard, LastSevenDaysCard, NetWorthCard, NotesCard, PaydayCard, TodayCard, UpcomingCard,
-} from "@/components/home/cards"
-import { GreetingBand, HomeTopBar } from "@/components/home/greeting"
+import { ActivityCard, BreakdownCard, BudgetsCard, GoalsCard, NetWorthCard, NotesCard, UpcomingCard } from "@/components/home/cards"
+import { CompanionCard, HomeHeader, HomeTopBar } from "@/components/home/greeting"
 import { QuickActionsCard } from "@/components/home/quick-actions"
 import { useAppActions } from "@/components/layout/app-context"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDashboard, useMe } from "@/lib/queries"
 
 function HomeSkeleton() {
   return (
-    <div className="space-y-4 pt-4">
-      <Skeleton className="h-10 w-2/3 rounded-xl" />
-      <Skeleton className="h-40 rounded-[1.75rem]" />
-      <Skeleton className="h-36 rounded-[1.5rem]" />
-      <div className="grid grid-cols-2 gap-3"><Skeleton className="h-44 rounded-[1.5rem]" /><Skeleton className="h-44 rounded-[1.5rem]" /></div>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+      <div className="space-y-4 lg:col-span-8 lg:space-y-5">
+        <Skeleton className="h-64 rounded-xl" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-5"><Skeleton className="h-52 rounded-xl" /><Skeleton className="h-52 rounded-xl" /></div>
+      </div>
+      <div className="space-y-4 lg:col-span-4 lg:space-y-5">
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-52 rounded-xl" />
+      </div>
     </div>
   )
 }
@@ -29,46 +32,48 @@ export default function HomePage() {
   const { openAddTransaction } = useAppActions()
 
   return (
-    <div className="pb-2">
-      <HomeTopBar />
+    <div className="space-y-5 pb-2 lg:space-y-6">
+      <div>
+        <HomeTopBar />
+        <HomeHeader />
+      </div>
       {error ? (
-        <p className="mt-4 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">Couldn&apos;t load your home screen. {error.message}</p>
+        <p className="rounded-xl border border-destructive/20 bg-danger-soft px-4 py-3 text-sm text-destructive">Couldn&apos;t load your home screen. {error.message}</p>
       ) : isLoading || !data ? <HomeSkeleton /> : !data.has_data ? (
-        <div className="space-y-4">
-          <GreetingBand mood="happy" />
-          <div className="card-surface flex flex-col items-center gap-4 px-6 py-10 text-center">
-            <Mascot className="animate-bob w-24" outfit={me?.settings.mascot_outfit} />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start lg:gap-5">
+          <section className="card-surface flex flex-col items-center gap-5 px-6 py-12 text-center lg:col-span-8">
+            <Mascot className="w-20" outfit={me?.settings.mascot_outfit} coin={false} />
             <div className="space-y-1.5">
-              <h2 className="text-xl font-extrabold tracking-tight">Let&apos;s log your first peso</h2>
-              <p className="mx-auto max-w-sm text-sm text-muted-foreground">Tap the + button whenever you spend or earn. Faldo builds your budgets, streak and insights from there.</p>
+              <h2 className="text-xl font-semibold tracking-[-0.02em]">Log your first peso</h2>
+              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">Add what you spend or earn. Faldo builds your budgets, streak and insights from there.</p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-              <button type="button" onClick={() => openAddTransaction({ mode: "expense" })} className="pressable flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground"><Plus className="size-4" /> Log an expense</button>
-              <Link href="/accounts" className="pressable flex h-12 items-center rounded-full border bg-card px-5 text-sm font-bold">Set up wallets</Link>
+              <Button size="lg" onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Log an expense</Button>
+              <Button size="lg" variant="outline" asChild><Link href="/accounts">Set up wallets</Link></Button>
             </div>
+          </section>
+          <div className="space-y-4 lg:col-span-4 lg:space-y-5">
+            <CompanionCard mood="happy" />
+            <QuickActionsCard />
           </div>
-          <QuickActionsCard />
         </div>
       ) : (
-        <div className="stagger grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
-          <div className="min-w-0 space-y-4 lg:col-span-8">
-            <GreetingBand mood={data.safe_to_spend.shortfall_minor > 0 || data.budget.lines.some((l) => l.status === "over") ? "worried" : "happy"} />
-            <QuickActionsCard />
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <BreakdownCard data={data} />
-              <TodayCard />
+        <div className="stagger grid grid-cols-1 items-start gap-4 md:grid-cols-2 lg:grid-cols-12 lg:gap-5">
+          <div className="contents lg:col-span-8 lg:flex lg:flex-col lg:gap-5">
+            <NetWorthCard data={data} className="order-1 lg:order-none md:col-span-2" />
+            <div className="contents lg:grid lg:grid-cols-2 lg:gap-5">
+              <ActivityCard className="order-4 lg:order-none" />
+              <BreakdownCard data={data} className="order-5 lg:order-none" />
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              <LastSevenDaysCard />
-              <PaydayCard />
-            </div>
-            <UpcomingCard items={data.upcoming} />
-            <BudgetsCard data={data} />
+            <UpcomingCard items={data.upcoming} className="order-6 lg:order-none md:col-span-2" />
+            <BudgetsCard data={data} className="order-7 lg:order-none" />
           </div>
-          <div className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:col-span-4">
-            <NetWorthCard data={data} />
-            <GoalsCard data={data} />
-            <NotesCard />
+          <div className="contents lg:col-span-4 lg:flex lg:flex-col lg:gap-5">
+            <CompanionCard className="order-2 lg:order-none md:col-span-2"
+              mood={data.safe_to_spend.shortfall_minor > 0 || data.budget.lines.some((l) => l.status === "over") ? "worried" : "happy"} />
+            <QuickActionsCard className="order-3 lg:order-none md:col-span-2" />
+            <GoalsCard data={data} className="order-8 lg:order-none" />
+            <NotesCard className="order-9 lg:order-none md:col-span-2" />
           </div>
         </div>
       )}

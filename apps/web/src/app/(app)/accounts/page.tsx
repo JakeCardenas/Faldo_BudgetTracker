@@ -4,22 +4,21 @@ import Link from "next/link"
 import { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { format, parseISO } from "date-fns"
-import { ChevronDown, ChevronRight, LayoutGrid, List, Plus, TrendingDown, TrendingUp, Wallet } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, LayoutGrid, List, Lightbulb, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
-import { Mascot } from "@/components/brand/mascot"
-import { Scene } from "@/components/brand/scene"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { EmptyState } from "@/components/finance/empty-state"
 import { AnimatedMoney } from "@/components/finance/money"
-import { Chip } from "@/components/ios/segmented"
+import { Chip, Segmented } from "@/components/ios/segmented"
 import { HeaderButton, LargeTitle } from "@/components/ios/nav-header"
 import { useAppActions } from "@/components/layout/app-context"
 import { AccountBadge, AccountCard } from "@/components/wallet/account-card"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ACCOUNT_GROUPS } from "@/lib/account-templates"
 import { api } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
-import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights, useMe } from "@/lib/queries"
+import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights } from "@/lib/queries"
 import type { Account, AccountType } from "@/lib/types"
 import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
@@ -56,17 +55,17 @@ function DailyBalance() {
   const min = Math.min(...values)
   const max = Math.max(...values)
   return (
-    <div className="card-surface flex flex-col p-4">
-      <p className="eyebrow">Daily balance</p>
-      {isLoading ? <Skeleton className="mt-3 h-16 rounded-xl" /> : (
-        <div className="mt-3 flex h-16 flex-1 items-end gap-1.5">
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">Daily balance</p>
+      {isLoading ? <Skeleton className="mt-2 h-16" /> : (
+        <div className="mt-2 flex h-16 items-end gap-1.5">
           {history?.map((p, i) => {
             const last = i === history.length - 1
             const height = max === min ? 60 : 25 + ((p.net_minor - min) / (max - min)) * 75
             return (
               <div key={p.date} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${format(parseISO(p.date), "EEE, MMM d")}: ${formatMoney(p.net_minor)}`}>
-                <div className={cn("w-full max-w-3 rounded-full", last ? "bg-primary" : "bg-leaf/50")} style={{ height: `${height}%` }} />
-                <span className={cn("text-[0.6rem] font-bold", last ? "text-foreground" : "text-muted-foreground")}>{format(parseISO(p.date), "EEEEE")}</span>
+                <div className={cn("w-full max-w-4 rounded-[3px]", last ? "bg-primary" : "bg-foreground/12 dark:bg-foreground/15")} style={{ height: `${height}%` }} />
+                <span className={cn("text-[0.625rem]", last ? "font-semibold text-foreground" : "text-muted-foreground")}>{format(parseISO(p.date), "EEEEE")}</span>
               </div>
             )
           })}
@@ -76,27 +75,23 @@ function DailyBalance() {
   )
 }
 
-function InsightCard({ assets }: { assets: number }) {
+function InsightRow({ assets }: { assets: number }) {
   const { data: insights = [] } = useInsights()
   const insight = insights[0]
   const fallback = assets >= 50_000_00
     ? "That's a healthy cushion of liquid money. Keep a slice parked in savings so it stays that way."
     : "Every peso you track makes the forecast sharper. Log today's spending to keep the picture clear."
   return (
-    <Link href="/forecast" className="card-surface pressable relative flex flex-col overflow-hidden p-4">
-      <span className="pointer-events-none absolute -top-2 left-2 font-serif text-6xl leading-none text-primary/10" aria-hidden>“</span>
-      <div className="relative flex items-center justify-between gap-2">
-        <p className="eyebrow text-primary">Insight</p>
-        <span className="flex items-center gap-0.5 text-[0.7rem] font-bold text-muted-foreground">Forecast cashflow <ChevronRight className="size-3" /></span>
-      </div>
-      <p className="relative mt-2 line-clamp-3 text-sm leading-snug">{insight ? <><span className="font-bold">{insight.title}.</span> {insight.body}</> : fallback}</p>
+    <Link href="/forecast" className="group flex items-start gap-3 border-t px-4 py-3.5 transition-colors hover:bg-accent/50 sm:px-5">
+      <Lightbulb className="mt-0.5 size-4 shrink-0 text-muted-foreground" strokeWidth={1.85} />
+      <p className="min-w-0 flex-1 text-sm leading-relaxed"><span className="line-clamp-2">{insight ? <><span className="font-medium">{insight.title}.</span> <span className="text-muted-foreground">{insight.body}</span></> : fallback}</span></p>
+      <span className="hidden shrink-0 items-center gap-0.5 text-[0.8125rem] font-medium text-primary sm:flex">Forecast <ChevronRight className="size-3.5" /></span>
     </Link>
   )
 }
 
 export default function AccountsPage() {
   const qc = useQueryClient()
-  const { data: me } = useMe()
   const { openAddTransaction } = useAppActions()
   const { data: accounts, isLoading } = useAccounts()
   const [dialog, setDialog] = useState<{ open: boolean; account?: Account }>({ open: false })
@@ -169,87 +164,74 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-5">
-      <LargeTitle title="Accounts" subtitle="Manage your wallets and balances"
+      <LargeTitle title="Wallet" subtitle="Your accounts and balances"
         actions={arranging
-          ? <HeaderButton onClick={finishArranging} className="bg-primary text-primary-foreground hover:bg-primary">Done</HeaderButton>
-          : <HeaderButton onClick={() => setDialog({ open: true })} className="text-primary"><Plus className="size-4" /> Add Account</HeaderButton>} />
+          ? <Button size="sm" onClick={finishArranging}>Done</Button>
+          : <HeaderButton onClick={() => setDialog({ open: true })}><Plus /> Add account</HeaderButton>} />
 
       {isLoading ? (
-        <div className="space-y-4"><Skeleton className="h-44 rounded-[1.75rem]" /><div className="grid grid-cols-2 gap-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-36 rounded-[1.4rem]" />)}</div></div>
+        <div className="space-y-4"><Skeleton className="h-52 rounded-xl" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-34 rounded-xl" />)}</div></div>
       ) : active.length === 0 ? (
         <div className="card-surface">
           <EmptyState icon={Wallet} title="Add your first wallet" description="Start with where your money lives: cash, GCash, Maya or a bank account."
-            action={<button type="button" onClick={() => setDialog({ open: true })} className="pressable flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground"><Plus className="size-4" /> Add account</button>} />
+            action={<Button size="lg" onClick={() => setDialog({ open: true })}><Plus /> Add account</Button>} />
         </div>
       ) : (
         <>
-          <section>
-            <div className="relative -mx-4 sm:mx-0">
-              <div className="absolute inset-x-0 bottom-6 h-[58%] overflow-hidden sm:rounded-[1.75rem]"><Scene id={me?.settings.home_background ?? "meadow"} /></div>
-              <div className="relative flex items-end gap-2 px-3 sm:px-5">
-                <Mascot outfit={me?.settings.mascot_outfit} className="animate-bob mb-7 w-24 shrink-0 drop-shadow-md sm:w-32" />
-                <div className="mb-3 min-w-0 flex-1 rounded-[1.4rem] border bg-card p-4 shadow-(--shadow-float) sm:p-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="eyebrow">{headline.label}</p>
-                    {view === "all" && trend !== null && Number.isFinite(trend) && (
-                      <span className={cn("inline-flex items-center gap-0.5 text-xs font-bold", trend >= 0 ? "text-income" : "text-expense")}>
-                        {trend >= 0 ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}{Math.abs(trend).toFixed(1)}%
-                      </span>
-                    )}
-                  </div>
-                  <AnimatedMoney minor={headline.value} className="mt-1 block text-[1.85rem] leading-tight font-extrabold tracking-tight sm:text-4xl" />
-                  <p className="text-xs text-muted-foreground">{headline.caption}</p>
-                </div>
+          <section className="card-surface overflow-hidden">
+            <div className="grid grid-cols-1 gap-5 p-4 sm:p-5 md:grid-cols-[1fr_15rem] md:items-end">
+              <div className="min-w-0">
+                <Segmented label="Balance view" size="sm" value={view} onChange={setView}
+                  options={[{ value: "all", label: "Net worth" }, { value: "assets", label: "Assets" }, { value: "liabilities", label: "Liabilities" }]} />
+                <AnimatedMoney minor={headline.value} className="display-number mt-5 block sm:text-[2.75rem]" />
+                <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[0.8125rem] text-muted-foreground">
+                  {view === "all" && trend !== null && Number.isFinite(trend) && (
+                    <span className={cn("inline-flex items-center font-medium", trend >= 0 ? "text-income" : "text-foreground")}>
+                      {trend >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}{Math.abs(trend).toFixed(1)}% this month,
+                    </span>
+                  )}
+                  {headline.caption}
+                </p>
               </div>
-              <div className="relative flex gap-2 px-4 sm:px-5">
-                {(["all", "assets", "liabilities"] as View[]).map((v) => (
-                  <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
-                    className={cn("pressable h-9 flex-1 rounded-full border text-sm font-bold capitalize shadow-(--shadow-card) transition-colors",
-                      view === v ? "border-primary bg-card text-primary ring-2 ring-primary/30" : "bg-card text-foreground")}>
-                    {v}
-                  </button>
-                ))}
-              </div>
+              <DailyBalance />
             </div>
+            <InsightRow assets={assets} />
           </section>
 
-          <div className="grid grid-cols-[1.6fr_1fr] gap-3">
-            <InsightCard assets={assets} />
-            <DailyBalance />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 px-1">
-            <p className="text-xs text-muted-foreground">{arranging ? "Use the arrows to reorder, then tap Done." : "Press and hold an account card to rearrange it."}</p>
-            <div className="flex shrink-0 rounded-full bg-muted p-1">
-              <button type="button" aria-label="Grid view" aria-pressed={layout === "grid"} onClick={() => changeLayout("grid")}
-                className={cn("flex size-7 items-center justify-center rounded-full", layout === "grid" && "bg-card shadow-(--shadow-card)")}><LayoutGrid className="size-3.5" /></button>
-              <button type="button" aria-label="List view" aria-pressed={layout === "list"} onClick={() => changeLayout("list")}
-                className={cn("flex size-7 items-center justify-center rounded-full", layout === "list" && "bg-card shadow-(--shadow-card)")}><List className="size-3.5" /></button>
+          <div className="flex items-center gap-2">
+            {filters.length > 1 ? (
+              <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto scrollbar-none">
+                <Chip active={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
+                {filters.map((f) => <Chip key={f.type} active={filter === f.type} onClick={() => setFilter(f.type)}>{f.label}</Chip>)}
+              </div>
+            ) : <div className="flex-1" />}
+            {!arranging && (
+              <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground" onClick={startArranging}>Reorder</Button>
+            )}
+            <div className="flex shrink-0 rounded-lg bg-muted p-0.5" role="radiogroup" aria-label="Layout">
+              <button type="button" role="radio" aria-label="Grid view" aria-checked={layout === "grid"} onClick={() => changeLayout("grid")}
+                className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors", layout === "grid" && "bg-card text-foreground shadow-[0_1px_2px_rgb(15_20_17/0.08)] dark:bg-[#2b302c]")}><LayoutGrid className="size-3.5" /></button>
+              <button type="button" role="radio" aria-label="List view" aria-checked={layout === "list"} onClick={() => changeLayout("list")}
+                className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors", layout === "list" && "bg-card text-foreground shadow-[0_1px_2px_rgb(15_20_17/0.08)] dark:bg-[#2b302c]")}><List className="size-3.5" /></button>
             </div>
           </div>
+          {arranging && <p className="-mt-2 text-[0.8125rem] text-muted-foreground">Use the arrows to reorder, then tap Done.</p>}
 
-          {filters.length > 1 && (
-            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:px-0">
-              <Chip active={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
-              {filters.map((f) => <Chip key={f.type} active={filter === f.type} onClick={() => setFilter(f.type)}>{f.label}</Chip>)}
-            </div>
-          )}
-
-          <div className="space-y-5">
+          <div className="space-y-6">
             {groups.map((group) => {
               const total = group.accounts.reduce((s, a) => s + a.balance_minor, 0)
               const isCollapsed = collapsed.has(group.type)
               const ids = group.accounts.map((a) => a.id)
               return (
-                <section key={group.type} className="space-y-3">
+                <section key={group.type} className="space-y-2.5">
                   <button type="button" aria-expanded={!isCollapsed} onClick={() => setCollapsed((c) => { const n = new Set(c); if (n.has(group.type)) n.delete(group.type); else n.add(group.type); return n })}
-                    className="flex w-full items-center gap-1.5 px-1 text-left">
-                    <ChevronDown className={cn("size-4 transition-transform", isCollapsed && "-rotate-90")} />
-                    <span className="flex-1 text-base font-extrabold tracking-tight">{group.label}</span>
-                    <span className={cn("tabular text-sm font-bold", total < 0 ? "text-expense" : "text-muted-foreground")}>{formatMoney(total)}</span>
+                    className="flex w-full items-center gap-1.5 rounded-md px-1 text-left">
+                    <span className="section-title flex-1">{group.label}</span>
+                    <span className={cn("tabular text-[0.8125rem] font-medium", total < 0 ? "text-expense" : "text-muted-foreground")}>{formatMoney(total)}</span>
+                    <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", isCollapsed && "-rotate-90")} />
                   </button>
                   {!isCollapsed && (layout === "grid" || arranging ? (
-                    <div className={cn("grid grid-cols-2 gap-3 lg:grid-cols-3", arranging && "gap-y-6 pb-2")}>
+                    <div className={cn("grid grid-cols-2 gap-3 lg:grid-cols-3", arranging && "gap-y-7 pb-3")}>
                       {group.accounts.map((account) => (
                         <AccountCard key={account.id} account={account} index={active.indexOf(account)} jiggle={arranging}
                           pressHandlers={arranging ? undefined : longPress}
@@ -260,14 +242,14 @@ export default function AccountsPage() {
                   ) : (
                     <div className="ios-group divide-y divide-border/60">
                       {group.accounts.map((account) => (
-                        <Link key={account.id} href={`/accounts/${account.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60">
+                        <Link key={account.id} href={`/accounts/${account.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
                           <AccountBadge account={account} />
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[0.95rem] font-bold">{account.name}</span>
-                            <span className="block truncate text-xs text-muted-foreground">{account.institution ?? group.label} · {account.transaction_count} transactions</span>
+                            <span className="block truncate text-[0.9375rem]">{account.name}</span>
+                            <span className="block truncate text-[0.8125rem] text-muted-foreground">{account.institution ?? group.label}, {account.transaction_count} transactions</span>
                           </span>
-                          <span className={cn("tabular text-sm font-extrabold", account.balance_minor < 0 && "text-expense")}>{formatMoney(account.balance_minor, account.currency)}</span>
-                          <ChevronRight className="size-4 text-muted-foreground/60" />
+                          <span className={cn("tabular text-[0.9375rem] font-medium", account.balance_minor < 0 && "text-expense")}>{formatMoney(account.balance_minor, account.currency)}</span>
+                          <ChevronRight className="size-4 text-muted-foreground/50" />
                         </Link>
                       ))}
                     </div>

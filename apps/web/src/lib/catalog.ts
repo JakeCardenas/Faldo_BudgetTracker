@@ -1,5 +1,10 @@
+import {
+  BookOpenCheck, CalendarCheck, CalendarClock, CalendarDays, Calculator, Crown, Dumbbell, Flag, Flame, Medal, MessageCircle, ReceiptText, Sprout, Target,
+  type LucideIcon,
+} from "lucide-react"
+
 export const OUTFIT_INFO: Record<string, { name: string; hint: string }> = {
-  classic: { name: "Classic sprout", hint: "Always available" },
+  classic: { name: "Classic", hint: "Always available" },
   bucket_hat: { name: "Bucket hat", hint: "Keep a 3-day streak" },
   scarf: { name: "Cozy scarf", hint: "Keep a 7-day streak" },
   headphones: { name: "Headphones", hint: "Ask Faldo a question" },
@@ -19,19 +24,19 @@ export const BACKGROUND_INFO: Record<string, { name: string; hint: string }> = {
   night_market: { name: "Night market", hint: "Keep a 30-day streak" },
 }
 
-export const BADGE_ART: Record<string, { emoji: string; color: string }> = {
-  first_sprout: { emoji: "🌱", color: "#5d9e59" },
-  two_in_a_row: { emoji: "✌️", color: "#6d8fc0" },
-  warming_up: { emoji: "🔥", color: "#e0772f" },
-  full_week: { emoji: "📅", color: "#4a7f52" },
-  fortnight_focus: { emoji: "🎯", color: "#c2477f" },
-  monthly_habit: { emoji: "🏅", color: "#d69c2c" },
-  sixty_strong: { emoji: "💪", color: "#6d52c9" },
-  hundred_club: { emoji: "💯", color: "#df5b4f" },
-  budget_builder: { emoji: "🧮", color: "#3f7bd1" },
-  goal_setter: { emoji: "🚩", color: "#1f8f80" },
-  bill_planner: { emoji: "🗓️", color: "#8a6a3f" },
-  receipt_ranger: { emoji: "🧾", color: "#5f6b61" },
-  curious_mind: { emoji: "💬", color: "#4a7f52" },
-  scholar: { emoji: "🎓", color: "#2c3a32" },
+export const BADGE_ART: Record<string, { icon: LucideIcon }> = {
+  first_sprout: { icon: Sprout },
+  two_in_a_row: { icon: CalendarCheck },
+  warming_up: { icon: Flame },
+  full_week: { icon: CalendarDays },
+  fortnight_focus: { icon: Target },
+  monthly_habit: { icon: Medal },
+  sixty_strong: { icon: Dumbbell },
+  hundred_club: { icon: Crown },
+  budget_builder: { icon: Calculator },
+  goal_setter: { icon: Flag },
+  bill_planner: { icon: CalendarClock },
+  receipt_ranger: { icon: ReceiptText },
+  curious_mind: { icon: MessageCircle },
+  scholar: { icon: BookOpenCheck },
 }

@@ -19,7 +19,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex items-start justify-between gap-4 py-2.5 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{children}</span>
+      <span className="text-right">{children}</span>
     </div>
   )
 }
@@ -43,8 +43,8 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
 
   return (
     <Sheet open={!!id} onOpenChange={(open) => { if (!open) close() }}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-md">
-        <SheetHeader className="border-b">
+      <SheetContent className="w-full gap-0 overflow-y-auto bg-popover sm:max-w-md">
+        <SheetHeader className="border-b px-5 py-4">
           <SheetTitle>{editing ? "Edit transaction" : "Transaction"}</SheetTitle>
           <SheetDescription className="sr-only">Transaction details</SheetDescription>
         </SheetHeader>
@@ -68,26 +68,26 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
             <div className="flex items-center gap-3">
               <CategoryIcon icon={t.type === "transfer" ? "transfer" : t.category_icon} color={t.category_color} size="lg" />
               <div className="min-w-0">
-                <p className="truncate font-semibold">{t.type === "transfer" ? "Transfer" : t.merchant ?? t.category_name ?? "Transaction"}</p>
-                <p className="text-xs text-muted-foreground">{formatDate(t.occurred_on, "EEEE, MMMM d, yyyy")}</p>
+                <p className="truncate text-[0.9375rem] font-medium">{t.type === "transfer" ? "Transfer" : t.merchant ?? t.category_name ?? "Transaction"}</p>
+                <p className="text-[0.8125rem] text-muted-foreground">{formatDate(t.occurred_on, "EEEE, MMMM d, yyyy")}</p>
               </div>
             </div>
-            <p className={`tabular text-4xl font-semibold tracking-tight ${t.type === "income" ? "text-emerald" : ""}`}>
+            <p className={`display-number ${t.type === "income" ? "text-income" : ""}`}>
               {formatMoney(t.type === "expense" ? -t.amount_minor : t.amount_minor, t.currency, { signed: t.type === "income" })}
             </p>
-            <div className="divide-y rounded-xl border px-4">
+            <div className="divide-y rounded-xl border bg-card px-4">
               <Row label="Type">{t.type[0].toUpperCase() + t.type.slice(1)}</Row>
               <Row label={t.type === "transfer" ? "From" : "Account"}>{t.account_name}</Row>
               {t.to_account_name && <Row label="To">{t.to_account_name}</Row>}
-              {t.category_name && <Row label="Category">{t.category_name}{t.subcategory_name && ` · ${t.subcategory_name}`}</Row>}
+              {t.category_name && <Row label="Category">{t.category_name}{t.subcategory_name && `, ${t.subcategory_name}`}</Row>}
               {t.payment_method && <Row label="Payment method">{t.payment_method}</Row>}
               {t.tags.length > 0 && <Row label="Tags">{t.tags.join(", ")}</Row>}
               <Row label="Source">{SOURCE_LABELS[t.source] ?? t.source}</Row>
             </div>
             {t.items.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Items</p>
-                <ul className="divide-y rounded-xl border px-4">
+                <p className="text-[0.8125rem] font-medium text-muted-foreground">Items</p>
+                <ul className="divide-y rounded-xl border bg-card px-4">
                   {t.items.map((item) => (
                     <li key={item.id} className="flex justify-between gap-3 py-2.5 text-sm">
                       <span>{item.name}{Number(item.quantity) !== 1 && <span className="text-muted-foreground"> × {Number(item.quantity)}</span>}</span>
@@ -99,13 +99,13 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
             )}
             {t.notes && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Notes</p>
-                <p className="text-sm">{t.notes}</p>
+                <p className="text-[0.8125rem] font-medium text-muted-foreground">Notes</p>
+                <p className="text-sm leading-relaxed">{t.notes}</p>
               </div>
             )}
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setEditing(true)}><Pencil /> Edit</Button>
-              <Button variant="destructive" className="flex-1" onClick={() => setConfirmDelete(true)}><Trash2 /> Delete</Button>
+              <Button variant="outline" size="lg" className="flex-1" onClick={() => setConfirmDelete(true)}><Trash2 className="text-destructive" /> Delete</Button>
+              <Button variant="secondary" size="lg" className="flex-1" onClick={() => setEditing(true)}><Pencil /> Edit</Button>
             </div>
           </div>
         )}
@@ -118,7 +118,7 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => t && remove.mutate(t.id, {
+            <AlertDialogAction variant="destructive" onClick={() => t && remove.mutate(t.id, {
               onSuccess: () => { toast.success("Transaction deleted"); close() },
               onError: (e) => toast.error(e.message),
             })}>Delete</AlertDialogAction>

@@ -39,16 +39,16 @@ export default function InsightsPage() {
   ]
 
   return (
-    <div className="space-y-5 pt-2">
+    <div className="space-y-5">
       <PageHeader title="Insights" description="Patterns Faldo detected in your actual data. Every insight is backed by specific numbers."
         actions={<Button variant="outline" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? "animate-spin" : ""} /> Refresh</Button>} />
       {pulse && (
-        <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-mint/60 to-card p-5">
-          <p className="flex items-center gap-2 text-xs font-medium tracking-wide text-primary uppercase"><Sparkles className="size-3.5" /> Financial pulse</p>
-          <p className="mt-2 text-[0.975rem] leading-relaxed">{pulse.text}</p>
+        <div className="card-surface p-5">
+          <p className="text-[0.8125rem] font-medium text-muted-foreground">Financial pulse</p>
+          <p className="mt-2 text-[0.9375rem] leading-relaxed">{pulse.text}</p>
         </div>
       )}
-      {isLoading ? <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div> : !insights?.length ? (
+      {isLoading ? <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div> : !insights?.length ? (
         <div className="card-surface"><EmptyState icon={Lightbulb} title="No insights right now" description="Insights appear when Faldo spots budget risks, unusual purchases, upcoming bills or progress worth celebrating." /></div>
       ) : (
         groups.filter((g) => g.items.length).map((group) => (

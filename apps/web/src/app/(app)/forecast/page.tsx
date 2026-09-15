@@ -66,7 +66,7 @@ function Simulator() {
           <div className="flex flex-wrap gap-1.5">
             {PRESETS.map((p) => (
               <button key={p.label} type="button" onClick={() => setDrafts([{ kind: "one_time_expense", amount: "", date: "", label: "", categoryId: NONE, ...p.draft } as Draft])}
-                className="rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/30 hover:text-foreground">{p.label}</button>
+                className="rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/30 hover:text-foreground">{p.label}</button>
             ))}
           </div>
           {drafts.map((d, i) => (
@@ -99,7 +99,7 @@ function Simulator() {
 
         <div className="min-w-0 space-y-4">
           {!result ? (
-            <div className="flex h-full min-h-72 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed text-center">
+            <div className="flex h-full min-h-72 flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center">
               <FlaskConical className="size-6 text-muted-foreground" />
               <p className="text-sm font-medium">Run a scenario to see its impact</p>
               <p className="max-w-xs text-xs text-muted-foreground">Faldo recalculates your projected month-end balance, budget impact and savings risk.</p>
@@ -109,7 +109,7 @@ function Simulator() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Projected balance on {formatDate(result.horizon_end, "MMM d")}</p>
-                  <p className="text-3xl font-semibold tracking-tight"><Money minor={result.projected_minor} className={result.projected_minor < 0 ? "text-destructive" : ""} /></p>
+                  <p className="text-3xl font-semibold tracking-[-0.025em]"><Money minor={result.projected_minor} className={result.projected_minor < 0 ? "text-destructive" : ""} /></p>
                   <p className="text-sm text-muted-foreground">{formatMoney(result.delta_minor, "PHP", { signed: true })} vs. without this change</p>
                 </div>
                 <RiskBadge level={result.risk_level} verdict={result.verdict} />
@@ -119,22 +119,22 @@ function Simulator() {
                 <CalculationCard title="How Faldo calculated this" lines={result.lines} resultLabel="Projected balance" resultMinor={result.projected_minor} />
                 <div className="space-y-3">
                   {result.reasons.length > 0 && (
-                    <div className="space-y-2 rounded-2xl border p-4">
+                    <div className="space-y-2 rounded-xl border p-4">
                       <p className="text-sm font-medium">Why this risk level</p>
                       <ul className="space-y-1.5">{result.reasons.map((r) => <li key={r.code} className="flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" />{REASONS[r.code] ?? r.code}</li>)}</ul>
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl border p-4"><p className="text-xs text-muted-foreground">Savings at risk</p><Money minor={result.savings_at_risk_minor} className="text-lg font-semibold" /></div>
-                    <div className="rounded-2xl border p-4"><p className="text-xs text-muted-foreground">Goal delay</p><p className="text-lg font-semibold">{result.goal_delay_days ? `~${result.goal_delay_days} days` : "None"}</p></div>
+                    <div className="rounded-xl border p-4"><p className="text-xs text-muted-foreground">Savings at risk</p><Money minor={result.savings_at_risk_minor} className="text-lg font-semibold" /></div>
+                    <div className="rounded-xl border p-4"><p className="text-xs text-muted-foreground">Goal delay</p><p className="text-lg font-semibold">{result.goal_delay_days ? `~${result.goal_delay_days} days` : "None"}</p></div>
                   </div>
                   {result.budget_impacts.map((b) => (
-                    <div key={b.category} className={cn("rounded-2xl border p-4 text-sm", b.remaining_after_minor < 0 && "border-destructive/30 bg-danger-soft/50")}>
+                    <div key={b.category} className={cn("rounded-xl border p-4 text-sm", b.remaining_after_minor < 0 && "border-destructive/30 bg-danger-soft/50")}>
                       <p className="font-medium">{b.category} budget</p>
                       <p className="text-muted-foreground">{formatMoney(b.remaining_before_minor)} left now → {b.remaining_after_minor < 0 ? <span className="text-destructive">{formatMoney(-b.remaining_after_minor)} over</span> : `${formatMoney(b.remaining_after_minor)} left`}</p>
                     </div>
                   ))}
-                  <p className="text-xs text-muted-foreground">Likely range {formatMoney(result.range.p10)} – {formatMoney(result.range.p90)}. Simulations are estimates, not guarantees.</p>
+                  <p className="text-xs text-muted-foreground">Likely range {formatMoney(result.range.p10)} to {formatMoney(result.range.p90)}. Simulations are estimates, not guarantees.</p>
                 </div>
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function ForecastPage() {
   const { data, isLoading } = useForecast(horizon)
 
   return (
-    <div className="space-y-5 pt-2">
+    <div className="space-y-5">
       <PageHeader title="Forecast" description="Where your spendable balance is likely headed, based on scheduled bills, income and your spending pattern."
         actions={<Tabs value={horizon} onValueChange={setHorizon}><TabsList>
           <TabsTrigger value="end_of_month">Month end</TabsTrigger><TabsTrigger value="30_days">30d</TabsTrigger><TabsTrigger value="60_days">60d</TabsTrigger><TabsTrigger value="90_days">90d</TabsTrigger>
@@ -159,15 +159,15 @@ export default function ForecastPage() {
         <Info className="mt-0.5 size-4 shrink-0 text-primary" />
         <span>Projections are <span className="font-medium text-foreground">estimates</span>. The shaded band shows the likely range from simulating your recent daily spending.</span>
       </div>
-      {isLoading || !data ? <Skeleton className="h-96 rounded-2xl" /> : data.sufficiency === "insufficient" ? (
+      {isLoading || !data ? <Skeleton className="h-96 rounded-xl" /> : data.sufficiency === "insufficient" ? (
         <div className="card-surface"><EmptyState icon={LineChart} title="Forecast unlocks soon" description={`Faldo needs at least a week of transactions to project your balance. You have ${data.history_days} day${data.history_days === 1 ? "" : "s"} so far.`} /></div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Spendable now</p><Money minor={data.start_balance_minor} className="text-2xl font-semibold tracking-tight" /></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Projected {formatDate(data.horizon_end, "MMM d")}</p><Money minor={data.end_balance.p50} className="text-2xl font-semibold tracking-tight text-primary" /><p className="text-xs text-muted-foreground">{formatMoney(data.end_balance.p10)} – {formatMoney(data.end_balance.p90)}</p></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Lowest point</p><Money minor={data.lowest_point.p50_minor} className={cn("text-2xl font-semibold tracking-tight", data.lowest_point.p50_minor < data.buffer_minor && "text-warning")} /><p className="text-xs text-muted-foreground">around {formatDate(data.lowest_point.date, "MMM d")}</p></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Safe to spend</p><Money minor={data.safe_to_spend.amount_minor} className="text-2xl font-semibold tracking-tight" /><p className="text-xs text-muted-foreground">≈{formatMoney(data.safe_to_spend.per_day_minor)}/day this month</p></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Spendable now</p><Money minor={data.start_balance_minor} className="text-2xl font-semibold tracking-[-0.025em]" /></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Projected {formatDate(data.horizon_end, "MMM d")}</p><Money minor={data.end_balance.p50} className="block text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">Likely {formatMoney(data.end_balance.p10)} to {formatMoney(data.end_balance.p90)}</p></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Lowest point</p><Money minor={data.lowest_point.p50_minor} className={cn("text-2xl font-semibold tracking-[-0.025em]", data.lowest_point.p50_minor < data.buffer_minor && "text-warning")} /><p className="text-xs text-muted-foreground">around {formatDate(data.lowest_point.date, "MMM d")}</p></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Safe to spend</p><Money minor={data.safe_to_spend.amount_minor} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">≈{formatMoney(data.safe_to_spend.per_day_minor)}/day this month</p></div>
           </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_22rem]">
             <SectionCard title="Projected spendable balance" description={data.sufficiency === "low" ? "Limited history. Treat this range with caution." : `Based on ${data.history_days} days of history`}>
@@ -189,7 +189,7 @@ export default function ForecastPage() {
                       <CalendarDays className="size-3.5 text-muted-foreground" />
                       <span className="w-14 text-xs text-muted-foreground">{formatDate(e.date, "MMM d")}</span>
                       <span className="min-w-0 flex-1 truncate">{e.label}</span>
-                      <Money minor={e.amount_minor} signed className={cn("text-sm", e.amount_minor > 0 && "text-emerald")} />
+                      <Money minor={e.amount_minor} signed className={cn("text-sm", e.amount_minor > 0 && "text-income")} />
                     </li>
                   ))}
                 </ul>

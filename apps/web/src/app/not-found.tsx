@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button"
 export default function NotFound() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-5 px-6 text-center">
-      <MascotArt className="animate-bob w-32" priority />
+      <MascotArt className="w-32" priority />
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Page not found</h1>
+        <h1 className="text-2xl font-semibold tracking-[-0.025em]">Page not found</h1>
         <p className="text-sm text-muted-foreground">The page you're looking for doesn't exist or has moved.</p>
       </div>
       <Button asChild><Link href="/">Back to home</Link></Button>

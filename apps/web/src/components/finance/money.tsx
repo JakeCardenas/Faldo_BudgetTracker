@@ -15,7 +15,7 @@ interface MoneyProps {
 }
 
 export function Money({ minor, currency = "PHP", signed, cents, compact, className, tone = "none" }: MoneyProps) {
-  const toneClass = tone === "auto" ? (minor > 0 ? "text-emerald" : minor < 0 ? "text-foreground" : "") : ""
+  const toneClass = tone === "auto" ? (minor > 0 ? "text-income" : minor < 0 ? "text-foreground" : "") : ""
   return <span className={cn("tabular whitespace-nowrap", toneClass, className)}>{formatMoney(minor, currency, { signed, cents, compact })}</span>
 }
 
@@ -64,7 +64,7 @@ export function AnimatedMoney({ minor, currency = "PHP", className, symbolClassN
   return (
     <span className={cn("tabular whitespace-nowrap", className)} aria-label={formatMoney(minor, currency)}>
       {sign}
-      <span className={cn("mr-0.5 align-top text-[0.62em] font-medium text-muted-foreground", symbolClassName)}>{symbol}</span>
+      <span className={cn("mr-[0.06em] align-[0.36em] text-[0.58em] font-medium text-muted-foreground", symbolClassName)}>{symbol}</span>
       {rest.slice(symbol.length)}
     </span>
   )

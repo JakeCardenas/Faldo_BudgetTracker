@@ -10,18 +10,15 @@ export function EmptyState({ icon: Icon, title, description, action, className, 
   compact?: boolean
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center text-center", compact ? "gap-2 py-8" : "gap-3 py-14", className)}>
-      <div className="relative">
-        <div className="absolute inset-0 scale-150 rounded-full bg-mint/60 blur-xl" aria-hidden />
-        <div className="relative flex size-12 items-center justify-center rounded-2xl border bg-card text-primary shadow-(--shadow-card)">
-          <Icon className="size-5" strokeWidth={1.8} />
-        </div>
+    <div className={cn("flex flex-col items-center justify-center text-center", compact ? "gap-2.5 px-4 py-8" : "gap-3 px-6 py-14", className)}>
+      <div className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <Icon className="size-5" strokeWidth={1.75} />
       </div>
-      <div className="max-w-sm space-y-1">
-        <p className="font-medium text-foreground">{title}</p>
-        {description && <p className="text-sm text-muted-foreground text-balance-safe">{description}</p>}
+      <div className="max-w-xs space-y-1">
+        <p className="text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground">{title}</p>
+        {description && <p className="text-sm leading-relaxed text-muted-foreground text-balance-safe">{description}</p>}
       </div>
-      {action && <div className="pt-1">{action}</div>}
+      {action && <div className="pt-2">{action}</div>}
     </div>
   )
 }

@@ -36,7 +36,7 @@ export function CurrencyConverter() {
         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
           <Field label="Currency">
             <Select value={code} onValueChange={(v) => { setCode(v); setRate(String(REFERENCE[v].php)) }}>
-              <SelectTrigger className="h-12! w-full rounded-2xl bg-card text-base font-semibold"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-12! w-full rounded-lg bg-card text-base font-semibold"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(REFERENCE).map(([k, v]) => <SelectItem key={k} value={k}>{v.flag} {k} · {v.name}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
@@ -47,12 +47,12 @@ export function CurrencyConverter() {
         <Field label={toPhp ? `Amount in ${code}` : "Amount in PHP"}>
           <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" className={inputClass} />
         </Field>
-        <button type="button" onClick={() => setToPhp(!toPhp)} className="pressable mx-auto flex size-11 items-center justify-center rounded-full bg-secondary text-primary" aria-label="Swap direction">
+        <button type="button" onClick={() => setToPhp(!toPhp)} className="pressable mx-auto flex size-10 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Swap direction">
           <ArrowDownUp className="size-5" />
         </button>
-        <div className="rounded-2xl bg-secondary p-4 text-center">
-          <p className="eyebrow">{toPhp ? "In Philippine pesos" : `In ${code}`}</p>
-          <p className="tabular text-3xl font-extrabold text-secondary-foreground">{fmt(result, toPhp ? "PHP" : code)}</p>
+        <div className="rounded-lg bg-muted/60 p-4 text-center">
+          <p className="text-[0.8125rem] text-muted-foreground">{toPhp ? "In Philippine pesos" : `In ${code}`}</p>
+          <p className="tabular mt-1 text-3xl font-semibold tracking-[-0.025em]">{fmt(result, toPhp ? "PHP" : code)}</p>
         </div>
       </section>
       <Disclaimer>Rates are editable references, not live quotes. Enter the rate your bank or remittance service shows today.</Disclaimer>

@@ -37,13 +37,13 @@ export function TaxCalculator() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="card-surface space-y-4 p-5">
-        <Field label="Monthly basic salary" hint="Your gross pay before deductions."><AmountInput value={gross} onValueChange={setGross} className="h-12 rounded-2xl" /></Field>
-        <Field label="Monthly SSS, PhilHealth & Pag-IBIG" hint="Your employee share. These are deducted before tax."><AmountInput value={contributions} onValueChange={setContributions} className="h-12 rounded-2xl" /></Field>
-        <Field label="Other taxable pay per month" hint="Overtime, taxable allowances or commissions."><AmountInput value={allowances} onValueChange={setAllowances} placeholder="0" className="h-12 rounded-2xl" /></Field>
+        <Field label="Monthly basic salary" hint="Your gross pay before deductions."><AmountInput value={gross} onValueChange={setGross} className="h-11" /></Field>
+        <Field label="Monthly SSS, PhilHealth & Pag-IBIG" hint="Your employee share. These are deducted before tax."><AmountInput value={contributions} onValueChange={setContributions} className="h-11" /></Field>
+        <Field label="Other taxable pay per month" hint="Overtime, taxable allowances or commissions."><AmountInput value={allowances} onValueChange={setAllowances} placeholder="0" className="h-11" /></Field>
       </section>
       <section className="card-surface p-5">
-        <p className="eyebrow">Estimated monthly take-home</p>
-        <p className="tabular text-4xl font-extrabold tracking-tight text-primary">{peso(Math.max(0, takeHome))}</p>
+        <p className="text-[0.8125rem] text-muted-foreground">Estimated monthly take-home</p>
+        <p className="tabular mt-1 text-[2.25rem] leading-tight font-semibold tracking-[-0.03em]">{peso(Math.max(0, takeHome))}</p>
         <div className="mt-4">
           <ResultRow label="Annual taxable income" value={peso(annualTaxable)} />
           <ResultRow label="Annual income tax" value={peso(tax)} tone="expense" />

@@ -33,14 +33,14 @@ export default function ForgotPasswordPage() {
       <Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to sign in</Link>
       {sent ? (
         <div className="space-y-4">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-mint text-mint-foreground"><MailCheck className="size-5" /></span>
-          <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
+          <span className="flex size-12 items-center justify-center rounded-lg bg-secondary text-primary"><MailCheck className="size-5" strokeWidth={1.75} /></span>
+          <h1 className="text-2xl font-semibold tracking-[-0.025em]">Check your email</h1>
           <p className="text-sm text-muted-foreground">If an account exists for <span className="font-medium text-foreground">{email}</span>, we sent a link to reset your password. It expires in 30 minutes.</p>
         </div>
       ) : (
         <>
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Reset your password</h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.025em]">Reset your password</h1>
             <p className="text-sm text-muted-foreground">Enter your email and we'll send you a reset link.</p>
           </div>
           <form onSubmit={submit} className="space-y-4">

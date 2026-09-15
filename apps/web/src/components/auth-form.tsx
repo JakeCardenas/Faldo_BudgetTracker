@@ -44,7 +44,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   return (
     <div className="space-y-7">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{mode === "login" ? "Welcome back" : "Create your Faldo account"}</h1>
+        <h1 className="text-2xl font-semibold tracking-[-0.025em]">{mode === "login" ? "Welcome back" : "Create your Faldo account"}</h1>
         <p className="text-sm text-muted-foreground">
           {mode === "login" ? "Sign in to see your financial picture." : "Private by design. Your data is only used to answer your questions."}
         </p>
@@ -53,28 +53,28 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         {mode === "register" && (
           <div className="space-y-1.5">
             <Label htmlFor="name">First name</Label>
-            <Input id="name" autoComplete="given-name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} className="h-10" />
+            <Input id="name" autoComplete="given-name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
         )}
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-10" />
+          <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            {mode === "login" && <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">Forgot password?</Link>}
+            {mode === "login" && <Link href="/forgot-password" className="text-[0.8125rem] font-medium text-primary hover:underline">Forgot password?</Link>}
           </div>
           <Input id="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required
-            minLength={mode === "register" ? 10 : 1} value={password} onChange={(e) => setPassword(e.target.value)} className="h-10" />
+            minLength={mode === "register" ? 10 : 1} value={password} onChange={(e) => setPassword(e.target.value)} />
           {mode === "register" && <p className="text-xs text-muted-foreground">At least 10 characters.</p>}
         </div>
-        {error && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-destructive">{error}</p>}
-        <Button type="submit" className="h-10 w-full" disabled={busy}>
+        {error && <p role="alert" className="rounded-lg border border-destructive/20 bg-danger-soft px-3 py-2 text-sm text-destructive">{error}</p>}
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>
           {busy && <Loader2 className="animate-spin" />} {mode === "login" ? "Sign in" : "Create account"}
         </Button>
         {showDemo && (
-          <Button type="button" variant="outline" className="h-10 w-full" disabled={busy}
+          <Button type="button" variant="outline" size="lg" className="w-full" disabled={busy}
             onClick={(e) => submit(e as unknown as React.FormEvent, { email: "jake@faldo.app", password: "faldo-demo-2026" })}>
             Explore the demo account
           </Button>

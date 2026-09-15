@@ -18,7 +18,7 @@ export function accountColor(account: Account, index = 0) {
 
 export function AccountBadge({ account, className }: { account: Account; className?: string }) {
   return (
-    <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl text-[0.7rem] font-extrabold text-white", className)}
+    <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-[0.6875rem] font-semibold text-white", className)}
       style={{ backgroundColor: accountColor(account) }}>
       {account.name.slice(0, 2).toUpperCase()}
     </span>
@@ -47,51 +47,52 @@ export function AccountCard({ account, index = 0, actions, jiggle, onMove, canMo
   const owed = isCredit ? Math.max(0, -account.balance_minor) : 0
   const limit = account.credit_limit_minor ?? 0
   const usedPct = limit > 0 ? Math.min(100, (owed / limit) * 100) : 0
-  const subtitle = [isCredit ? "Credit" : account.type === "savings" ? "Savings" : "Debit", account.currency, account.institution ?? ACCOUNT_TYPE_LABELS[account.type]]
-    .filter(Boolean).join(" · ")
+  const subtitle = account.institution && account.institution !== account.name ? account.institution : ACCOUNT_TYPE_LABELS[account.type]
 
   const body = (
     <>
-      <span className="pointer-events-none absolute -top-12 -right-10 size-32 rounded-full bg-white/10" aria-hidden />
-      <span className="pointer-events-none absolute -bottom-16 -left-10 size-32 rounded-full bg-black/5" aria-hidden />
-      <div className="relative flex items-start gap-2.5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur"><Icon className="size-4" /></span>
+      <div className="flex items-start gap-2.5 pr-7">
+        <span className={cn("flex shrink-0 items-center justify-center rounded-lg text-white", large ? "size-10" : "size-8")} style={{ backgroundColor: color }}>
+          <Icon className={large ? "size-5" : "size-4"} strokeWidth={1.85} />
+        </span>
         <div className="min-w-0 flex-1">
-          <p className={cn("truncate font-extrabold", large ? "text-lg" : "text-sm")}>{account.name}</p>
-          <p className="truncate text-[0.68rem] text-white/75">{subtitle}</p>
+          <p className={cn("truncate font-medium", large ? "text-base" : "text-sm")}>{account.name}</p>
+          <p className="truncate text-xs text-muted-foreground">{subtitle}{account.currency !== "PHP" && `, ${account.currency}`}</p>
         </div>
       </div>
-      <div className="relative">
+      <div>
         {isCredit && limit > 0 && (
-          <div className="mb-2">
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/25"><div className="h-full rounded-full bg-white" style={{ width: `${usedPct}%` }} /></div>
-            <p className="mt-1 flex justify-between text-[0.62rem] text-white/80"><span>{Math.round(usedPct)}% used</span><span>{formatMoney(limit - owed)} left</span></p>
+          <div className="mb-2.5">
+            <div className="h-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${usedPct}%`, backgroundColor: color }} /></div>
+            <p className="tabular mt-1.5 flex justify-between text-[0.6875rem] text-muted-foreground"><span>{Math.round(usedPct)}% used</span><span>{formatMoney(limit - owed)} left</span></p>
           </div>
         )}
-        <p className="text-[0.6rem] font-bold tracking-[0.12em] text-white/70 uppercase">{isCredit ? "Used credit" : "Balance"}</p>
-        <p className={cn("tabular font-extrabold tracking-tight", large ? "text-3xl" : "text-lg")}>{formatMoney(isCredit ? owed : account.balance_minor, account.currency)}</p>
+        <p className="text-xs text-muted-foreground">{isCredit ? "Used credit" : "Balance"}</p>
+        <p className={cn("tabular font-semibold tracking-[-0.02em]", large ? "text-[2rem] leading-tight" : "text-lg leading-snug", !isCredit && account.balance_minor < 0 && "text-expense")}>
+          {formatMoney(isCredit ? owed : account.balance_minor, account.currency)}
+        </p>
       </div>
     </>
   )
 
+  const surface = cn("relative flex flex-col justify-between gap-4 rounded-xl border bg-card p-4 select-none-touch", large ? "min-h-44" : "min-h-[8.5rem]")
+
   return (
     <div className={cn("relative", jiggle && "animate-jiggle")} style={jiggle ? { animationDelay: `${(index % 3) * -90}ms` } : undefined}>
       {jiggle ? (
-        <div {...pressHandlers} className={cn("relative flex flex-col justify-between overflow-hidden rounded-[1.4rem] p-4 text-white shadow-(--shadow-card) select-none-touch", large ? "min-h-48" : "min-h-[8.75rem]")}
-          style={{ background: `linear-gradient(145deg, ${color}, color-mix(in oklab, ${color}, black 24%))` }}>{body}</div>
+        <div {...pressHandlers} className={cn(surface, "border-primary/40")}>{body}</div>
       ) : (
         <Link href={`/accounts/${account.id}`} {...pressHandlers}
-          className={cn("pressable relative flex flex-col justify-between overflow-hidden rounded-[1.4rem] p-4 text-white shadow-(--shadow-card) select-none-touch focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none", large ? "min-h-48" : "min-h-[8.75rem]")}
-          style={{ background: `linear-gradient(145deg, ${color}, color-mix(in oklab, ${color}, black 24%))` }}>
+          className={cn(surface, "pressable hover:border-input focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none")}>
           {body}
         </Link>
       )}
       {actions && !jiggle && (
         <DropdownMenu>
-          <DropdownMenuTrigger aria-label={`${account.name} options`} className="absolute top-2.5 right-2.5 flex size-8 items-center justify-center rounded-full text-white/90 hover:bg-white/15">
-            <MoreHorizontal className="size-4.5" />
+          <DropdownMenuTrigger aria-label={`${account.name} options`} className="absolute top-3 right-2.5 flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground aria-expanded:bg-accent">
+            <MoreHorizontal className="size-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+          <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuItem asChild><Link href={`/accounts/${account.id}`}><Eye /> View history</Link></DropdownMenuItem>
             <DropdownMenuItem onClick={() => actions.onAdd(account, "expense")}><Plus /> Add expense</DropdownMenuItem>
             <DropdownMenuItem onClick={() => actions.onAdd(account, "income")}><Plus /> Add income</DropdownMenuItem>
@@ -102,11 +103,11 @@ export function AccountCard({ account, index = 0, actions, jiggle, onMove, canMo
         </DropdownMenu>
       )}
       {jiggle && onMove && (
-        <div className="absolute inset-x-0 -bottom-3 flex justify-center gap-2">
+        <div className="absolute inset-x-0 -bottom-3.5 flex justify-center gap-1.5">
           <button type="button" disabled={!canMoveBack} onClick={() => onMove(-1)} aria-label={`Move ${account.name} earlier`}
-            className="pressable flex size-8 items-center justify-center rounded-full border bg-card text-foreground shadow-(--shadow-float) disabled:opacity-30"><ChevronLeft className="size-4" /></button>
+            className="pressable flex size-8 items-center justify-center rounded-lg border bg-popover text-foreground shadow-(--shadow-float) disabled:opacity-30"><ChevronLeft className="size-4" /></button>
           <button type="button" disabled={!canMoveForward} onClick={() => onMove(1)} aria-label={`Move ${account.name} later`}
-            className="pressable flex size-8 items-center justify-center rounded-full border bg-card text-foreground shadow-(--shadow-float) disabled:opacity-30"><ChevronRight className="size-4" /></button>
+            className="pressable flex size-8 items-center justify-center rounded-lg border bg-popover text-foreground shadow-(--shadow-float) disabled:opacity-30"><ChevronRight className="size-4" /></button>
         </div>
       )}
     </div>

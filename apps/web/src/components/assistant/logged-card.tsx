@@ -53,30 +53,27 @@ export function LoggedCard({ transactions, onOpen }: { transactions: Transaction
   }
   const cancelled = state === "cancelled"
   return (
-    <div className={cn("space-y-3 rounded-[1.4rem] border bg-card p-4 shadow-(--shadow-card)", cancelled && "opacity-70")}>
-      <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.65rem] font-extrabold tracking-wider uppercase",
-        cancelled ? "bg-muted text-muted-foreground" : "bg-secondary text-primary")}>
-        {cancelled ? <XCircle className="size-3.5" /> : <CheckCircle2 className="size-3.5" />}{cancelled ? "Cancelled" : "Logged"}
-      </span>
-      <div>
-        <p className="font-extrabold">{cancelled ? "Removed" : "Logged"} {transactions.length} transaction{transactions.length === 1 ? "" : "s"}</p>
-        <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">{transactions.map((t) => <li key={t.id}>{describe(t)}</li>)}</ul>
-      </div>
+    <div className={cn("space-y-3 rounded-xl border bg-card p-4", cancelled && "opacity-70")}>
+      <p className={cn("flex items-center gap-1.5 text-[0.9375rem] font-medium", !cancelled && "text-primary")}>
+        {cancelled ? <XCircle className="size-4" /> : <CheckCircle2 className="size-4" />}
+        {cancelled ? "Removed" : "Logged"} {transactions.length} transaction{transactions.length === 1 ? "" : "s"}
+      </p>
+      <ul className="space-y-1 text-sm leading-relaxed text-foreground/85 [&_b]:font-medium [&_b]:text-foreground">{transactions.map((t) => <li key={t.id}>{describe(t)}</li>)}</ul>
       {!cancelled && (
         <>
           <div className="space-y-1.5">
             {transactions.map((t) => (
-              <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="pressable flex w-full items-center gap-3 rounded-2xl border bg-surface p-2.5 text-left">
-                <CategoryIcon icon={t.category_icon} color={t.category_color} className="rounded-xl" />
+              <button key={t.id} type="button" onClick={() => onOpen(t.id)} className="pressable flex w-full items-center gap-3 rounded-lg border p-2.5 text-left hover:bg-accent/60">
+                <CategoryIcon icon={t.category_icon} color={t.category_color} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-bold">{t.category_name ?? (t.type === "transfer" ? "Transfer" : "Uncategorized")}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{t.type === "income" ? "Income" : t.type === "transfer" ? "Transfer" : "Expense"} · {formatMoney(t.amount_minor)} {t.type === "income" ? "to" : "from"} {t.account_name}</span>
+                  <span className="block truncate text-sm font-medium">{t.category_name ?? (t.type === "transfer" ? "Transfer" : "Uncategorized")}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{t.type === "income" ? "Income" : t.type === "transfer" ? "Transfer" : "Expense"}, {formatMoney(t.amount_minor)} {t.type === "income" ? "to" : "from"} {t.account_name}</span>
                 </span>
-                <ChevronRight className="size-4 text-muted-foreground" />
+                <ChevronRight className="size-4 text-muted-foreground/60" />
               </button>
             ))}
           </div>
-          <button type="button" onClick={cancel} disabled={state === "cancelling"} className="pressable inline-flex h-8 items-center gap-1.5 rounded-full bg-muted px-3 text-xs font-bold">
+          <button type="button" onClick={cancel} disabled={state === "cancelling"} className="pressable inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[0.8125rem] font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
             {state === "cancelling" ? <Loader2 className="size-3.5 animate-spin" /> : <XCircle className="size-3.5" />} Cancel
           </button>
         </>
@@ -104,15 +101,13 @@ export function ReviewCard({ drafts: initial, onLogged }: { drafts: CaptureDraft
     }
   }
   return (
-    <div className="space-y-3 rounded-[1.4rem] border bg-card p-4 shadow-(--shadow-card)">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-[0.65rem] font-extrabold tracking-wider text-warning uppercase">
-        <CircleAlert className="size-3.5" /> Quick check
-      </span>
-      <p className="text-sm">I read this, but a detail needs your confirmation before I log it.</p>
+    <div className="space-y-3 rounded-xl border bg-card p-4">
+      <p className="flex items-center gap-1.5 text-[0.9375rem] font-medium text-warning"><CircleAlert className="size-4" /> Quick check</p>
+      <p className="text-sm text-muted-foreground">I read this, but a detail needs your confirmation before I log it.</p>
       {drafts.map((draft, i) => (
         <DraftCard key={i} draft={draft} onChange={(next) => setDrafts(drafts.map((d, idx) => (idx === i ? next : d)))} />
       ))}
-      <button type="button" onClick={save} disabled={busy || blocking} className="pressable h-10 w-full rounded-2xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-40">
+      <button type="button" onClick={save} disabled={busy || blocking} className="pressable h-10 w-full rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40">
         {busy ? "Logging…" : "Log it"}
       </button>
     </div>

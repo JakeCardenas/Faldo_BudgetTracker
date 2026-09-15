@@ -24,18 +24,18 @@ export function UserMenu({ variant = "compact" }: { variant?: "sidebar" | "compa
       <DropdownMenuTrigger
         className={cn(
           "flex items-center gap-2.5 rounded-lg text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
-          variant === "sidebar" ? "w-full p-2 hover:bg-sidebar-accent" : "p-0.5",
+          variant === "sidebar" ? "w-full px-2.5 py-2 hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent" : "p-0.5",
         )}
         aria-label="Account menu"
       >
-        <span className="flex size-8 items-center justify-center rounded-full bg-mint text-xs font-semibold text-mint-foreground">{initials}</span>
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-secondary text-[0.6875rem] font-semibold text-secondary-foreground">{initials}</span>
         {variant === "sidebar" && (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{me?.display_name ?? " "}</span>
+              <span className="block truncate text-sm leading-tight font-medium">{me?.display_name ?? " "}</span>
               <span className="block truncate text-xs text-muted-foreground">{me?.email ?? " "}</span>
             </span>
-            <ChevronsUpDown className="size-4 text-muted-foreground" />
+            <ChevronsUpDown className="size-3.5 text-muted-foreground" />
           </>
         )}
       </DropdownMenuTrigger>

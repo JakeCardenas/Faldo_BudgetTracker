@@ -12,12 +12,12 @@ const AXIS = { fontSize: 11, fill: "var(--muted-foreground)" }
 
 function TooltipCard({ title, rows }: { title: string; rows: { label: string; value: string; color?: string }[] }) {
   return (
-    <div className="min-w-40 rounded-xl border bg-popover px-3 py-2.5 text-xs shadow-(--shadow-float)">
+    <div className="min-w-40 rounded-lg border bg-popover px-3 py-2.5 text-xs shadow-(--shadow-float)">
       <p className="mb-1.5 font-medium">{title}</p>
       {rows.map((r) => (
         <div key={r.label} className="flex items-center justify-between gap-4 py-0.5">
           <span className="flex items-center gap-1.5 text-muted-foreground">
-            {r.color && <span className="size-2 rounded-full" style={{ backgroundColor: r.color }} />}{r.label}
+            {r.color && <span className="size-2 rounded-[3px]" style={{ backgroundColor: r.color }} />}{r.label}
           </span>
           <span className="tabular font-medium">{r.value}</span>
         </div>
@@ -56,18 +56,18 @@ export function IncomeExpenseBars({ data, height = 240 }: { data: { label: strin
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} barGap={4} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
-        <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.7} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tick={AXIS} />
         <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={56} />
-        <Tooltip cursor={{ fill: "var(--muted)", radius: 8 }} content={({ payload, label }) => payload?.length ? (
+        <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload, label }) => payload?.length ? (
           <TooltipCard title={`${label}${payload[0].payload.partial || payload[0].payload.is_partial ? " (so far)" : ""}`} rows={[
             { label: "Income", value: formatMoney(payload[0].payload.income_minor), color: "var(--chart-2)" },
             { label: "Expenses", value: formatMoney(payload[0].payload.expense_minor), color: "var(--chart-1)" },
             { label: "Net", value: formatMoney(payload[0].payload.income_minor - payload[0].payload.expense_minor, "PHP", { signed: true }) },
           ]} />
         ) : null} />
-        <Bar dataKey="income_minor" fill="var(--chart-3)" radius={[6, 6, 2, 2]} maxBarSize={22} />
-        <Bar dataKey="expense_minor" fill="var(--chart-1)" radius={[6, 6, 2, 2]} maxBarSize={22} />
+        <Bar dataKey="income_minor" fill="var(--chart-3)" radius={[4, 4, 1, 1]} maxBarSize={22} />
+        <Bar dataKey="expense_minor" fill="var(--chart-1)" radius={[4, 4, 1, 1]} maxBarSize={22} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -77,7 +77,7 @@ export function DailyBars({ data, height = 180 }: { data: { date: string; amount
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 0, left: -8, bottom: 0 }}>
-        <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.7} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tick={AXIS} tickFormatter={(d) => format(parseISO(d), "d")} interval="preserveStartEnd" minTickGap={12} />
         <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={52} />
         <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload }) => payload?.length ? (
@@ -125,7 +125,7 @@ export function ForecastChart({ series, actual = EMPTY_ACTUAL, baseline, bufferM
             <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.06} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.7} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tick={AXIS} tickFormatter={(d) => format(parseISO(d), "MMM d")} minTickGap={28} />
         <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={58} />
         {bufferMinor ? <ReferenceLine y={bufferMinor} stroke="var(--warning)" strokeDasharray="4 4" strokeOpacity={0.6} /> : null}
@@ -134,7 +134,7 @@ export function ForecastChart({ series, actual = EMPTY_ACTUAL, baseline, bufferM
           <TooltipCard title={format(parseISO(String(label)), "EEE, MMM d")} rows={[
             ...(payload[0].payload.actual !== undefined ? [{ label: "Actual", value: formatMoney(payload[0].payload.actual), color: "var(--chart-1)" }] : []),
             ...(payload[0].payload.p50 !== undefined ? [{ label: "Projected", value: formatMoney(payload[0].payload.p50), color: "var(--chart-2)" }] : []),
-            ...(payload[0].payload.band ? [{ label: "Likely range", value: `${compact(payload[0].payload.band[0])} – ${compact(payload[0].payload.band[1])}` }] : []),
+            ...(payload[0].payload.band ? [{ label: "Likely range", value: `${compact(payload[0].payload.band[0])} to ${compact(payload[0].payload.band[1])}` }] : []),
             ...(payload[0].payload.baseline !== undefined ? [{ label: "Without change", value: formatMoney(payload[0].payload.baseline), color: "var(--muted-foreground)" }] : []),
           ]} />
         ) : null} />

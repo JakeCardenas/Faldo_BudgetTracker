@@ -76,28 +76,28 @@ export function LoanCalculator() {
         <Segmented label="Interest type" className="w-full" value={mode} onChange={setMode}
           options={[{ value: "addon", label: "Add-on (monthly)" }, { value: "annual", label: "Annual (diminishing)" }]} />
         <Field label="Name"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className={inputClass} /></Field>
-        <Field label="Amount financed"><AmountInput value={principal} onValueChange={setPrincipal} className="h-12 rounded-2xl" /></Field>
+        <Field label="Amount financed"><AmountInput value={principal} onValueChange={setPrincipal} className="h-11" /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={mode === "addon" ? "Rate / month %" : "Rate / year %"}>
             <input value={rate} onChange={(e) => setRate(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" className={inputClass} />
           </Field>
           <Field label="Months"><input value={months} onChange={(e) => setMonths(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className={inputClass} /></Field>
         </div>
-        <Field label="One-time fees" hint="Processing or documentary fees deducted upfront."><AmountInput value={fee} onValueChange={setFee} placeholder="0" className="h-12 rounded-2xl" /></Field>
+        <Field label="One-time fees" hint="Processing or documentary fees deducted upfront."><AmountInput value={fee} onValueChange={setFee} placeholder="0" className="h-11" /></Field>
       </section>
       <section className="card-surface flex flex-col p-5">
-        <p className="eyebrow">Monthly payment</p>
-        <p className="tabular text-4xl font-extrabold tracking-tight text-primary">{peso(payment)}</p>
+        <p className="text-[0.8125rem] text-muted-foreground">Monthly payment</p>
+        <p className="tabular mt-1 text-[2.25rem] leading-tight font-semibold tracking-[-0.03em]">{peso(payment)}</p>
         <div className="mt-4 flex-1">
           <ResultRow label="Total interest" value={peso(interest)} tone="expense" />
           <ResultRow label="Fees" value={peso(f)} />
           <ResultRow label="Total you'll pay" value={peso(total + f)} />
           <ResultRow label="True yearly cost (effective rate)" value={`${ear.toFixed(1)}%`} strong />
         </div>
-        {mode === "addon" && rt > 0 && <p className="mt-2 rounded-2xl bg-warning-soft px-3 py-2 text-xs text-warning">A {rate}% monthly add-on rate is really about {ear.toFixed(0)}% a year, because interest is charged on the full amount the whole time.</p>}
+        {mode === "addon" && rt > 0 && <p className="mt-2 rounded-xl bg-warning-soft px-3 py-2 text-xs text-warning">A {rate}% monthly add-on rate is really about {ear.toFixed(0)}% a year, because interest is charged on the full amount the whole time.</p>}
         <div className="mt-4 flex items-end gap-2">
           <Field label="First payment" className="flex-1"><input type="date" value={firstDue} min={todayISO()} onChange={(e) => setFirstDue(e.target.value)} className={inputClass} /></Field>
-          <button type="button" onClick={track} disabled={saving || payment <= 0} className="pressable flex h-12 items-center gap-2 rounded-2xl bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-40">
+          <button type="button" onClick={track} disabled={saving || payment <= 0} className="pressable flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-40">
             <CalendarPlus className="size-4" /> Track it
           </button>
         </div>

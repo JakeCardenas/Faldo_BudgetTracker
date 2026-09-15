@@ -63,7 +63,7 @@ function EditBudgetDialog({ budget, open, onOpenChange }: { budget: Budget; open
                   <p className="truncate text-sm font-medium">{c.name}</p>
                   {line && <p className="text-xs text-muted-foreground">Avg last 3 months {formatMoney(line.average_spent_minor)}</p>}
                 </div>
-                <AmountInput aria-label={`${c.name} limit`} value={values[c.id] ?? ""} onValueChange={(v) => setValues({ ...values, [c.id]: v })} placeholder="—" className="w-32" />
+                <AmountInput aria-label={`${c.name} limit`} value={values[c.id] ?? ""} onValueChange={(v) => setValues({ ...values, [c.id]: v })} placeholder="No limit" className="w-32" />
               </div>
             )
           })}
@@ -100,7 +100,7 @@ export default function BudgetsPage() {
   const atRisk = lines.filter((l) => l.status === "over" || l.status === "at_risk")
 
   return (
-    <div className="space-y-5 pt-2">
+    <div className="space-y-5">
       <PageHeader title="Budgets" description="Monthly limits by category, with pacing and history."
         actions={<>
           <div className="flex items-center rounded-lg border bg-card">
@@ -111,7 +111,7 @@ export default function BudgetsPage() {
           {budget && budget.lines.length > 0 && <Button onClick={() => setEditing(true)}>Edit budget</Button>}
         </>} />
 
-      {isLoading || !budget ? <Skeleton className="h-96 rounded-2xl" /> : budget.lines.length === 0 ? (
+      {isLoading || !budget ? <Skeleton className="h-96 rounded-xl" /> : budget.lines.length === 0 ? (
         <div className="card-surface">
           <EmptyState icon={PiggyBank} title={`No budget for ${format(monthDate, "MMMM")}`} description="Budgets help Faldo warn you before you overspend and explain what changed."
             action={<div className="flex flex-wrap justify-center gap-2">
@@ -126,7 +126,7 @@ export default function BudgetsPage() {
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Spent in budgeted categories</p>
-                  <p className="text-3xl font-semibold tracking-tight"><Money minor={budget.total_spent_minor} /> <span className="text-lg font-normal text-muted-foreground">/ {formatMoney(budget.total_budgeted_minor)}</span></p>
+                  <p className="text-3xl font-semibold tracking-[-0.025em]"><Money minor={budget.total_spent_minor} /> <span className="text-lg font-normal text-muted-foreground">/ {formatMoney(budget.total_budgeted_minor)}</span></p>
                 </div>
                 <p className={cn("text-sm font-medium", budget.total_budgeted_minor - budget.total_spent_minor < 0 ? "text-destructive" : "text-primary")}>
                   {budget.total_budgeted_minor - budget.total_spent_minor >= 0 ? `${formatMoney(budget.total_budgeted_minor - budget.total_spent_minor)} remaining` : `${formatMoney(budget.total_spent_minor - budget.total_budgeted_minor)} over`}
@@ -154,7 +154,7 @@ export default function BudgetsPage() {
           </div>
 
           {atRisk.length > 0 && (
-            <div className="flex flex-col gap-3 rounded-2xl border border-warning/20 bg-warning-soft/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-xl border border-warning/20 bg-warning-soft/60 p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm"><span className="font-medium">{atRisk[0].category_name}</span> is {atRisk[0].status === "over" ? "over budget" : "on pace to go over"}. Want to know why?</p>
               <Button asChild variant="outline" size="sm" className="bg-card">
                 <Link href={`/assistant?q=${encodeURIComponent(`Why is my ${atRisk[0].category_name} budget ${atRisk[0].status === "over" ? "over" : "at risk"} this month?`)}`}><Sparkles /> Explain with AI</Link>

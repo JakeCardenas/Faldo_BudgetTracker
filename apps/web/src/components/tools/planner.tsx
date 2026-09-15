@@ -37,8 +37,8 @@ export function BudgetPlanner() {
   return (
     <div className="space-y-4">
       <section className="card-surface grid gap-4 p-5 sm:grid-cols-2">
-        <Field label="Monthly take-home pay"><AmountInput value={income} onValueChange={setIncome} placeholder="25,000" className="h-12 rounded-2xl" /></Field>
-        <div className="space-y-1.5"><p className="eyebrow">Split</p>
+        <Field label="Monthly take-home pay"><AmountInput value={income} onValueChange={setIncome} placeholder="25,000" className="h-11" /></Field>
+        <div className="space-y-1.5"><p className="text-[0.8125rem] text-muted-foreground">Split</p>
           <Segmented label="Split preset" className="w-full" value={preset} onChange={setPreset} options={Object.keys(PRESETS).map((k) => ({ value: k as Preset, label: k.replace(/-/g, "/") }))} /></div>
       </section>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -48,19 +48,19 @@ export function BudgetPlanner() {
           return (
             <section key={b.label} className="card-surface p-5">
               <div className="flex items-center justify-between">
-                <p className="text-base font-extrabold">{b.label}</p>
-                <span className="rounded-full px-2.5 py-1 text-xs font-extrabold text-white" style={{ backgroundColor: b.color }}>{b.pct}%</span>
+                <p className="text-base font-semibold">{b.label}</p>
+                <span className="tabular flex items-center gap-1.5 text-[0.8125rem] font-medium text-muted-foreground"><span className="size-2 rounded-[3px]" style={{ backgroundColor: b.color }} />{b.pct}%</span>
               </div>
               <p className="text-xs text-muted-foreground">{b.note}</p>
-              <p className="tabular mt-3 text-3xl font-extrabold tracking-tight">{formatMoney(planned)}</p>
-              <p className="eyebrow mt-3">This month so far</p>
-              <p className={cn("tabular text-lg font-extrabold", incomeMinor > 0 && over ? "text-expense" : "text-income")}>{formatMoney(b.actual)}</p>
-              {incomeMinor > 0 && <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${Math.min(100, planned > 0 ? (Math.max(0, b.actual) / planned) * 100 : 0)}%`, backgroundColor: b.color }} /></div>}
+              <p className="tabular mt-3 text-3xl font-semibold tracking-[-0.025em]">{formatMoney(planned)}</p>
+              <p className="mt-4 text-[0.8125rem] text-muted-foreground">This month so far</p>
+              <p className={cn("tabular text-lg font-semibold", incomeMinor > 0 && over ? "text-expense" : "text-foreground")}>{formatMoney(b.actual)}</p>
+              {incomeMinor > 0 && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${Math.min(100, planned > 0 ? (Math.max(0, b.actual) / planned) * 100 : 0)}%`, backgroundColor: b.color }} /></div>}
             </section>
           )
         })}
       </div>
-      <Link href="/learn/budget-50-30-20" className="card-surface pressable flex items-center justify-between gap-3 p-4 text-sm font-bold text-primary">
+      <Link href="/learn/budget-50-30-20" className="card-surface flex items-center justify-between gap-3 p-4 text-sm font-medium text-primary transition-colors hover:border-input">
         Learn how to adjust the split to your life <ArrowRight className="size-4" />
       </Link>
       <Disclaimer>Needs use the categories you marked as essential in Settings. Savings is income minus spending this month.</Disclaimer>

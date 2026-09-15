@@ -28,16 +28,16 @@ export function groupByDay(items: Transaction[]) {
 
 export function DayGroups({ items, onOpen, stickyTop = false }: { items: Transaction[]; onOpen: (id: string) => void; stickyTop?: string | false }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {groupByDay(items).map((group) => (
         <section key={group.date}>
-          <div className={cn("-mx-1 flex items-center justify-between rounded-xl px-3 py-1.5", stickyTop && `glass sticky z-10 ${stickyTop}`)}>
-            <h3 className="eyebrow">{dayLabel(group.date)}</h3>
-            <span className={cn("tabular text-xs font-extrabold", group.net > 0 ? "text-income" : group.net < 0 ? "text-expense" : "text-muted-foreground")}>
+          <div className={cn("flex items-center justify-between px-1 pb-2", stickyTop && `glass sticky z-10 ${stickyTop}`)}>
+            <h3 className="text-[0.8125rem] font-medium text-muted-foreground">{dayLabel(group.date)}</h3>
+            <span className={cn("tabular text-[0.8125rem] font-medium", group.net > 0 ? "text-income" : "text-muted-foreground")}>
               {formatMoney(group.net, "PHP", { signed: true })}
             </span>
           </div>
-          <div className="ios-group mt-1.5 divide-y divide-border/50 px-2">
+          <div className="ios-group divide-y divide-border/60">
             {group.items.map((t) => <TransactionRow key={t.id} transaction={t} onClick={() => onOpen(t.id)} />)}
           </div>
         </section>

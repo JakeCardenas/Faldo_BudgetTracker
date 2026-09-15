@@ -64,7 +64,7 @@ export function timeAgo(value: string) {
 }
 
 export function formatPct(value: number | null | undefined, signed = false) {
-  if (value === null || value === undefined) return "—"
+  if (value === null || value === undefined) return "n/a"
   const rounded = Math.abs(value) >= 10 ? Math.round(value) : Math.round(value * 10) / 10
   return `${signed && value > 0 ? "+" : ""}${rounded}%`
 }

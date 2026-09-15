@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 function Chip({ icon: Icon, children, warn }: { icon: typeof Tag; children: React.ReactNode; warn?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs", warn ? "border-warning/30 bg-warning-soft text-warning" : "bg-card text-foreground")}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs", warn ? "border-warning/30 bg-warning-soft text-warning" : "bg-card text-foreground")}>
       <Icon className="size-3.5 opacity-70" />
       {children}
     </span>
@@ -28,24 +28,24 @@ export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; on
   }
 
   const typeLabel = draft.type === "income" ? "Income" : draft.type === "transfer" ? "Transfer" : "Expense"
-  const title = draft.type === "transfer" ? `${draft.account_name ?? "?"} → ${draft.to_account_name ?? "?"}` : draft.merchant ?? draft.category_name ?? typeLabel
+  const title = draft.type === "transfer" ? `${draft.account_name ?? "?"} to ${draft.to_account_name ?? "?"}` : draft.merchant ?? draft.category_name ?? typeLabel
 
   return (
-    <div className="animate-rise space-y-3 rounded-2xl border bg-card p-4 shadow-(--shadow-card)">
+    <div className="animate-rise space-y-3 rounded-xl border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted-foreground">{typeLabel}</p>
           <p className="truncate text-base font-semibold">{title}</p>
         </div>
-        <p className={cn("tabular text-2xl font-semibold tracking-tight", draft.type === "income" && "text-emerald", !draft.amount_minor && "text-muted-foreground")}>
-          {draft.amount_minor ? formatMoney(draft.type === "expense" ? -draft.amount_minor : draft.amount_minor, "PHP", { signed: draft.type === "income" }) : "₱—"}
+        <p className={cn("tabular text-2xl font-semibold tracking-[-0.02em]", draft.type === "income" && "text-income", !draft.amount_minor && "text-muted-foreground")}>
+          {draft.amount_minor ? formatMoney(draft.type === "expense" ? -draft.amount_minor : draft.amount_minor, "PHP", { signed: draft.type === "income" }) : "₱0"}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
         {draft.type !== "transfer" && (
           <Chip icon={Tag} warn={fields.has("category_id")}>
-            {draft.category_name ?? "No category"}{draft.subcategory_name && ` · ${draft.subcategory_name}`}
+            {draft.category_name ?? "No category"}{draft.subcategory_name && `, ${draft.subcategory_name}`}
           </Chip>
         )}
         <Chip icon={Landmark} warn={fields.has("account_id")}>{draft.account_name ?? "No account"}</Chip>
@@ -54,7 +54,7 @@ export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; on
       </div>
 
       {draft.items.length > 0 && (
-        <ul className="space-y-1 rounded-xl bg-muted/50 px-3 py-2 text-sm">
+        <ul className="space-y-1 rounded-lg bg-muted/60 px-3 py-2 text-sm">
           {draft.items.map((item, i) => (
             <li key={i} className="flex justify-between gap-3"><span className="truncate">{item.name}</span><span className="tabular text-muted-foreground">{formatMoney(item.amount_minor)}</span></li>
           ))}
@@ -70,7 +70,7 @@ export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; on
               </p>
               {!issue.options && !issue.blocking && (
                 <button type="button" onClick={() => onChange({ ...draft, issues: draft.issues.filter((i) => i.code !== issue.code), needs_confirmation: draft.issues.length > 1 })}
-                  className="rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:border-primary/40 hover:bg-accent">
+                  className="pressable rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-accent">
                   {issue.code === "possible_duplicate" ? "It's a new transaction" : "Looks right"}
                 </button>
               )}
@@ -80,8 +80,8 @@ export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; on
                     const selected = (issue.field === "account_id" && draft.account_id === option.id) || (issue.field === "category_id" && draft.category_id === option.id)
                     return (
                       <button key={option.id} type="button" onClick={() => choose(issue.field, option.id, option.label)}
-                        className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:border-primary/40 hover:bg-accent",
-                          selected && "border-primary/50 bg-accent text-primary")}>
+                        className={cn("pressable rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-accent",
+                          selected && "border-primary/45 bg-secondary text-secondary-foreground")}>
                         {option.label}
                       </button>
                     )

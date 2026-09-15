@@ -75,27 +75,27 @@ function AccountPicker({ label, accounts, value, onChange, exclude }: {
   const selected = accounts.find((a) => a.id === value)
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="pressable flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-2xl border bg-card px-3 text-left shadow-(--shadow-card)">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold text-white"
+      <PopoverTrigger className="pressable flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-lg border bg-card px-2.5 text-left hover:bg-accent/60 aria-expanded:bg-accent/60">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md text-[0.625rem] font-semibold text-white"
           style={{ backgroundColor: selected?.color ?? "var(--primary)" }}>
           {(selected?.name ?? "?").slice(0, 2).toUpperCase()}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="eyebrow block">{label}</span>
-          <span className="block truncate text-sm font-bold">{selected?.name ?? "Choose account"}</span>
+          <span className="block text-[0.6875rem] leading-tight text-muted-foreground">{label}</span>
+          <span className="block truncate text-sm leading-tight font-medium">{selected?.name ?? "Choose account"}</span>
         </span>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
-      <PopoverContent align="start" side="top" className="w-72 rounded-2xl p-1.5">
+      <PopoverContent align="start" side="top" className="w-72 p-1.5">
         <div className="max-h-72 overflow-y-auto">
           {accounts.filter((a) => a.id !== exclude).map((account) => (
             <button key={account.id} type="button" onClick={() => { onChange(account.id); setOpen(false) }}
-              className={cn("flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left hover:bg-muted", account.id === value && "bg-secondary")}>
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[0.65rem] font-extrabold text-white"
+              className={cn("flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-accent", account.id === value && "bg-accent")}>
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-md text-[0.625rem] font-semibold text-white"
                 style={{ backgroundColor: account.color ?? "var(--primary)" }}>{account.name.slice(0, 2).toUpperCase()}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{account.name}</span>
-                <span className="block text-xs text-muted-foreground">{formatMoney(account.balance_minor, account.currency)}</span>
+                <span className="block truncate text-sm font-medium">{account.name}</span>
+                <span className="tabular block text-xs text-muted-foreground">{formatMoney(account.balance_minor, account.currency)}</span>
               </span>
               {account.id === value && <Check className="size-4 text-primary" />}
             </button>
@@ -124,14 +124,14 @@ function AddCategory({ kind, onCreated }: { kind: "expense" | "income"; onCreate
   }
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="pressable flex h-11 items-center gap-1.5 rounded-2xl border border-dashed px-3.5 text-sm font-semibold text-muted-foreground hover:text-foreground">
+      <PopoverTrigger className="pressable flex h-10 items-center gap-1.5 rounded-lg border border-dashed px-3 text-sm text-muted-foreground hover:bg-accent/60 hover:text-foreground">
         <Plus className="size-4" /> Add
       </PopoverTrigger>
-      <PopoverContent className="w-64 rounded-2xl p-3">
+      <PopoverContent className="w-64 p-2">
         <form onSubmit={(e) => { e.preventDefault(); create() }} className="flex gap-2">
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Category name"
-            className="h-9 min-w-0 flex-1 rounded-xl border bg-card px-3 text-base outline-none focus:border-ring sm:text-sm" />
-          <button type="submit" className="h-9 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground">Add</button>
+            className="h-9 min-w-0 flex-1 rounded-md border bg-card px-2.5 text-base outline-none focus:border-ring focus:ring-3 focus:ring-ring/25 sm:text-sm" />
+          <button type="submit" className="pressable h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">Add</button>
         </form>
       </PopoverContent>
     </Popover>
@@ -226,7 +226,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
       if (type === "transfer") {
         feedback = `Moved ${formatMoney(amountMinor)} from ${account?.name} to ${active.find((a) => a.id === toId)?.name}.`
       } else if (type === "income") {
-        feedback = `Nice! ${formatMoney(amountMinor)} added to ${account?.name}.`
+        feedback = `${formatMoney(amountMinor)} added to ${account?.name}.`
       } else if (line && date.slice(0, 7) === monthKey()) {
         const spent = line.spent_minor + amountMinor
         const pct = Math.round((spent / line.limit_minor) * 100)
@@ -234,7 +234,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
           ? `That puts ${line.category_name} ${formatMoney(spent - line.limit_minor)} over budget. Maybe ease up this week.`
           : `${line.category_name} is now at ${pct}% of its ${formatMoney(line.limit_minor)} budget.`
       } else {
-        feedback = `Logged ${formatMoney(amountMinor)}${category ? ` for ${category.name}` : ""}. Keep the streak going!`
+        feedback = `Logged ${formatMoney(amountMinor)}${category ? ` for ${category.name}` : ""}. Your streak is safe for today.`
       }
       onSaved(transaction, feedback)
     } catch (error) {
@@ -268,22 +268,22 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4">
-        <div className="flex flex-col items-center pt-2 pb-1" aria-live="polite">
-          {hasOperation(expr) && <p className="tabular text-sm font-semibold text-muted-foreground">{formatExpression(expr)}</p>}
-          <p className={cn("tabular flex items-start font-extrabold tracking-tight", amountMinor >= 1_000_000_00 ? "text-4xl" : "text-[3.25rem] leading-none")}>
-            <span className="mt-1 mr-1 text-2xl font-bold text-muted-foreground">{symbol}</span>
-            {hasOperation(expr) ? (value !== null ? formatExpression(String(value)) : "—") : expr ? formatExpression(expr) : <span className="text-muted-foreground/40">0</span>}
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4 sm:px-5">
+        <div className="flex min-h-24 flex-col items-center justify-center pt-3 pb-2" aria-live="polite">
+          {hasOperation(expr) && <p className="tabular mb-1 text-sm text-muted-foreground">{formatExpression(expr)}</p>}
+          <p className={cn("tabular flex items-start font-semibold tracking-[-0.035em]", amountMinor >= 1_000_000_00 ? "text-[2.5rem] leading-none" : "text-[3.25rem] leading-none")}>
+            <span className="mt-[0.18em] mr-1 text-[0.5em] font-medium tracking-normal text-muted-foreground">{symbol}</span>
+            {hasOperation(expr) ? (value !== null ? formatExpression(String(value)) : "0") : expr ? formatExpression(expr) : <span className="text-muted-foreground/35">0</span>}
           </p>
         </div>
 
-        <label className="flex h-12 items-center gap-3 rounded-2xl bg-muted/70 px-4">
+        <label className="flex h-11 items-center gap-2.5 rounded-lg bg-muted px-3 focus-within:ring-3 focus-within:ring-ring/25">
           <NotebookPen className="size-4 shrink-0 text-muted-foreground" />
           <span className="sr-only">Note</span>
           <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={120} data-entry-note=""
             onFocus={() => setKeypad(false)}
-            placeholder={type === "income" ? "e.g. Salary, freelance project" : type === "transfer" ? "e.g. Move to savings" : "Add a note… e.g. Lunch at Jollibee"}
-            className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70 sm:text-sm" />
+            placeholder={type === "income" ? "Add a note, like Salary" : type === "transfer" ? "Add a note, like Move to savings" : "Add a note, like Lunch at Jollibee"}
+            className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/80 sm:text-sm" />
         </label>
 
         {type === "transfer" && (
@@ -296,7 +296,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
 
         {templates.length > 0 && (
           <div className="space-y-2">
-            <p className="eyebrow px-1">Recent {type === "income" ? "income" : type === "transfer" ? "transfers" : "expenses"}</p>
+            <p className="text-[0.8125rem] font-medium text-muted-foreground">Recent {type === "income" ? "income" : type === "transfer" ? "transfers" : "expenses"}</p>
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
               {templates.map((t) => (
                 <button key={t.id} type="button" onClick={() => {
@@ -307,10 +307,10 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
                   setSubcategoryId(t.subcategory_id ?? "")
                   setAccountId(t.account_id)
                   if (t.to_account_id) setToAccountId(t.to_account_id)
-                }} className="pressable w-32 shrink-0 rounded-2xl border bg-card p-2.5 text-left shadow-(--shadow-card)">
-                  <span className="inline-block max-w-full truncate rounded-md bg-secondary px-1.5 py-0.5 text-[0.6rem] font-bold text-secondary-foreground">{t.account_name}</span>
-                  <span className="tabular mt-1 block text-sm font-extrabold">{formatMoney(t.amount_minor, t.currency)}</span>
-                  <span className="block truncate text-[0.7rem] text-muted-foreground">{t.merchant ?? t.notes ?? t.category_name ?? typeLabel}</span>
+                }} className="pressable w-32 shrink-0 rounded-lg border bg-card px-3 py-2 text-left hover:bg-accent/60">
+                  <span className="tabular block text-sm font-semibold">{formatMoney(t.amount_minor, t.currency)}</span>
+                  <span className="block truncate text-xs">{t.merchant ?? t.notes ?? t.category_name ?? typeLabel}</span>
+                  <span className="block truncate text-[0.6875rem] text-muted-foreground">{t.account_name}</span>
                 </button>
               ))}
             </div>
@@ -319,7 +319,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
 
         {type !== "transfer" && (
           <div className="space-y-2">
-            <p className="eyebrow px-1">Category <span className="font-medium normal-case tracking-normal">(optional)</span></p>
+            <p className="text-[0.8125rem] font-medium text-muted-foreground">Category <span className="font-normal text-muted-foreground/80">(optional)</span></p>
             <div className="flex flex-wrap gap-2">
               {topCategories.map((category) => {
                 const line = budgetByCategory.get(category.id)
@@ -327,15 +327,15 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
                 return (
                   <button key={category.id} type="button" aria-pressed={selected}
                     onClick={() => { play("select"); setCategoryId(selected ? "" : category.id); setSubcategoryId("") }}
-                    className={cn("pressable flex h-11 items-center gap-2 rounded-2xl border bg-card pr-3.5 pl-1.5 text-left shadow-(--shadow-card) transition-colors",
-                      selected && "border-primary bg-secondary ring-2 ring-primary/20")}>
+                    className={cn("pressable flex h-10 items-center gap-2 rounded-lg border bg-card pr-3 pl-1 text-left hover:bg-accent/60",
+                      selected && "border-primary/45 bg-secondary hover:bg-secondary")}>
                     <span className="relative flex size-8 items-center justify-center">
                       {line && <BudgetRing pct={line.pct_used} color={category.color ?? "var(--primary)"} />}
                       <CategoryIcon icon={category.icon} color={category.color} size="sm" />
                     </span>
                     <span className="leading-tight">
-                      <span className="block text-sm font-semibold">{category.name}</span>
-                      {line && <span className="tabular block text-[0.62rem] text-muted-foreground">{formatMoney(line.spent_minor, "PHP", { compact: true })} / {formatMoney(line.limit_minor, "PHP", { compact: true })}</span>}
+                      <span className="block text-sm">{category.name}</span>
+                      {line && <span className="tabular block text-[0.625rem] text-muted-foreground">{formatMoney(line.spent_minor, "PHP", { compact: true })} / {formatMoney(line.limit_minor, "PHP", { compact: true })}</span>}
                     </span>
                   </button>
                 )
@@ -356,7 +356,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
           <Chip active={date === todayISO()} onClick={() => setDate(todayISO())}>Today</Chip>
           <Chip active={date === yesterday} onClick={() => setDate(yesterday)}>Yesterday</Chip>
           <Chip active={date !== todayISO() && date !== yesterday} onClick={() => dateRef.current?.showPicker?.()} className="relative gap-1.5">
-            <CalendarDays className="mr-1 inline size-3.5" />
+            <CalendarDays className="mr-1.5 inline size-3.5" />
             {date !== todayISO() && date !== yesterday ? format(new Date(`${date}T00:00:00`), "MMM d, yyyy") : "Pick date"}
             <input ref={dateRef} type="date" value={date} max={todayISO()} onChange={(e) => e.target.value && setDate(e.target.value)}
               className="pointer-events-none absolute inset-0 opacity-0" tabIndex={-1} aria-label="Transaction date" />
@@ -364,22 +364,22 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
           <button type="button" onClick={() => onMoreDetails({
             type, amount_minor: amountMinor || undefined, occurred_on: date, account_id: fromId || undefined,
             to_account_id: toId || null, category_id: categoryId || null, subcategory_id: subcategoryId || null, notes: note || null,
-          })} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
-            <SlidersHorizontal className="size-3.5" /> Items, tags & more
+          })} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[0.8125rem] font-medium text-primary hover:opacity-80">
+            <SlidersHorizontal className="size-3.5" /> More details
           </button>
         </div>
       </div>
 
-      <div className="border-t bg-card/95 px-3 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+      <div className="border-t bg-popover px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         {keypad && (
-          <div className="grid grid-cols-4 gap-1.5 pb-2 select-none-touch">
+          <div className="grid grid-cols-4 gap-1.5 pb-2.5 select-none-touch">
             {KEYS.map(({ key, label, tone }) => (
               <button key={key} type="button" onClick={() => press(key)} aria-label={key === "⌫" ? "Delete" : key === "AC" ? "Clear" : key}
-                className={cn("pressable flex h-12 items-center justify-center rounded-2xl text-xl font-semibold transition-colors sm:h-11",
+                className={cn("pressable flex h-12 items-center justify-center rounded-lg text-[1.375rem] transition-colors sm:h-11",
                   tone === "digit" && "bg-muted/80 text-foreground hover:bg-muted",
-                  tone === "op" && "bg-secondary text-secondary-foreground hover:brightness-95",
-                  tone === "danger" && "bg-expense-soft text-expense hover:brightness-95",
-                  tone === "primary" && "bg-primary text-primary-foreground")}>
+                  tone === "op" && "bg-muted/80 text-primary hover:bg-muted",
+                  tone === "danger" && "bg-muted/80 text-base font-medium text-muted-foreground hover:bg-muted",
+                  tone === "primary" && "bg-secondary text-secondary-foreground hover:bg-secondary/80")}>
                 {label ?? key}
               </button>
             ))}
@@ -387,13 +387,12 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
         )}
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setKeypad((k) => !k)} aria-label={keypad ? "Hide keypad" : "Show keypad"} aria-pressed={keypad}
-            className="pressable flex size-14 shrink-0 items-center justify-center rounded-2xl border bg-card text-muted-foreground">
-            <Grid3x3 className="size-5" />
+            className="pressable flex size-12 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-accent/60 aria-pressed:text-foreground">
+            <Grid3x3 className="size-5" strokeWidth={1.75} />
           </button>
           {type !== "transfer" && <AccountPicker label="Account" accounts={active} value={fromId} onChange={setAccountId} />}
           <button type="button" onClick={save} disabled={!canSave || saving}
-            className={cn("pressable h-14 shrink-0 rounded-2xl px-5 text-[0.95rem] font-bold text-primary-foreground shadow-(--shadow-card) transition-opacity disabled:opacity-40",
-              type === "income" ? "bg-income text-white dark:text-[#0c150e]" : "bg-primary", type === "transfer" && "flex-1")}>
+            className={cn("pressable h-12 shrink-0 rounded-lg bg-primary px-5 text-[0.9375rem] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40", type === "transfer" && "flex-1")}>
             {saving ? "Saving…" : `Save ${typeLabel}`}
           </button>
         </div>
