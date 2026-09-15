@@ -1,20 +1,25 @@
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" aria-hidden className={cn("size-8", className)}>
-      <rect width="64" height="64" rx="18" fill="var(--primary)" />
-      <path d="M22 46V19h22" stroke="#f5fbf3" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M22 32.5h15" stroke="#b9dca9" strokeWidth="6" strokeLinecap="round" fill="none" />
-    </svg>
+    <Image src="/brand/logo-96.png" alt="" width={96} height={96} priority
+      className={cn("size-8 shrink-0 rounded-[28%] shadow-(--shadow-card)", className)} />
+  )
+}
+
+export function MascotArt({ className, priority }: { className?: string; priority?: boolean }) {
+  return (
+    <Image src="/brand/faldo-mascot.png" alt="Faldo mascot" width={625} height={640} priority={priority}
+      className={cn("h-auto w-28 select-none", className)} draggable={false} />
   )
 }
 
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
-      <LogoMark className="size-7" />
-      <span className="text-[1.05rem] font-semibold tracking-tight text-foreground">Faldo</span>
+      <LogoMark className="size-8" />
+      <span className="text-[1.1rem] font-extrabold tracking-tight text-foreground">Faldo</span>
     </span>
   )
 }

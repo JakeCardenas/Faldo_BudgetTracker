@@ -1,4 +1,4 @@
-import { Logo } from "@/components/brand/logo"
+import { Logo, LogoMark, MascotArt } from "@/components/brand/logo"
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,9 +7,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute -top-40 -right-40 size-[32rem] rounded-full bg-emerald/25 blur-3xl" aria-hidden />
         <div className="absolute -bottom-32 -left-24 size-96 rounded-full bg-leaf/15 blur-3xl" aria-hidden />
         <div className="relative flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-primary-foreground/10 font-semibold">F</span>
-          <span className="text-lg font-semibold tracking-tight">Faldo</span>
+          <LogoMark className="size-9 ring-1 ring-white/15" />
+          <span className="text-lg font-extrabold tracking-tight">Faldo</span>
         </div>
+        <MascotArt className="animate-bob relative mx-auto mt-10 w-56 drop-shadow-2xl xl:w-64" priority />
         <div className="relative mt-auto max-w-md space-y-8">
           <div className="space-y-3">
             <h2 className="text-4xl leading-tight font-semibold tracking-tight text-balance-safe">Know where your money went. Decide where it goes.</h2>
@@ -31,7 +32,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
       </aside>
       <main className="flex flex-col px-5 py-8 sm:px-10">
-        <div className="lg:hidden"><Logo /></div>
+        <div className="flex flex-col items-center gap-2 lg:hidden">
+          <MascotArt className="animate-bob w-24" priority />
+          <Logo />
+        </div>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">{children}</div>
       </main>
     </div>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { AddTransactionDialog, type AddMode } from "@/components/capture/add-transaction-dialog"
 import type { EntryPreset } from "@/components/capture/keypad-entry"
-import { Mascot } from "@/components/brand/mascot"
+import { MascotArt } from "@/components/brand/logo"
 import { TransactionSheet } from "@/components/finance/transaction-sheet"
 import { AppActionsContext, type AddModeOption } from "@/components/layout/app-context"
 import { CommandSearch } from "@/components/layout/command-search"
@@ -68,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (isLoading || !me || !me.settings.onboarding_completed_at) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3">
-        <Mascot className="animate-bob w-20" coin={false} />
+        <MascotArt className="animate-bob w-24" priority />
         <p className="text-sm font-semibold text-muted-foreground">Getting your money ready…</p>
       </div>
     )

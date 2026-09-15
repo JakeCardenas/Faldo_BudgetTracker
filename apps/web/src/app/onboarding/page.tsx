@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, ArrowRight, Banknote, Check, CreditCard, Landmark, Loader2, PiggyBank, Smartphone, Sparkles } from "lucide-react"
 import { toast } from "sonner"
-import { Logo, LogoMark } from "@/components/brand/logo"
+import { Logo, MascotArt } from "@/components/brand/logo"
 import { AmountInput } from "@/components/finance/amount-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -173,7 +173,7 @@ export default function OnboardingPage() {
         <div key={step} className="animate-rise w-full max-w-xl space-y-8">
           {step === 0 && (
             <div className="space-y-6 text-center">
-              <div className="relative mx-auto w-fit"><div className="absolute inset-0 scale-150 rounded-full bg-mint blur-2xl" /><LogoMark className="relative size-16" /></div>
+              <div className="relative mx-auto w-fit"><div className="absolute inset-0 scale-110 rounded-full bg-mint blur-2xl" /><MascotArt className="animate-bob relative w-32" priority /></div>
               <div className="space-y-3">
                 <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Welcome to Faldo{me ? `, ${me.display_name}` : ""}.</h1>
                 <p className="mx-auto max-w-md text-muted-foreground">Your AI financial copilot. Track your money, understand where it goes, and get answers grounded in your own numbers.</p>
