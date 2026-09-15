@@ -22,10 +22,9 @@ export function SplashContent({ animated = false, className }: { animated?: bool
           <p className="mt-3 text-sm font-semibold text-muted-foreground">Track · Plan · Save · Learn</p>
         </div>
       </div>
-      <div className="absolute inset-x-0 bottom-[calc(2rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-1.5" aria-hidden>
-        <span className={cn("h-1.5 w-6 rounded-full bg-primary", animated && "splash-dot-pulse")} />
-        {[0, 1, 2, 3].map((i) => <span key={i} className="size-1.5 rounded-full bg-muted-foreground/25" />)}
-      </div>
+      <p className={cn("absolute inset-x-0 bottom-[calc(2rem+env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground", animated && "splash-text-in")}>
+        Made by: <span className="font-bold text-foreground">Jake Cardenas</span>
+      </p>
     </div>
   )
 }

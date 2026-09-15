@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { AddTransactionDialog, type AddMode } from "@/components/capture/add-transaction-dialog"
 import type { EntryPreset } from "@/components/capture/keypad-entry"
+import Image from "next/image"
 import { SplashContent } from "@/components/brand/splash"
 import { TransactionSheet } from "@/components/finance/transaction-sheet"
 import { AppActionsContext, type AddModeOption } from "@/components/layout/app-context"
@@ -67,7 +68,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isLoading || !me || !me.settings.onboarding_completed_at) {
     return (
-      <SplashContent className="min-h-dvh" />
+      <>
+        <SplashContent className="boot-full min-h-dvh" />
+        <div className="boot-quiet flex min-h-dvh items-center justify-center">
+          <Image src="/brand/faldo-icon.svg" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
+        </div>
+      </>
     )
   }
 

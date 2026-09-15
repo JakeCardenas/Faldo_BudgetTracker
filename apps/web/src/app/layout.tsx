@@ -7,6 +7,8 @@ import "./globals.css"
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"] })
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] })
 
+const SPLASH_GATE = `(function(){try{var d=document.documentElement;var n=performance.getEntriesByType("navigation")[0];var t=n&&n.type;if(t==="reload"||t==="back_forward"||sessionStorage.getItem("faldo:opened")){d.dataset.splash="skip"}else{sessionStorage.setItem("faldo:opened","1")}}catch(e){}})()`
+
 export const metadata: Metadata = {
   title: { default: "Faldo", template: "%s · Faldo" },
   description: "Your personal money companion. Track spending, plan ahead and grow your savings.",
@@ -28,6 +30,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${jakarta.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SPLASH_GATE }} />
+      </head>
       <body className="min-h-dvh">
         <Splash />
         <Providers>{children}</Providers>
