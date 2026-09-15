@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google"
+import { Splash } from "@/components/brand/splash"
 import { Providers } from "./providers"
 import "./globals.css"
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${jakarta.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <body className="min-h-dvh">
+        <Splash />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -1,0 +1,45 @@
+"use client"
+
+import Image from "next/image"
+import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
+
+export function SplashContent({ animated = false, className }: { animated?: boolean; className?: string }) {
+  return (
+    <div className={cn("relative flex flex-col items-center justify-center", className)}>
+      <div className={cn("flex flex-col items-center gap-6 sm:flex-row sm:gap-10", animated && "splash-stage")}>
+        <div className={cn(animated && "splash-icon-slide")}>
+          <div className={cn(animated && "splash-icon-in")}>
+            <Image src="/brand/faldo-icon.svg" alt="" width={180} height={180} priority unoptimized
+              className="size-28 drop-shadow-[0_18px_30px_rgb(30_58_36/0.22)] sm:size-44" />
+          </div>
+        </div>
+        <div className={cn("w-[18rem] text-center sm:w-[22rem] sm:text-left", animated && "splash-text-in")}>
+          <span className="inline-flex rounded-full bg-card px-3 py-1 text-xs font-bold text-primary shadow-(--shadow-card)">
+            Faldo <span className="mx-1 text-muted-foreground/60">·</span> <span className="font-semibold">Money companion</span>
+          </span>
+          <p className="mt-3 text-[2.1rem] leading-[1.05] font-extrabold tracking-tight text-foreground sm:text-5xl">Your money,<br />made simple.</p>
+          <p className="mt-3 text-sm font-semibold text-muted-foreground">Track · Plan · Save · Learn</p>
+        </div>
+      </div>
+      <div className="absolute inset-x-0 bottom-[calc(2rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-1.5" aria-hidden>
+        <span className={cn("h-1.5 w-6 rounded-full bg-primary", animated && "splash-dot-pulse")} />
+        {[0, 1, 2, 3].map((i) => <span key={i} className="size-1.5 rounded-full bg-muted-foreground/25" />)}
+      </div>
+    </div>
+  )
+}
+
+export function Splash() {
+  const [mounted, setMounted] = useState(true)
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(false), 3000)
+    return () => clearTimeout(timer)
+  }, [])
+  if (!mounted) return null
+  return (
+    <div aria-hidden className="splash-overlay fixed inset-0 z-[100] bg-background">
+      <SplashContent animated className="h-full" />
+    </div>
+  )
+}
