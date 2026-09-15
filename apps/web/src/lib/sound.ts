@@ -21,20 +21,8 @@ const FILES: Record<SoundName, string[]> = {
 
 const VOLUME: Partial<Record<SoundName, number>> = { type: 0.35, tap: 0.4, celebrate: 0.5, success: 0.55 }
 const STORAGE_KEY = "faldo:sounds"
-const TAP_KEY = "faldo:splash-tap"
 const GESTURES = ["pointerdown", "touchend", "click", "keydown"] as const
 
-type Cue = { at: number; sound: SoundName; volume?: number } | { at: number; note: number; volume?: number; length?: number }
-
-const SPLASH_CUES: Cue[] = [
-  { at: 90, sound: "open", volume: 0.5 },
-  { at: 1060, sound: "send", volume: 0.32 },
-  { at: 1380, note: 659.25, volume: 0.1 },
-  { at: 1470, note: 830.61, volume: 0.1 },
-  { at: 1560, note: 987.77, volume: 0.1 },
-  { at: 1670, note: 1318.51, volume: 0.12, length: 0.9 },
-]
-const SPLASH_END = 2350
 
 let context: AudioContext | null = null
 const buffers = new Map<string, AudioBuffer>()
@@ -53,25 +41,6 @@ export function setSoundsEnabled(enabled: boolean) {
   try {
     window.localStorage.setItem(STORAGE_KEY, enabled ? "on" : "off")
   } catch {}
-}
-
-export function splashTapEnabled() {
-  if (typeof window === "undefined") return false
-  try {
-    return window.localStorage.getItem(TAP_KEY) !== "off"
-  } catch {
-    return true
-  }
-}
-
-export function setSplashTapEnabled(enabled: boolean) {
-  try {
-    window.localStorage.setItem(TAP_KEY, enabled ? "on" : "off")
-  } catch {}
-}
-
-export function audioRunning() {
-  return getContext()?.state === "running"
 }
 
 export function onFirstGesture(handler: () => void) {
@@ -127,56 +96,10 @@ function startBuffer(ctx: AudioContext, name: SoundName, when: number, volume?: 
   source.start(when)
 }
 
-function startNote(ctx: AudioContext, frequency: number, when: number, volume = 0.1, length = 0.45) {
-  const osc = ctx.createOscillator()
-  const gain = ctx.createGain()
-  osc.type = "sine"
-  osc.frequency.setValueAtTime(frequency, when)
-  gain.gain.setValueAtTime(0.0001, when)
-  gain.gain.exponentialRampToValueAtTime(volume, when + 0.012)
-  gain.gain.exponentialRampToValueAtTime(0.0001, when + length)
-  osc.connect(gain).connect(ctx.destination)
-  osc.start(when)
-  osc.stop(when + length + 0.05)
-}
-
 export function play(name: SoundName) {
   const ctx = getContext()
   if (!canPlay(ctx)) return
   const files = FILES[name]
   if (files.every((f) => buffers.has(f))) startBuffer(ctx, name, ctx.currentTime)
   else void preloadSounds().then(() => { if (canPlay(ctx)) startBuffer(ctx, name, ctx.currentTime) })
-}
-
-export function playSplash(getElapsed: () => number) {
-  const ctx = getContext()
-  if (!ctx || !soundsEnabled()) return () => undefined
-  let cancelled = false
-  let scheduled = false
-
-  const schedule = () => {
-    if (cancelled || scheduled || !canPlay(ctx)) return
-    const elapsed = getElapsed()
-    if (elapsed >= SPLASH_END - 250) return
-    scheduled = true
-    const now = ctx.currentTime
-    for (const cue of SPLASH_CUES) {
-      const delay = (cue.at - elapsed) / 1000
-      if (delay < -(cue.at < 600 ? 0.7 : 0.12)) continue
-      const when = now + Math.max(0, delay)
-      if ("sound" in cue) startBuffer(ctx, cue.sound, when, cue.volume)
-      else startNote(ctx, cue.note, when, cue.volume, cue.length)
-    }
-  }
-
-  void preloadSounds().then(() => {
-    if (ctx.state === "running") schedule()
-    else void ctx.resume().then(schedule).catch(() => undefined)
-  })
-  const removeGesture = onFirstGesture(() => { void ctx.resume().then(() => preloadSounds()).then(schedule).catch(() => undefined) })
-
-  return () => {
-    cancelled = true
-    removeGesture()
-  }
 }
