@@ -2,9 +2,9 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, FileUp, LayoutGrid, List, Plus, Wallet } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, FileUp, LayoutGrid, List, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { BalanceLine } from "@/components/charts/charts"
 import { AccountDialog } from "@/components/finance/account-dialog"
@@ -34,20 +34,6 @@ function readView(): "grid" | "list" {
     return window.localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid"
   } catch {
     return "grid"
-  }
-}
-
-function useLongPress(onLongPress: () => void, ms = 480) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const fired = useRef(false)
-  const clear = () => { if (timer.current) clearTimeout(timer.current); timer.current = null }
-  return {
-    onPointerDown: () => { fired.current = false; clear(); timer.current = setTimeout(() => { fired.current = true; onLongPress(); navigator.vibrate?.(12) }, ms) },
-    onPointerUp: clear,
-    onPointerLeave: clear,
-    onPointerCancel: clear,
-    onContextMenu: (e: React.MouseEvent) => { e.preventDefault() },
-    onClickCapture: (e: React.MouseEvent) => { if (fired.current) { e.preventDefault(); e.stopPropagation() } },
   }
 }
 
@@ -124,7 +110,6 @@ export default function AccountsPage() {
     setOrder(active.map((a) => a.id))
     setArranging(true)
   }
-  const longPress = useLongPress(startArranging)
 
   async function finishArranging() {
     setArranging(false)
@@ -137,15 +122,13 @@ export default function AccountsPage() {
     }
   }
 
-  function move(id: string, direction: -1 | 1, groupIds: string[]) {
-    const index = groupIds.indexOf(id)
-    const target = groupIds[index + direction]
-    if (!target) return
+  function move(id: string, direction: -1 | 1) {
     play("tap")
     setOrder((current) => {
       const next = [...current]
       const a = next.indexOf(id)
-      const b = next.indexOf(target)
+      const b = a + direction
+      if (a < 0 || b < 0 || b >= next.length) return current
       ;[next[a], next[b]] = [next[b], next[a]]
       return next
     })
@@ -159,7 +142,6 @@ export default function AccountsPage() {
   const filters = ACCOUNT_GROUPS.filter((g) => active.some((a) => a.type === g.type))
   const inView = (a: Account) => view === "all" || (view === "assets" ? a.balance_minor >= 0 : a.balance_minor < 0)
   const shown = ordered.filter((a) => (filter === "all" || a.type === filter) && inView(a))
-  const shownIds = shown.map((a) => a.id)
   const groups = ACCOUNT_GROUPS
     .filter((g) => filter === "all" || g.type === filter)
     .map((g) => ({ ...g, accounts: ordered.filter((a) => a.type === g.type && inView(a)) }))
@@ -173,14 +155,17 @@ export default function AccountsPage() {
     <div className="space-y-5">
       <LargeTitle title="Accounts" back={{ href: "/", label: "Home" }}
         actions={arranging
-          ? <Button size="sm" onClick={finishArranging}>Done</Button>
+          ? <div className="flex gap-2">
+              <HeaderButton onClick={() => setArranging(false)}>Cancel</HeaderButton>
+              <Button size="sm" onClick={finishArranging}>Done</Button>
+            </div>
           : <div className="flex gap-2">
               <HeaderButton onClick={() => router.push("/import")} aria-label="Import a statement"><FileUp /> <span className="max-sm:hidden">Import</span></HeaderButton>
               <HeaderButton onClick={() => setDialog({ open: true })}><Plus /> Add</HeaderButton>
             </div>} />
 
       {isLoading ? (
-        <div className="space-y-6"><div className="space-y-3 px-1"><Skeleton className="h-8 w-60 rounded-full" /><Skeleton className="h-11 w-48" /><Skeleton className="h-40 rounded-2xl" /></div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}</div></div>
+        <div className="space-y-6"><div className="space-y-3 px-1"><Skeleton className="h-8 w-60 rounded-full" /><Skeleton className="h-11 w-48" /><Skeleton className="h-40 rounded-2xl" /></div><div className="grid grid-cols-1 gap-4 min-[560px]:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[1.586] rounded-[1.125rem]" />)}</div></div>
       ) : active.length === 0 ? (
         <div className="card-surface">
           <EmptyState icon={Wallet} title="Add your first account" description="Start with where your money lives: cash, GCash, Maya or a bank account. Faldo never connects to your bank."
@@ -201,31 +186,51 @@ export default function AccountsPage() {
             <BalanceTrend view={view} current={headline.value} />
           </section>
 
+          {arranging ? (
+            <section aria-label="Reorder accounts" className="space-y-2.5">
+              <p className="px-1 text-[0.8125rem] text-muted-foreground">Move accounts up or down, then tap Done. Home shows them in this order.</p>
+              <ol className="ios-group divide-y divide-border/60">
+                {ordered.map((account, i) => (
+                  <li key={account.id} className="flex items-center gap-3 py-2.5 pr-2 pl-4">
+                    <AccountBadge account={account} index={active.indexOf(account)} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[0.9375rem] font-medium">{account.name}</span>
+                      <span className="block truncate text-[0.8125rem] text-muted-foreground">{account.institution ?? ACCOUNT_GROUPS.find((g) => g.type === account.type)?.label}</span>
+                    </span>
+                    <button type="button" disabled={i === 0} onClick={() => move(account.id, -1)} aria-label={`Move ${account.name} up`}
+                      className="pressable flex size-10 items-center justify-center rounded-full text-foreground hover:bg-accent disabled:opacity-25"><ChevronUp className="size-5" /></button>
+                    <button type="button" disabled={i === ordered.length - 1} onClick={() => move(account.id, 1)} aria-label={`Move ${account.name} down`}
+                      className="pressable flex size-10 items-center justify-center rounded-full text-foreground hover:bg-accent disabled:opacity-25"><ChevronDown className="size-5" /></button>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : (
+          <>
           <div className="flex items-center gap-2">
             {filters.length > 1 ? (
               <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto scrollbar-none">
                 <Chip active={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
                 {filters.map((f) => <Chip key={f.type} active={filter === f.type} onClick={() => setFilter(f.type)}>{f.label}</Chip>)}
               </div>
-            ) : <p className="min-w-0 flex-1 truncate px-1 text-[0.8125rem] text-muted-foreground">{arranging ? "" : "Hold a card to rearrange"}</p>}
-            {!arranging && (
-              <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground max-sm:hidden" onClick={startArranging}>Reorder</Button>
+            ) : <span className="flex-1" />}
+            {active.length > 1 && (
+              <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground" onClick={startArranging} aria-label="Reorder accounts">
+                <ArrowUpDown /> <span className="max-sm:hidden">Reorder</span>
+              </Button>
             )}
             <div className="flex shrink-0 rounded-full bg-muted p-1" role="radiogroup" aria-label="Layout">
-              <button type="button" role="radio" aria-label="Grid view" aria-checked={layout === "grid"} onClick={() => changeLayout("grid")}
+              <button type="button" role="radio" aria-label="Card view" aria-checked={layout === "grid"} onClick={() => changeLayout("grid")}
                 className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "grid" && "bg-card text-foreground shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-[#2b302c]")}><LayoutGrid className="size-3.5" /></button>
               <button type="button" role="radio" aria-label="List view" aria-checked={layout === "list"} onClick={() => changeLayout("list")}
                 className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "list" && "bg-card text-foreground shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-[#2b302c]")}><List className="size-3.5" /></button>
             </div>
           </div>
-          {arranging && <p className="-mt-2 text-[0.8125rem] text-muted-foreground">Use the arrows to reorder, then tap Done.</p>}
 
-          {layout === "grid" || arranging ? (
-            <div className={cn("grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4", arranging && "gap-y-7 pb-3")}>
+          {layout === "grid" ? (
+            <div className="grid grid-cols-1 gap-4 min-[560px]:grid-cols-2 lg:grid-cols-3">
               {shown.map((account) => (
-                <AccountCard key={account.id} account={account} index={active.indexOf(account)} jiggle={arranging}
-                  pressHandlers={arranging ? undefined : longPress}
-                  onMove={(d) => move(account.id, d, shownIds)} canMoveBack={shownIds.indexOf(account.id) > 0} canMoveForward={shownIds.indexOf(account.id) < shownIds.length - 1}
+                <AccountCard key={account.id} account={account} index={active.indexOf(account)} fill
                   actions={{ onEdit: (a) => setDialog({ open: true, account: a }), onAdd: (a, mode) => openAddTransaction({ mode, preset: { account_id: a.id } }) }} />
               ))}
             </div>
@@ -246,7 +251,7 @@ export default function AccountsPage() {
                       <div className="ios-group divide-y divide-border/60">
                         {group.accounts.map((account) => (
                           <Link key={account.id} href={`/accounts/${account.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-                            <AccountBadge account={account} />
+                            <AccountBadge account={account} index={active.indexOf(account)} />
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[0.9375rem] font-medium">{account.name}{account.card_last4 && <span className="tabular ml-1.5 text-[0.8125rem] font-normal text-muted-foreground">•••• {account.card_last4}</span>}</span>
                               <span className="block truncate text-[0.8125rem] text-muted-foreground">{account.institution ?? group.label}, {account.transaction_count} {account.transaction_count === 1 ? "transaction" : "transactions"}</span>
@@ -261,6 +266,8 @@ export default function AccountsPage() {
                 )
               })}
             </div>
+          )}
+          </>
           )}
         </>
       )}

@@ -7,7 +7,8 @@ import { SeverityDot } from "@/components/finance/insight-card"
 import { formatMoney, relativeDays } from "@/lib/format"
 import { useInsights, useUpcoming } from "@/lib/queries"
 
-export function Notifications({ tone = "default" }: { tone?: "default" | "light" }) {
+/** `surface` is the round button used on the Home environment, next to Search. */
+export function Notifications({ tone = "default" }: { tone?: "default" | "surface" }) {
   const { data: insights = [] } = useInsights()
   const { data: upcoming = [] } = useUpcoming(7)
   const alerts = insights.filter((i) => i.severity === "warning" || i.severity === "critical").slice(0, 4)
@@ -17,13 +18,13 @@ export function Notifications({ tone = "default" }: { tone?: "default" | "light"
   return (
     <Popover>
       <PopoverTrigger
-        className={tone === "light"
-          ? "relative flex size-10 items-center justify-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/20 focus-visible:ring-3 focus-visible:ring-white/40 focus-visible:outline-none"
+        className={tone === "surface"
+          ? "relative flex size-10 items-center justify-center rounded-full bg-card/70 text-foreground ring-1 ring-foreground/[0.05] transition-colors hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none aria-expanded:bg-card"
           : "relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none aria-expanded:bg-accent aria-expanded:text-foreground"}
         aria-label={count ? `Notifications, ${count} new` : "Notifications"}
       >
         <Bell className="size-[1.1rem]" strokeWidth={1.85} />
-        {count > 0 && <span className={tone === "light" ? "absolute top-2 right-2 size-2 rounded-full bg-[#9be2ad] ring-2 ring-[#1d5436]" : "absolute top-2 right-2.5 size-1.5 rounded-full bg-primary ring-2 ring-background"} />}
+        {count > 0 && <span className={tone === "surface" ? "absolute top-2 right-2 size-2 rounded-full bg-primary ring-2 ring-card" : "absolute top-2 right-2.5 size-1.5 rounded-full bg-primary ring-2 ring-background"} />}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(22rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-2xl p-0">
         <div className="border-b px-4 py-3">

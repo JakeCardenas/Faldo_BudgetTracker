@@ -387,7 +387,7 @@ function AssistantView() {
             {messages.length === 0 ? (
               <div className="animate-rise space-y-6">
                 <div className="flex flex-col items-center pt-4 text-center sm:pt-10">
-                  <Panda pose="wave" priority sizes="112px" className="w-24 drop-shadow-[0_10px_18px_rgb(16_36_24/0.18)]" />
+                  <Panda pose="wave" priority sizes="112px" className="w-24" />
                   <h2 className="mt-4 text-xl font-semibold tracking-[-0.02em]">Hi {me?.display_name?.split(" ")[0] ?? "there"}, how can I help?</h2>
                   <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">Ask about your balances, spending or goals. You can also log money the way you&apos;d text it, like &ldquo;Spent 250 on food&rdquo;.</p>
                 </div>

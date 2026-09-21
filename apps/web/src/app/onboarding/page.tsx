@@ -185,7 +185,7 @@ export default function OnboardingPage() {
         <div key={step} className="animate-rise w-full max-w-xl space-y-8">
           {step === 0 && (
             <div className="space-y-7 text-center">
-              <Panda pose="wave" priority sizes="160px" className="mx-auto w-36 drop-shadow-[0_14px_24px_rgb(16_36_24/0.2)]" />
+              <Panda pose="wave" priority sizes="160px" className="mx-auto w-36" />
               <div className="space-y-3">
                 <h1 className="text-[2rem] leading-tight font-semibold tracking-[-0.035em] sm:text-[2.5rem]">Welcome to Faldo{me ? `, ${me.display_name}` : ""}</h1>
                 <p className="mx-auto max-w-md text-[0.9375rem] leading-relaxed text-muted-foreground">Your money companion. Track what you spend, see what&apos;s safe to spend, and get answers from your own numbers.</p>
@@ -322,7 +322,7 @@ export default function OnboardingPage() {
 
           {step === 7 && (
             <div className="space-y-6 text-center">
-              <Panda pose="bamboo" sizes="144px" className="mx-auto w-32 drop-shadow-[0_14px_24px_rgb(16_36_24/0.2)]" />
+              <Panda pose="bamboo" sizes="144px" className="mx-auto w-32" />
               <div className="space-y-2">
                 <h1 className="text-[2rem] leading-tight font-semibold tracking-[-0.035em]">Ask Faldo anything</h1>
                 <p className="mx-auto max-w-md text-[0.9375rem] leading-relaxed text-muted-foreground">Ask about your money in plain words. Faldo looks up your records, works out exact figures and shows where they came from. It never invents numbers.</p>

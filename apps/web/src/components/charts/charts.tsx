@@ -1,11 +1,12 @@
 "use client"
 
 import { format, parseISO } from "date-fns"
-import { useId, useMemo } from "react"
+import { useId, useMemo, useState } from "react"
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts"
 import { formatMoney } from "@/lib/format"
+import { useAmountsHidden } from "@/lib/privacy"
 import type { CategoryRow, ForecastPoint } from "@/lib/types"
 
 const AXIS = { fontSize: 11, fill: "var(--muted-foreground)" }
@@ -30,51 +31,106 @@ const compact = (v: number) => formatMoney(v, "PHP", { compact: true })
 
 export interface BalancePointValue { date: string; value: number }
 
+/** Three or four round values that cover the data, so the scale reads ₱40K, ₱45K, ₱50K instead of odd numbers. */
+function niceTicks(min: number, max: number) {
+  const span = Math.max(max - min, Math.abs(max) * 0.04, 10_000)
+  const magnitude = 10 ** Math.floor(Math.log10(span / 2))
+  for (const m of [0.5, 1, 2, 2.5, 5, 10, 20]) {
+    const step = m * magnitude
+    const lo = Math.floor(min / step) * step
+    const hi = Math.ceil(max / step) * step
+    const count = Math.round((hi - lo) / step) + 1
+    if (count <= 4) return Array.from({ length: count }, (_, i) => lo + i * step)
+  }
+  return [min, max]
+}
+
+const PLOT = { top: 10, right: 4, left: 2, bottom: 4, axis: 46 }
+
 /**
- * Answers one question: how has my balance moved? A single line, no grid, a dot where today is.
- * `tone="light"` draws it in white for the green Home environment. `onHover` reports the point under
- * the finger or cursor so the headline can show that day's balance.
+ * Answers one question: how has my balance moved? One line over a quiet dashed grid, a compact scale on
+ * the right, the first, middle and last dates below and a dot for today. Drag across it (finger or
+ * mouse) or use the arrow keys to read any day; `onHover` reports that point so a headline can show it.
  */
-export function BalanceLine({ data, height = 168, tone = "default", onHover }: {
+export function BalanceLine({ data, height = 168, onHover }: {
   data: BalancePointValue[]
   /** Pixels, or "100%" to fill the parent. */
   height?: number | "100%"
-  tone?: "default" | "light"
   onHover?: (point: BalancePointValue | null) => void
 }) {
   const gradientId = `line-${useId().replace(/:/g, "")}`
-  const min = Math.min(...data.map((d) => d.value))
-  const max = Math.max(...data.map((d) => d.value))
-  const pad = Math.max(1, (max - min) * 0.18)
-  const stroke = tone === "light" ? "#ffffff" : "var(--primary)"
-  const ring = tone === "light" ? "var(--hero-deep)" : "var(--card)"
+  const hidden = useAmountsHidden()
+  const [active, setActive] = useState<number | null>(null)
+  const ticks = useMemo(() => niceTicks(Math.min(...data.map((d) => d.value)), Math.max(...data.map((d) => d.value))), [data])
+  const dates = useMemo(() => {
+    const last = data.length - 1
+    return [...new Set([0, Math.round(last / 2), last])].map((i) => data[i].date)
+  }, [data])
+  const today = format(new Date(), "yyyy-MM-dd")
+  const axis = hidden ? 0 : PLOT.axis
+  const point = active !== null ? data[active] : null
+
+  function pick(index: number | null) {
+    setActive(index)
+    onHover?.(index === null ? null : data[index])
+  }
+  function fromPointer(event: React.PointerEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const width = rect.width - PLOT.left - PLOT.right - axis
+    const ratio = (event.clientX - rect.left - PLOT.left) / width
+    pick(Math.min(data.length - 1, Math.max(0, Math.round(ratio * (data.length - 1)))))
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 12, right: 10, left: 10, bottom: 4 }}
-        onMouseMove={(state) => {
-          const index = typeof state?.activeTooltipIndex === "number" ? state.activeTooltipIndex : Number(state?.activeTooltipIndex)
-          onHover?.(Number.isFinite(index) && data[index] ? data[index] : null)
-        }}
-        onMouseLeave={() => onHover?.(null)}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={stroke} stopOpacity={tone === "light" ? 0.28 : 0.16} />
-            <stop offset="100%" stopColor={stroke} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <YAxis hide domain={[min - pad, max + pad]} />
-        <XAxis dataKey="date" hide />
-        <Tooltip cursor={{ stroke: tone === "light" ? "rgb(255 255 255 / 0.45)" : "var(--border)", strokeWidth: 1 }}
-          content={onHover ? () => null : ({ payload }) => payload?.length ? (
-            <TooltipCard title={format(parseISO(payload[0].payload.date), "EEE, MMM d")} rows={[{ label: "Balance", value: formatMoney(payload[0].payload.value) }]} />
-          ) : null} />
-        <Area type="monotone" dataKey="value" stroke={stroke} strokeWidth={2.5} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
-          dot={(props: { cx?: number; cy?: number; index?: number }) => props.index === data.length - 1 && props.cx !== undefined && props.cy !== undefined
-            ? <g key="end"><circle cx={props.cx} cy={props.cy} r={10} fill={stroke} opacity={0.22} /><circle cx={props.cx} cy={props.cy} r={4.5} fill={stroke} stroke={ring} strokeWidth={2} /></g>
-            : <g key={`d-${props.index}`} />}
-          activeDot={{ r: 5, fill: stroke, stroke: ring, strokeWidth: 2 }} />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div tabIndex={0} role="group" className="relative h-full touch-pan-y rounded-lg outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      style={{ height }}
+      aria-label={`Balance from ${format(parseISO(data[0].date), "MMM d")} to ${format(parseISO(data[data.length - 1].date), "MMM d")}. Use the arrow keys to read each day.`}
+      onPointerDown={fromPointer} onPointerMove={(e) => { if (e.pointerType === "mouse" || e.buttons) fromPointer(e) }}
+      onPointerUp={(e) => { if (e.pointerType !== "mouse") pick(null) }}
+      onPointerLeave={() => pick(null)} onPointerCancel={() => pick(null)} onBlur={() => pick(null)}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          e.preventDefault()
+          const step = e.key === "ArrowLeft" ? -1 : 1
+          pick(Math.min(data.length - 1, Math.max(0, (active ?? data.length - 1) + step)))
+        } else if (e.key === "Escape") pick(null)
+      }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: PLOT.top, right: PLOT.right, left: PLOT.left, bottom: PLOT.bottom }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.18} />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="var(--foreground)" strokeOpacity={0.09} strokeDasharray="2 5" />
+          <YAxis orientation="right" hide={hidden} width={axis} domain={[ticks[0], ticks[ticks.length - 1]]} ticks={ticks} interval={0}
+            axisLine={false} tickLine={false} tickMargin={6} tick={{ ...AXIS, fontSize: 10.5 }} tickFormatter={compact} />
+          <XAxis dataKey="date" ticks={dates} interval={0} axisLine={false} tickLine={false} height={20} tickMargin={4}
+            tick={({ x, y, payload }: { x: number | string; y: number | string; payload: { value: string } }) => (
+              <text x={x} y={y} dy={9} fontSize={10.5} fill="var(--muted-foreground)"
+                textAnchor={payload.value === dates[0] ? "start" : payload.value === dates[dates.length - 1] ? "end" : "middle"}>
+                {payload.value === today ? "Today" : format(parseISO(payload.value), "MMM d")}
+              </text>
+            )} />
+          {point && <ReferenceLine x={point.date} stroke="var(--foreground)" strokeOpacity={0.22} strokeDasharray="3 3" />}
+          <Area type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2.25} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
+            activeDot={false}
+            dot={(props: { cx?: number; cy?: number; index?: number }) => {
+              if (props.cx === undefined || props.cy === undefined) return <g key={`d-${props.index}`} />
+              if (props.index === active) return <g key="active"><circle cx={props.cx} cy={props.cy} r={5} fill="var(--primary)" stroke="var(--card)" strokeWidth={2.5} /></g>
+              if (props.index === data.length - 1 && active === null) return <g key="end"><circle cx={props.cx} cy={props.cy} r={9} fill="var(--primary)" opacity={0.16} /><circle cx={props.cx} cy={props.cy} r={4} fill="var(--primary)" stroke="var(--card)" strokeWidth={2} /></g>
+              return <g key={`d-${props.index}`} />
+            }} />
+        </AreaChart>
+      </ResponsiveContainer>
+      {point && !onHover && (
+        <div className="pointer-events-none absolute -top-1"
+          style={{ left: `clamp(0px, calc(${PLOT.left}px + (100% - ${PLOT.left + PLOT.right + axis}px) * ${active! / Math.max(1, data.length - 1)} - 5rem), calc(100% - 10rem))` }}>
+          <TooltipCard title={format(parseISO(point.date), "EEE, MMM d")} rows={[{ label: "Balance", value: formatMoney(point.value) }]} />
+        </div>
+      )}
+    </div>
   )
 }
 

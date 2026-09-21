@@ -150,23 +150,24 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
       )}
 
       {step === "type" && (
-        <div className="grid grid-cols-2 gap-2.5">
-          {CHOICES.map((c, i) => {
+        <ul className="overflow-hidden rounded-2xl bg-muted/40 dark:bg-muted/50">
+          {CHOICES.map((c) => {
             const Icon = c.icon
-            const last = i === CHOICES.length - 1
             return (
-              <button key={c.id} type="button" onClick={() => pickChoice(c.id)}
-                className={cn("pressable flex min-h-[5.75rem] flex-col items-start justify-between gap-3 rounded-2xl bg-muted/60 p-3.5 text-left transition-colors hover:bg-muted",
-                  last && "col-span-2 min-h-0 flex-row items-center justify-start")}>
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-card text-foreground/80 shadow-(--shadow-card)"><Icon className="size-[1.05rem]" strokeWidth={1.9} /></span>
-                <span className="min-w-0">
-                  <span className="block text-[0.9375rem] font-medium">{c.label}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{c.hint}</span>
-                </span>
-              </button>
+              <li key={c.id} className="border-b border-border/60 last:border-b-0">
+                <button type="button" onClick={() => pickChoice(c.id)}
+                  className="flex w-full min-w-0 items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-accent/70">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-card text-foreground/80 shadow-(--shadow-card)"><Icon className="size-[1.05rem]" strokeWidth={1.9} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[0.9375rem] font-medium">{c.label}</span>
+                    <span className="block truncate text-[0.8125rem] text-muted-foreground">{c.hint}</span>
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
+                </button>
+              </li>
             )
           })}
-        </div>
+        </ul>
       )}
 
       {step === "provider" && (

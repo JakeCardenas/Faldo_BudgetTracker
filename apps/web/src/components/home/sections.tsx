@@ -27,12 +27,12 @@ export function AccountsRail({ data }: { data: Dashboard }) {
   const accounts = data.accounts.filter((a) => !a.archived)
   return (
     <Section title="Accounts" href="/accounts" linkLabel={accounts.length > 3 ? `All ${accounts.length}` : "See all"}>
-      <div className="rail lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
+      <div className="rail -mb-3 overflow-y-hidden pb-4 lg:mx-0 lg:mb-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
         {accounts.map((account, i) => (
           <AccountCard key={account.id} account={account} index={i} size="md" fluid className={cn(i >= 3 && "lg:hidden")} />
         ))}
         <button type="button" onClick={() => setAdding(true)}
-          className={cn("pressable flex h-[9.75rem] w-[9.5rem] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-foreground/15 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground",
+          className={cn("pressable flex min-h-[9rem] w-[9.5rem] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-foreground/15 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground",
             accounts.length >= 3 && "lg:hidden")}>
           <span className="flex size-9 items-center justify-center rounded-full bg-muted"><Plus className="size-4.5" /></span>
           Add account

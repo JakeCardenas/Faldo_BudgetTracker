@@ -333,6 +333,16 @@
   }
 }
 
+/* Faldo's environment (Home hero, sign-in): a clean diagonal wash, lightest where Faldo stands. */
+@layer components {
+  .faldo-env {
+    background: linear-gradient(118deg, var(--env-l1) 0%, var(--env-l2) 46%, var(--env-l3) 100%);
+  }
+  .dark .faldo-env {
+    background: linear-gradient(118deg, var(--env-d1) 0%, var(--env-d2) 46%, var(--env-d3) 100%);
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .glass-float,
   .glass {
@@ -359,15 +369,6 @@
   }
 }
 
-@keyframes jiggle {
-  0%, 100% {
-    transform: rotate(-0.8deg);
-  }
-  50% {
-    transform: rotate(0.8deg);
-  }
-}
-
 @keyframes sheet-up {
   from {
     transform: translateY(16px);
@@ -379,16 +380,13 @@
   }
 }
 
-.animate-jiggle {
-  animation: jiggle 0.3s ease-in-out infinite;
-}
-
+/* "backwards" (not "both") so no transform lingers after the animation and creates a stacking context. */
 .animate-rise {
-  animation: rise-in 280ms var(--ease-out-quint) both;
+  animation: rise-in 280ms var(--ease-out-quint) backwards;
 }
 
 .stagger > * {
-  animation: rise-in 360ms var(--ease-out-quint) both;
+  animation: rise-in 360ms var(--ease-out-quint) backwards;
 }
 .stagger > *:nth-child(2) { animation-delay: 30ms; }
 .stagger > *:nth-child(3) { animation-delay: 60ms; }

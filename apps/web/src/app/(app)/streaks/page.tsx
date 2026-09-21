@@ -109,7 +109,7 @@ export default function StreaksPage() {
               <p className="text-[0.8125rem] text-muted-foreground">Unlock new Faldo poses and Home environments with your badges.</p>
               <p className="tabular mt-2 text-sm font-medium">{data.outfits.filter((o) => o.unlocked).length + data.backgrounds.filter((b) => b.unlocked).length} of {data.outfits.length + data.backgrounds.length} unlocked</p>
             </div>
-            <Panda pose={poseFor(me?.settings.mascot_outfit)} sizes="80px" className="w-18 shrink-0" />
+            <Panda pose={poseFor(me?.settings.mascot_outfit)} sizes="80px" className="w-18" />
           </section>
         </div>
       </div>
@@ -149,7 +149,7 @@ export default function StreaksPage() {
                     selected && "bg-secondary/70 shadow-[inset_0_0_0_1.5px_var(--primary)] hover:bg-secondary/70")}>
                   {selected && <span className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3" strokeWidth={3} /></span>}
                   {!outfit.unlocked && <span className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-muted"><Lock className="size-3 text-muted-foreground" /></span>}
-                  <span className="flex h-24 items-end justify-center"><Panda pose={info.pose} sizes="96px" className={cn("max-h-24 w-auto max-w-24", !outfit.unlocked && "opacity-35 grayscale")} /></span>
+                  <span className="flex h-24 items-end justify-center"><Panda pose={info.pose} sizes="96px" muted={!outfit.unlocked} className="w-22" /></span>
                   <p className="mt-1 text-sm font-medium">{info.name}</p>
                   <p className="text-[0.6875rem] text-muted-foreground">{outfit.unlocked ? (selected ? "On Home" : "Tap to use") : info.hint}</p>
                 </button>

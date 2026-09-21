@@ -71,7 +71,7 @@ function Appearance({ me }: { me: Me }) {
         </label>
         <div className="ios-group divide-y divide-border/60">
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-            <span className="flex size-9 shrink-0 items-center justify-center"><Panda pose={poseFor(me.settings.mascot_outfit)} sizes="40px" className="max-h-9 w-auto max-w-9" /></span>
+            <span className="flex size-9 shrink-0 items-center justify-center"><Panda pose={poseFor(me.settings.mascot_outfit)} sizes="40px" className="w-9" /></span>
             <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Faldo&apos;s pose</span><span className="block text-xs text-muted-foreground">{outfit}</span></span>
             <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>

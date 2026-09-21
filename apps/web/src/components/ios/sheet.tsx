@@ -33,7 +33,7 @@ export function IosSheet({ open, onOpenChange, title, description, children, foo
             <X className="size-4" strokeWidth={2.2} />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 sm:px-6 sm:pb-6">{children}</div>
+        <div className={cn("min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-5 sm:px-6 sm:pb-6", footer ? "pb-5" : "pb-[calc(1.25rem+env(safe-area-inset-bottom))]")}>{children}</div>
         {footer && <div className="border-t px-5 pt-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-4">{footer}</div>}
       </DialogContent>
     </Dialog>
