@@ -45,7 +45,7 @@ MonthQuery = Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")]
 
 
 @router.get("/dashboard", tags=["dashboard"])
-async def get_dashboard(ctx: CtxDep, range: Literal["this_month", "last_month", "last_30_days", "last_90_days", "this_year"] = "this_month") -> dict[str, Any]:
+async def get_dashboard(ctx: CtxDep, range: Literal["today", "this_week", "this_month", "last_month", "last_30_days", "last_90_days", "this_year"] = "this_month") -> dict[str, Any]:
     return await dashboard.dashboard(ctx.db, ctx.user_id, ctx.settings, ctx.today, range)
 
 

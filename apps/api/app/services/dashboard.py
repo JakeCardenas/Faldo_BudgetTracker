@@ -17,7 +17,8 @@ from app.services.goals import list_goals
 from app.services.recurring import upcoming
 from app.services.transactions import TransactionFilters, list_transactions
 
-RANGES = {"this_month", "last_month", "last_30_days", "last_90_days", "this_year"}
+# "today" and "this_week" feed Home's money in and out card (Day / Week / Month).
+RANGES = {"today", "this_week", "this_month", "last_month", "last_30_days", "last_90_days", "this_year"}
 ATTENTION_LIMIT = 5
 
 

@@ -77,8 +77,8 @@
 */
 
 :root {
-  --background: #f3f4f1;
-  --surface: #fafbf9;
+  --background: #f5f7f7;
+  --surface: #fbfcfc;
   --foreground: #101411;
   --card: #ffffff;
   --card-foreground: #101411;
@@ -134,7 +134,7 @@
   --glass-shadow-sm: 0 6px 16px -8px rgb(16 36 24 / 0.28), 0 1px 2px rgb(16 36 24 / 0.06);
   --glass-solid: #fbfbfa;
   --tab-indicator: rgb(16 36 24 / 0.07);
-  --tab-lens: rgb(44 117 73 / 0.13);
+  --tab-lens: rgb(16 24 20 / 0.075);
 }
 
 .dark {
@@ -194,7 +194,7 @@
   --glass-shadow-sm: 0 6px 16px -8px rgb(0 0 0 / 0.7), 0 1px 2px rgb(0 0 0 / 0.35);
   --glass-solid: #1a1e1b;
   --tab-indicator: rgb(255 255 255 / 0.1);
-  --tab-lens: rgb(124 203 147 / 0.17);
+  --tab-lens: rgb(255 255 255 / 0.12);
 }
 
 @layer base {
@@ -336,6 +336,10 @@
     @apply active:scale-[0.97];
   }
   /* Type scale. Weight carries the hierarchy: titles and money are bold, supporting text stays regular. */
+  /* Small all-caps labels that name a figure (NET WORTH, BALANCE, DUE). */
+  .label-caps {
+    @apply text-[0.6875rem] leading-4 font-semibold tracking-[0.08em] text-muted-foreground uppercase;
+  }
   .eyebrow {
     @apply text-[0.75rem] font-semibold tracking-[0.005em] text-muted-foreground;
   }

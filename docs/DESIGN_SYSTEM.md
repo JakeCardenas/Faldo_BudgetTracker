@@ -21,7 +21,12 @@ Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + 
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
-Home has a hard limit: the green hero (total balance, the balance line with 1W to 1Y, Faldo), Safe to Spend, spending this month, account cards, coming up, one Faldo note and recent activity. Add to Home only by removing something.
+## Page layouts
+
+- **Home:** Faldo's green bamboo band at the top: the streak button and a glass pill (search, notifications, Profile) under the status bar, the date in small caps, the greeting with the name in bold, and Faldo standing on the band's edge beside his note in a speech bubble. Then quick action tiles, the total balance card with its balance line, Safe to Spend, a spending ring beside a money in and out card (Day, Week, Month), payments due on a date timeline, account cards and recent activity. Add to Home only by removing something.
+- **Wallet:** the same band with the title, Faldo beside a white net worth card, and All, Assets and Liabilities pills. Then an insight and the last seven days of balance as bars, type filters, and accounts grouped by type (collapsible, with totals) as two-column tiles or a list.
+- **Plan:** one row per planning tool (budgets, goals, money plan, bills, money owed, planned purchases, installments, forecast, what if), each with a tinted icon and a live summary, then "Can I afford it?" and quick links.
+- **History:** search and filters, then each day as a collapsible header (the date in small caps, money out and in as pills) over a timeline: the time each entry was logged, a red or green dot, and the entry on its own card with its account in a small tag.
 
 ## Faldo, the panda
 
@@ -64,7 +69,7 @@ Logos are official files in `public/brand/providers/` (GCash, Maya, BDO, BPI, Go
 
 All colours are CSS variables in `apps/web/src/app/globals.css`, with light and dark values.
 
-- **Canvas:** `--background` (a soft neutral). Content groups sit on white `card-surface` / `ios-group` surfaces.
+- **Canvas:** `--background` (a cool near-white). Content groups sit on white `card-surface` / `ios-group` surfaces.
 - **Accent:** one green (`--primary`). Use it for primary actions, active navigation, positive money and Safe to Spend.
 - **Semantics:** green for income and good states, `--expense` red for problems and overspending, `--warning` amber for attention. Expenses in lists use the normal text colour, not red.
 - **Signature surfaces:** only the Home green environment and account cards (the provider's or account's own colour) carry strong colour. Safe to Spend is a calm light surface: green when healthy, amber when this week's share is used, red only when money is genuinely short.
@@ -91,11 +96,11 @@ Geist throughout. Money always uses tabular figures.
 | Section titles | `section-title` (16px bold) |
 | Card and row titles | 15px medium to semibold |
 | Body and supporting text | 13 to 14px |
-| Small labels | `eyebrow` (12px semibold, muted) |
+| Small labels | `eyebrow` (12px semibold, muted) or `label-caps` (11px bold, tracked capitals) |
 
 Weight carries the hierarchy: titles and money are bold, supporting text stays regular. Negative amounts keep their sign and colour; positive money can use Faldo green.
 
-Sentence case everywhere. No uppercase labels, no em dashes in copy.
+Sentence case for titles, buttons and copy. The one exception is `label-caps`: small, tracked all-caps labels that name a figure (NET WORTH, BALANCE, TOTAL DUE, the date on Home). No em dashes in copy.
 
 ## Glass
 

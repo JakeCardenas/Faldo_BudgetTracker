@@ -5,9 +5,10 @@ import { Plus, Wallet } from "lucide-react"
 import { BambooDecor, environmentStyle } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
 import { AccountDialog } from "@/components/finance/account-dialog"
-import { BalanceHero } from "@/components/home/hero"
+import { BalanceCard, HomeBand } from "@/components/home/hero"
 import { SafeToSpendCard } from "@/components/home/safe-to-spend"
-import { AccountsRail, ComingUp, FaldoNote, RecentActivity, SpendingSummary } from "@/components/home/sections"
+import { AccountsRail, PaymentsDue, RecentActivity } from "@/components/home/sections"
+import { MoneyInOut, QuickActions, SpendingRing } from "@/components/home/widgets"
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,14 +19,15 @@ function HomeSkeleton() {
   const { data: me } = useMe()
   return (
     <div aria-busy="true" aria-label="Loading your home screen">
-      <div style={environmentStyle(me?.settings.home_background)} className="-mx-5 px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-12 sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-9 lg:pb-9">
-        <div className="flex justify-end lg:hidden"><Skeleton className="h-11 w-24 rounded-full bg-white/12" /></div>
-        <Skeleton className="mt-4 h-4 w-32 bg-white/15 lg:mt-0" /><Skeleton className="mt-2 h-7 w-52 bg-white/15" />
-        <Skeleton className="mt-8 h-4 w-24 bg-white/15" /><Skeleton className="mt-2 h-11 w-48 bg-white/15" />
-        <Skeleton className="mt-6 h-36 rounded-2xl bg-white/10 lg:h-60" /><Skeleton className="mt-3 h-10 rounded-full bg-white/10 sm:w-72" />
+      <div style={environmentStyle(me?.settings.home_background)} className="-mx-5 h-[20rem] px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:h-[16rem] lg:rounded-[2rem] lg:px-10 lg:pt-8">
+        <div className="flex justify-between lg:hidden"><Skeleton className="size-11 rounded-full bg-white/12" /><Skeleton className="h-11 w-32 rounded-full bg-white/12" /></div>
+        <Skeleton className="mt-5 h-3 w-40 bg-white/15 lg:mt-0" /><Skeleton className="mt-2 h-7 w-56 bg-white/15" />
+        <Skeleton className="mt-6 ml-36 h-24 rounded-[1.25rem] bg-white/15 lg:ml-0 lg:w-96" />
       </div>
-      <div className="relative -mt-6 space-y-4 rounded-t-[1.75rem] bg-background pt-6 lg:mt-8 lg:rounded-none lg:pt-0">
-        <Skeleton className="h-44 rounded-2xl" /><Skeleton className="h-52 rounded-2xl" />
+      <div className="mt-5 space-y-5 lg:mt-8">
+        <div className="flex gap-3.5 overflow-hidden">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="size-16 shrink-0 rounded-[1.125rem]" />)}</div>
+        <Skeleton className="h-72 rounded-2xl" />
+        <div className="grid grid-cols-[1.12fr_1fr] gap-3"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-40 rounded-2xl" /></div>
       </div>
     </div>
   )
@@ -55,8 +57,8 @@ function Welcome() {
 }
 
 /**
- * Home: what you have and how it moved (the green hero, with Faldo), then what's safe to spend,
- * what you spent, your accounts and what's coming. Everything else lives in Activity, Plans or You.
+ * Home: Faldo's green band with the greeting and his note, quick actions, the balance and how it moved,
+ * what's safe to spend, spending and money in and out, payments due, accounts and recent activity.
  */
 export default function HomePage() {
   const { data, isLoading, error, refetch } = useDashboard("this_month")
@@ -74,17 +76,21 @@ export default function HomePage() {
 
   return (
     <div className="pb-4">
-      <BalanceHero data={data} />
-      <div className="relative -mt-6 grid grid-cols-1 gap-7 rounded-t-[1.75rem] bg-background pt-6 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-x-10 lg:gap-y-8 lg:rounded-none lg:pt-0">
+      <HomeBand data={data} />
+      <div className="mt-5 grid grid-cols-1 gap-7 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-x-10 lg:gap-y-8">
         <div className="contents lg:flex lg:flex-col lg:gap-8">
-          <SafeToSpendCard sts={data.safe_to_spend} className="order-1 lg:order-none" />
-          <div className="order-3 lg:order-none"><AccountsRail data={data} /></div>
-          <div className="order-6 lg:order-none"><RecentActivity data={data} /></div>
+          <QuickActions className="order-1 lg:order-none" />
+          <BalanceCard data={data} className="order-2 lg:order-none" />
+          <div className="order-4 grid grid-cols-[1.12fr_1fr] gap-3 lg:order-none">
+            <SpendingRing data={data} />
+            <MoneyInOut />
+          </div>
+          <div className="order-5 lg:order-none"><PaymentsDue data={data} /></div>
+          <div className="order-6 lg:order-none"><AccountsRail data={data} /></div>
         </div>
         <div className="contents lg:flex lg:flex-col lg:gap-8">
-          <SpendingSummary data={data} className="order-2 lg:order-none" />
-          <div className="order-4 lg:order-none"><ComingUp data={data} /></div>
-          <FaldoNote data={data} className="order-5 lg:hidden" />
+          <SafeToSpendCard sts={data.safe_to_spend} className="order-3 lg:order-none" />
+          <div className="order-7 lg:order-none"><RecentActivity data={data} /></div>
         </div>
       </div>
     </div>

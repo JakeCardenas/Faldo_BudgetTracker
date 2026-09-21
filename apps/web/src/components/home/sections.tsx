@@ -4,20 +4,16 @@ import Link from "next/link"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { parseISO } from "date-fns"
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Loader2, Plus } from "lucide-react"
+import { ChevronRight, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
-import { LogoMark } from "@/components/brand/logo"
 import { AccountDialog } from "@/components/finance/account-dialog"
-import { CategoryIcon } from "@/components/finance/category-icon"
 import { Money } from "@/components/finance/money"
 import { TransactionRow } from "@/components/finance/transaction-row"
 import { Section } from "@/components/ios/panel"
 import { useAppActions } from "@/components/layout/app-context"
 import { AccountCard } from "@/components/wallet/account-card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney } from "@/lib/format"
-import { maskAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, usePulse } from "@/lib/queries"
 import type { AttentionItem, Dashboard, UpcomingItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -68,82 +64,14 @@ export function useFaldoNote(data: Dashboard) {
   return { note, isLoading }
 }
 
-/** Faldo's note on phones, where the panda is up in the balance area. */
-export function FaldoNote({ data, className }: { data: Dashboard; className?: string }) {
-  const { note, isLoading } = useFaldoNote(data)
-  return (
-    <section aria-label="Faldo's note" className={cn("flex gap-3 rounded-2xl p-4",
-      note?.tone === "critical" ? "bg-danger-soft" : note?.tone === "warn" ? "bg-warning-soft" : "bg-secondary/70 dark:bg-secondary/60", className)}>
-      <LogoMark className="size-10 shrink-0 drop-shadow-none" />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-primary">Faldo</p>
-        {isLoading && !note ? (
-          <div className="space-y-2 pt-1.5"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-2/3" /></div>
-        ) : note ? (
-          <>
-            {note.title && <p className="mt-0.5 text-[0.9375rem] font-semibold tracking-[-0.01em]">{maskAmounts(note.title)}</p>}
-            <p className={cn("mt-0.5 text-[0.9375rem] leading-snug", note.title ? "text-foreground/80" : "line-clamp-4")}>{maskAmounts(note.body)}</p>
-            <Link href={note.href} className="mt-2 inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
-              {note.cta} <ArrowRight className="size-3.5" />
-            </Link>
-          </>
-        ) : (
-          <p className="mt-0.5 text-[0.9375rem] text-foreground/80">You&apos;re all set. Log what you spend and I&apos;ll keep an eye on the rest.</p>
-        )}
-      </div>
-    </section>
-  )
-}
-
-/** Where this month's money went, as a short ranked list rather than a chart. */
-export function SpendingSummary({ data, className }: { data: Dashboard; className?: string }) {
-  const rows = data.spending_by_category.slice(0, 4)
-  const top = rows[0]?.amount_minor ?? 1
-  const change = data.overview.expense_change_pct
-  return (
-    <Section title="Spending" description={`${formatDate(data.period.start, "MMMM")} so far`} href="/reports" linkLabel="Details" className={className}>
-      <div className="card-surface p-4 sm:p-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <Money minor={data.overview.expense_minor} className="text-[1.625rem] leading-none font-semibold tracking-[-0.03em]" />
-          {change !== null && change !== undefined && Number.isFinite(change) && change !== 0 && (
-            <span className={cn("tabular inline-flex items-center gap-0.5 text-[0.8125rem] font-medium", change > 0 ? "text-warning" : "text-income")}>
-              {change > 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
-              {change >= 100 ? "More than double last month" : `${Math.abs(Math.round(change))}% ${change > 0 ? "more" : "less"} than last month`}
-            </span>
-          )}
-        </div>
-        {rows.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No spending logged this month yet.</p>
-        ) : (
-          <ul className="mt-4 space-y-3.5">
-            {rows.map((r) => (
-              <li key={r.label}>
-                <Link href={r.category_id ? `/transactions?category=${r.category_id}` : "/transactions"} className="group flex items-center gap-3">
-                  <CategoryIcon icon={r.icon} color={r.color} size="sm" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-3">
-                      <span className="truncate text-[0.9375rem] group-hover:underline">{r.label}</span>
-                      <Money minor={r.amount_minor} className="text-[0.9375rem] font-semibold" />
-                    </span>
-                    <span className="mt-1.5 block h-1.5 rounded-full" style={{ width: `${Math.max(4, (r.amount_minor / top) * 100)}%`, backgroundColor: r.color }} aria-hidden />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Section>
-  )
-}
-
+/** A calendar tile: the month in small caps over the day. */
 export function DateTile({ date, tone }: { date: string; tone: "overdue" | "soon" | "normal" }) {
   const d = parseISO(date)
   return (
-    <span className={cn("flex size-11 shrink-0 flex-col items-center justify-center rounded-xl leading-none",
-      tone === "overdue" ? "bg-danger-soft text-expense" : tone === "soon" ? "bg-warning-soft text-warning" : "bg-muted text-foreground")}>
-      <span className="text-[0.625rem] font-medium opacity-80">{formatDate(date, "MMM")}</span>
-      <span className="tabular mt-0.5 text-[1.0625rem] font-semibold">{d.getDate()}</span>
+    <span className={cn("relative z-10 flex size-12 shrink-0 flex-col items-center justify-center rounded-[0.875rem] leading-none",
+      tone === "overdue" ? "bg-danger-soft text-expense" : "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]")}>
+      <span className={cn("text-[0.5625rem] font-bold tracking-[0.08em] uppercase", tone === "overdue" ? "opacity-80" : "text-muted-foreground")}>{formatDate(date, "MMM")}</span>
+      <span className="tabular mt-1 text-[1.1875rem] font-extrabold tracking-[-0.02em]">{d.getDate()}</span>
     </span>
   )
 }
@@ -214,30 +142,78 @@ function upcomingRow(u: UpcomingItem): ComingRow {
   }
 }
 
-export function ComingUp({ data, limit = 4 }: { data: Dashboard; limit?: number }) {
+function statusOf(row: ComingRow, today: Date): { text: string; tone: "overdue" | "soon" | "normal" | "income" } {
+  const days = Math.round((parseISO(row.date).getTime() - today.getTime()) / 86_400_000)
+  if (row.income) return { text: row.attention ? "Did it arrive?" : "Expected", tone: "income" }
+  if (days < 0) return { text: `${-days} ${days === -1 ? "day" : "days"} overdue`, tone: "overdue" }
+  if (days === 0) return { text: "Due today", tone: "soon" }
+  return { text: `${days} ${days === 1 ? "day" : "days"} left`, tone: days <= 3 ? "soon" : "normal" }
+}
+
+const STATUS = {
+  overdue: "bg-danger-soft text-expense",
+  soon: "bg-warning-soft text-warning",
+  normal: "bg-muted text-muted-foreground",
+  income: "bg-income-soft text-income",
+}
+
+/**
+ * What's due: bills, installments and money owed on a date timeline, with how long is left (or how
+ * overdue it is) and the total due. Overdue bills can be marked paid right in the row.
+ */
+export function PaymentsDue({ data, limit = 4 }: { data: Dashboard; limit?: number }) {
   const rows = comingRows(data, limit)
+  const outgoing = data.upcoming.filter((u) => !u.is_income)
+  const overdue = data.attention.filter((a) => a.kind === "bill_overdue")
+  const count = outgoing.length + overdue.length
+  const total = outgoing.reduce((s, u) => s + u.amount_minor, 0) + overdue.reduce((s, a) => s + a.amount_minor, 0)
+  const today = parseISO(formatDate(new Date().toISOString(), "yyyy-MM-dd"))
   return (
-    <Section title="Coming up" href="/bills">
-      {rows.length === 0 ? (
-        <p className="card-surface px-4 py-6 text-center text-sm text-muted-foreground">Nothing due in the next three weeks.</p>
-      ) : (
-        <ul className="ios-group divide-y divide-border/60">
-          {rows.map((row) => (
-            <li key={row.key} className="px-4 py-3">
-              <div className="flex items-center gap-3">
-                <DateTile date={row.date} tone={row.tone} />
-                <Link href={row.href} className="min-w-0 flex-1 rounded-md">
-                  <span className="block truncate text-[0.9375rem] font-medium">{row.title}</span>
-                  <span className={cn("block truncate text-[0.8125rem]", row.tone === "overdue" ? "font-medium text-expense" : "text-muted-foreground")}>{row.detail}</span>
-                </Link>
-                <Money minor={row.amount} signed={row.income} className={cn("text-[0.9375rem] font-semibold", row.income && "text-income")} />
-              </div>
-              {row.attention && <div className="pl-14"><RecurringActions item={row.attention} /></div>}
-            </li>
-          ))}
+    <section aria-labelledby="payments-title" className="min-w-0">
+      <Link href="/bills" className="group mb-3 flex items-end justify-between gap-3">
+        <span className="min-w-0">
+          <h2 id="payments-title" className="section-title">Payments due</h2>
+          <span className="block text-[0.8125rem] text-muted-foreground">
+            {count ? `${count} ${count === 1 ? "payment" : "payments"} in the next three weeks` : "Nothing due in the next three weeks"}
+          </span>
+        </span>
+        {count > 0 && (
+          <span className="flex items-center gap-1.5 text-right">
+            <span>
+              <Money minor={total} className="block text-[1.0625rem] font-extrabold tracking-[-0.02em]" />
+              <span className="label-caps block text-[0.625rem]">Total due</span>
+            </span>
+            <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </span>
+        )}
+      </Link>
+      {rows.length > 0 && (
+        <ul className="ios-group">
+          {rows.map((row, i) => {
+            const status = statusOf(row, today)
+            return (
+              <li key={row.key} className="relative px-4 py-3.5">
+                {/* The timeline joining the date tiles. */}
+                <span aria-hidden className={cn("absolute left-10 w-px bg-border", i === 0 ? "top-1/2" : "top-0", i === rows.length - 1 ? "bottom-1/2" : "bottom-0")} />
+                <div className="flex items-center gap-3">
+                  <DateTile date={row.date} tone={status.tone === "overdue" ? "overdue" : "normal"} />
+                  <Link href={row.href} className="min-w-0 flex-1 rounded-md">
+                    <span className={cn("inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-bold", STATUS[status.tone])}>{status.text}</span>
+                    <span className="mt-0.5 block truncate text-[0.9375rem] font-bold tracking-[-0.01em]">{row.title}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{row.detail}</span>
+                  </Link>
+                  <span className="text-right">
+                    <Money minor={row.amount} signed={row.income} className={cn("block text-[0.9375rem] font-extrabold tracking-[-0.01em]", row.income && "text-income")} />
+                    <span className="label-caps block text-[0.5625rem]">{row.income ? "Expected" : "Due"}</span>
+                  </span>
+                </div>
+                {row.attention && <div className="relative pl-15"><RecurringActions item={row.attention} /></div>}
+              </li>
+            )
+          })}
         </ul>
       )}
-    </Section>
+    </section>
   )
 }
 

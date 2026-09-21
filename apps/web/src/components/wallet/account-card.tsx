@@ -96,6 +96,26 @@ export function AccountBadge({ account, index, className }: { account: Account; 
   return <ProviderMark provider={providerFor(account)} fallback={ACCOUNT_ICONS[account.type] ?? Wallet} color={accountColor(account, index)} className={cn("size-10", className)} />
 }
 
+/** The ··· menu on an account card or tile. */
+function AccountMenu({ account, actions, className }: { account: Account; actions: AccountActions; className?: string }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger aria-label={`${account.name} options`}
+        className={cn("flex size-8 items-center justify-center rounded-full transition-colors", className)}>
+        <MoreHorizontal className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuItem asChild><Link href={`/accounts/${account.id}`}><Eye /> View history</Link></DropdownMenuItem>
+        <DropdownMenuItem onClick={() => actions.onAdd(account, "expense")}><Plus /> Add expense</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => actions.onAdd(account, "income")}><Plus /> Add income</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => actions.onAdd(account, "transfer")}><ArrowLeftRight /> Transfer from here</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => actions.onEdit(account)}><Pencil /> Edit account</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export interface AccountActions {
   onEdit: (account: Account) => void
   onAdd: (account: Account, mode: "expense" | "income" | "transfer") => void
@@ -276,21 +296,93 @@ export function AccountCard({ account, index = 0, actions, size = "md", large, c
         </Link>
       )}
       {actions && !isStatic && (
-        <DropdownMenu>
-          <DropdownMenuTrigger aria-label={`${account.name} options`}
-            className={cn("absolute top-3 right-3 flex size-8 items-center justify-center rounded-full transition-colors",
-              plain ? "text-muted-foreground hover:bg-foreground/5" : darkText ? "text-[#101411]/75 hover:bg-black/10" : "text-white/85 hover:bg-white/15")}>
-            <MoreHorizontal className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuItem asChild><Link href={`/accounts/${account.id}`}><Eye /> View history</Link></DropdownMenuItem>
-            <DropdownMenuItem onClick={() => actions.onAdd(account, "expense")}><Plus /> Add expense</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => actions.onAdd(account, "income")}><Plus /> Add income</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => actions.onAdd(account, "transfer")}><ArrowLeftRight /> Transfer from here</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => actions.onEdit(account)}><Pencil /> Edit account</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <AccountMenu account={account} actions={actions}
+          className={cn("absolute top-3 right-3", plain ? "text-muted-foreground hover:bg-foreground/5" : darkText ? "text-[#101411]/75 hover:bg-black/10" : "text-white/85 hover:bg-white/15")} />
+      )}
+    </div>
+  )
+}
+
+const TILE_KIND: Record<AccountType, string> = {
+  cash: "Cash", bank: "Debit", e_wallet: "E-wallet", credit_card: "Credit", savings: "Savings", custom: "Account",
+}
+
+/**
+ * A compact account tile for the Wallet grid: the provider's colours and logo, a meta line, the balance
+ * and, for a credit card, how much of the limit is used. Safe details only.
+ */
+export function AccountTile({ account, index = 0, actions }: { account: Account; index?: number; actions?: AccountActions }) {
+  const color = accountColor(account, index)
+  const provider = providerFor(account)
+  const art = provider?.card
+  const Icon = ACCOUNT_ICONS[account.type] ?? Wallet
+  const isCredit = account.type === "credit_card"
+  const plain = isSetAside(account) && !art
+  const darkText = art ? art.ink === "dark" : !plain && luminance(color) > 0.36
+  const ink = plain ? "text-foreground" : darkText ? "text-[#101411]" : "text-white"
+  const soft = plain ? "text-muted-foreground" : darkText ? "text-[#101411]/70" : "text-white/80"
+  const owed = isCredit ? Math.max(0, -account.balance_minor) : 0
+  const limit = account.credit_limit_minor ?? 0
+  const usedPct = limit > 0 ? Math.min(100, (owed / limit) * 100) : 0
+  const meta = [TILE_KIND[account.type], account.currency, account.card_last4 ? `•••• ${account.card_last4}` : null].filter(Boolean).join(" • ")
+
+  const style: React.CSSProperties = art
+    ? { background: art.background, boxShadow: `0 12px 24px -16px color-mix(in oklab, ${art.shadow ?? provider!.color} 80%, #0b0f0c), inset 0 1px 0 rgb(255 255 255 / 0.18)` }
+    : plain
+    ? {
+        backgroundColor: `color-mix(in oklab, ${color} 9%, var(--card))`,
+        backgroundImage: `repeating-linear-gradient(135deg, color-mix(in oklab, ${color} 9%, transparent) 0 1px, transparent 1px 9px)`,
+        boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${color} 24%, transparent), var(--elevation-card)`,
+      }
+    : {
+        backgroundImage: `linear-gradient(115deg, rgb(255 255 255 / 0.16), transparent 42%), linear-gradient(140deg, ${color}, color-mix(in oklab, ${color} 72%, #0b0f0c))`,
+        boxShadow: `0 12px 24px -16px color-mix(in oklab, ${color} 80%, #0b0f0c), inset 0 1px 0 rgb(255 255 255 / 0.2)`,
+      }
+
+  return (
+    <div className="relative min-w-0">
+      <Link href={`/accounts/${account.id}`} style={style}
+        className={cn("pressable flex aspect-[1.45] flex-col justify-between overflow-hidden rounded-[1.125rem] p-3.5 transition-transform select-none-touch hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none", ink)}>
+        <div className={cn("flex min-w-0 items-center gap-2", actions && "pr-7")}>
+          {provider?.logo ? (
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-[0.625rem] bg-white px-1 shadow-[0_1px_2px_rgb(0_0_0/0.12)]">
+              <ProviderLogoImage logo={provider.logo} name={provider.name} frame={provider.logo.symbol} className={provider.logo.symbol ? "h-[62%] max-w-full" : "h-[40%] max-w-full"} />
+            </span>
+          ) : (
+            <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-[0.625rem]", plain ? "text-white" : darkText ? "bg-black/10" : "bg-white/20")}
+              style={plain ? { backgroundColor: color } : undefined}>
+              <Icon className="size-4" strokeWidth={1.9} />
+            </span>
+          )}
+          <span className="min-w-0">
+            <span className="block truncate text-[0.875rem] leading-tight font-bold">{account.name}</span>
+            <span className={cn("block truncate text-[0.6875rem] leading-tight", soft)}>{meta}</span>
+          </span>
+        </div>
+        <div className="min-w-0">
+          {isCredit && limit > 0 ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className={cn("text-[0.625rem] font-bold tracking-[0.08em] uppercase", soft)}>Used credit</span>
+                <span className={cn("h-1 flex-1 overflow-hidden rounded-full", darkText ? "bg-black/15" : "bg-white/30")}>
+                  <span className={cn("block h-full rounded-full", darkText ? "bg-[#101411]/80" : "bg-white")} style={{ width: `${usedPct}%` }} />
+                </span>
+              </div>
+              <p className={cn("tabular mt-0.5 flex justify-between gap-2 text-[0.625rem]", soft)}>
+                <span>{Math.round(usedPct)}% used</span><span className="truncate">{formatMoney(Math.max(0, limit - owed), account.currency)} left</span>
+              </p>
+            </>
+          ) : (
+            <p className={cn("text-[0.625rem] font-bold tracking-[0.08em] uppercase", soft)}>{isCredit ? "Used" : plain ? "Saved" : "Balance"}</p>
+          )}
+          <p className={cn("tabular truncate text-[1.1875rem] leading-tight font-extrabold tracking-[-0.03em]", plain && account.balance_minor < 0 && "text-expense")}>
+            {formatMoney(isCredit ? owed : account.balance_minor, account.currency)}
+          </p>
+        </div>
+      </Link>
+      {actions && (
+        <AccountMenu account={account} actions={actions}
+          className={cn("absolute top-2 right-2 size-7", plain ? "text-muted-foreground hover:bg-foreground/5" : darkText ? "text-[#101411]/75 hover:bg-black/10" : "text-white/85 hover:bg-white/15")} />
       )}
     </div>
   )

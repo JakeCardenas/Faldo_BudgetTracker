@@ -196,6 +196,21 @@ async def test_empty_user_analytics_do_not_invent_data(client):
     assert report["summary"]["transaction_count"] == 0
 
 
+async def test_dashboard_today_and_this_week_ranges(client):
+    gcash = await _account(client)
+    r = await client.post("/api/v1/transactions", json={
+        "type": "expense", "amount_minor": 12_000, "occurred_on": TODAY.isoformat(), "account_id": gcash["id"], "merchant": "Jeep"})
+    assert r.status_code == 201, r.text
+    older = TODAY - timedelta(days=TODAY.weekday() + 1)
+    r = await client.post("/api/v1/transactions", json={
+        "type": "expense", "amount_minor": 50_000, "occurred_on": older.isoformat(), "account_id": gcash["id"], "merchant": "Groceries"})
+    assert r.status_code == 201, r.text
+    today = (await client.get("/api/v1/dashboard", params={"range": "today"})).json()
+    week = (await client.get("/api/v1/dashboard", params={"range": "this_week"})).json()
+    assert today["period"]["name"] == "today" and today["overview"]["expense_minor"] == 12_000
+    assert week["period"]["name"] == "this_week" and week["overview"]["expense_minor"] == 12_000
+
+
 async def test_card_last4_is_optional_and_only_four_digits(client):
     card = await _account(client, "BPI Visa", "credit_card", 0, credit_limit_minor=5_000_000, card_last4="4821")
     assert card["card_last4"] == "4821"
