@@ -49,13 +49,16 @@ const PLOT = { top: 10, right: 4, left: 2, bottom: 4, axis: 46 }
 
 /**
  * Answers one question: how has my balance moved? One line over a quiet dashed grid, a compact scale on
- * the right, the first, middle and last dates below and a dot for today. Drag across it (finger or
+ * the right, the first, middle and last dates below and a dot for today. `tone="light"` draws it in
+ * white for the green Home environment. Drag across it (finger or
  * mouse) or use the arrow keys to read any day; `onHover` reports that point so a headline can show it.
  */
-export function BalanceLine({ data, height = 168, onHover }: {
+export function BalanceLine({ data, height = 168, tone = "default", onHover }: {
   data: BalancePointValue[]
   /** Pixels, or "100%" to fill the parent. */
   height?: number | "100%"
+  /** "light" draws it in white for the green Home environment. */
+  tone?: "default" | "light"
   onHover?: (point: BalancePointValue | null) => void
 }) {
   const gradientId = `line-${useId().replace(/:/g, "")}`
@@ -69,6 +72,10 @@ export function BalanceLine({ data, height = 168, onHover }: {
   const today = format(new Date(), "yyyy-MM-dd")
   const axis = hidden ? 0 : PLOT.axis
   const point = active !== null ? data[active] : null
+  const light = tone === "light"
+  const stroke = light ? "#ffffff" : "var(--primary)"
+  const ink = light ? "rgb(255 255 255 / 0.72)" : "var(--muted-foreground)"
+  const ring = light ? "#1d5436" : "var(--card)"
 
   function pick(index: number | null) {
     setActive(index)
@@ -99,27 +106,27 @@ export function BalanceLine({ data, height = 168, onHover }: {
         <AreaChart data={data} margin={{ top: PLOT.top, right: PLOT.right, left: PLOT.left, bottom: PLOT.bottom }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.18} />
-              <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+              <stop offset="0%" stopColor={stroke} stopOpacity={light ? 0.26 : 0.18} />
+              <stop offset="100%" stopColor={stroke} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke="var(--foreground)" strokeOpacity={0.09} strokeDasharray="2 5" />
+          <CartesianGrid vertical={false} stroke={light ? "#ffffff" : "var(--foreground)"} strokeOpacity={light ? 0.16 : 0.09} strokeDasharray="2 5" />
           <YAxis orientation="right" hide={hidden} width={axis} domain={[ticks[0], ticks[ticks.length - 1]]} ticks={ticks} interval={0}
-            axisLine={false} tickLine={false} tickMargin={6} tick={{ ...AXIS, fontSize: 10.5 }} tickFormatter={compact} />
+            axisLine={false} tickLine={false} tickMargin={6} tick={{ fontSize: 10.5, fill: ink }} tickFormatter={compact} />
           <XAxis dataKey="date" ticks={dates} interval={0} axisLine={false} tickLine={false} height={20} tickMargin={4}
             tick={({ x, y, payload }: { x: number | string; y: number | string; payload: { value: string } }) => (
-              <text x={x} y={y} dy={9} fontSize={10.5} fill="var(--muted-foreground)"
+              <text x={x} y={y} dy={9} fontSize={10.5} fill={ink}
                 textAnchor={payload.value === dates[0] ? "start" : payload.value === dates[dates.length - 1] ? "end" : "middle"}>
                 {payload.value === today ? "Today" : format(parseISO(payload.value), "MMM d")}
               </text>
             )} />
-          {point && <ReferenceLine x={point.date} stroke="var(--foreground)" strokeOpacity={0.22} strokeDasharray="3 3" />}
-          <Area type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2.25} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
+          {point && <ReferenceLine x={point.date} stroke={light ? "#ffffff" : "var(--foreground)"} strokeOpacity={light ? 0.5 : 0.22} strokeDasharray="3 3" />}
+          <Area type="monotone" dataKey="value" stroke={stroke} strokeWidth={2.25} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
             activeDot={false}
             dot={(props: { cx?: number; cy?: number; index?: number }) => {
               if (props.cx === undefined || props.cy === undefined) return <g key={`d-${props.index}`} />
-              if (props.index === active) return <g key="active"><circle cx={props.cx} cy={props.cy} r={5} fill="var(--primary)" stroke="var(--card)" strokeWidth={2.5} /></g>
-              if (props.index === data.length - 1 && active === null) return <g key="end"><circle cx={props.cx} cy={props.cy} r={9} fill="var(--primary)" opacity={0.16} /><circle cx={props.cx} cy={props.cy} r={4} fill="var(--primary)" stroke="var(--card)" strokeWidth={2} /></g>
+              if (props.index === active) return <g key="active"><circle cx={props.cx} cy={props.cy} r={5} fill={stroke} stroke={ring} strokeWidth={2.5} /></g>
+              if (props.index === data.length - 1 && active === null) return <g key="end"><circle cx={props.cx} cy={props.cy} r={9} fill={stroke} opacity={light ? 0.24 : 0.16} /><circle cx={props.cx} cy={props.cy} r={4} fill={stroke} stroke={ring} strokeWidth={2} /></g>
               return <g key={`d-${props.index}`} />
             }} />
         </AreaChart>

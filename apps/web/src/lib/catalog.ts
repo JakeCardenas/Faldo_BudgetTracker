@@ -23,19 +23,15 @@ export function poseFor(outfit?: string | null): PandaPose {
   return OUTFIT_INFO[outfit ?? "classic"]?.pose ?? "bamboo"
 }
 
-/**
- * Unlockable environments for the Home hero: a clean off-white base with a light tint that fades
- * toward near-white where Faldo sits (so his white fur stays white). Each has a dark-mode version.
- */
-type Tint = [string, string, string]
-export const BACKGROUND_INFO: Record<string, { name: string; hint: string; light: Tint; dark: Tint }> = {
-  meadow: { name: "Bamboo grove", hint: "Always available", light: ["#dbebdf", "#eef5ef", "#fbfcfa"], dark: ["#16301f", "#0f1c14", "#0c120e"] },
-  sunrise: { name: "Morning light", hint: "Log two days in a row", light: ["#f2e7cf", "#f4f3e9", "#fcfcf8"], dark: ["#2b2917", "#171a10", "#0e110d"] },
-  terraces: { name: "Rice terraces", hint: "Keep a 7-day streak", light: ["#e0ecca", "#f0f5e6", "#fbfcf8"], dark: ["#223018", "#141c10", "#0d120c"] },
-  lagoon: { name: "Island lagoon", hint: "Set up a budget", light: ["#d3ebe5", "#ebf5f2", "#fafcfb"], dark: ["#10302a", "#0d1c19", "#0b1210"] },
-  hills: { name: "Highlands", hint: "Keep a 14-day streak", light: ["#dde9e1", "#eef3ef", "#fbfcfb"], dark: ["#1a2b21", "#111a15", "#0c110e"] },
-  bay_sunset: { name: "Golden hour", hint: "Track a recurring bill", light: ["#f2e0d0", "#f5efe7", "#fcfbf9"], dark: ["#2f2219", "#1a1611", "#0f0e0c"] },
-  night_market: { name: "Night grove", hint: "Keep a 30-day streak", light: ["#dce3e8", "#edf0f2", "#fafbfc"], dark: ["#111b22", "#0d1418", "#0b0f12"] },
+/** Unlockable green environments for the Home hero. */
+export const BACKGROUND_INFO: Record<string, { name: string; hint: string; from: string; to: string }> = {
+  meadow: { name: "Bamboo grove", hint: "Always available", from: "#17462c", to: "#2f7a4c" },
+  sunrise: { name: "Morning light", hint: "Log two days in a row", from: "#1b4a30", to: "#3d7f4f" },
+  terraces: { name: "Rice terraces", hint: "Keep a 7-day streak", from: "#23502a", to: "#4f8a3c" },
+  lagoon: { name: "Island lagoon", hint: "Set up a budget", from: "#0f4a44", to: "#23806b" },
+  hills: { name: "Highlands", hint: "Keep a 14-day streak", from: "#1e4032", to: "#48805f" },
+  bay_sunset: { name: "Golden hour", hint: "Track a recurring bill", from: "#28452c", to: "#6a7f3a" },
+  night_market: { name: "Night grove", hint: "Keep a 30-day streak", from: "#0c1f17", to: "#1f4a33" },
 }
 
 export function environmentFor(id?: string | null) {

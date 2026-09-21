@@ -13,11 +13,11 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 
 The **+** (phone tab bar, desktop "Add") opens one menu: type it like a text, Expense, Income, Transfer, then receipt, goal, money owed, planned purchase, Faldo Check and import.
 
-Home has a hard limit: the hero (total balance, the balance line with 1W to 1Y, Faldo), Safe to Spend, spending this month, account cards, coming up, one Faldo note and recent activity. Add to Home only by removing something.
+Home has a hard limit: the green hero (total balance, the balance line with 1W to 1Y, Faldo), Safe to Spend, spending this month, account cards, coming up, one Faldo note and recent activity. Add to Home only by removing something.
 
 ## Faldo, the panda
 
-The panda artworks in `apps/web/public/brand/panda/` are the canonical mascot: the designer's Canva exports with a transparent background, only cropped to each pose (`bamboo` and `wave` are single artworks, the rest come from the pose sheet). Never redraw, recolour, retouch, cut out or generate a panda. Use `<Panda pose="…" />` from `components/brand/panda.tsx`.
+The panda artworks in `apps/web/public/brand/panda/` are the canonical mascot, only cropped to each pose (`bamboo` and `wave` are single artworks, the rest come from the pose sheet). Colour comes from the designer's 2000px Canva exports and transparency from the designer's transparent exports of the same designs (they align pixel for pixel), so every pose stays sharp at large sizes. Faldo is served at optimizer quality 90. Never redraw, recolour, retouch, cut out or generate a panda. Use `<Panda pose="…" />` from `components/brand/panda.tsx`.
 
 | Pose | Use it for |
 |---|---|
@@ -32,11 +32,15 @@ The panda artworks in `apps/web/public/brand/panda/` are the canonical mascot: t
 
 One panda per view. It never sits inside transaction rows, cards or charts. The app icon (`faldo-panda-*.png`) is the same character and stays as the logo mark.
 
-Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts`) and its background ids unlock environment tints (`BACKGROUND_INFO`). The chosen pose and tint appear in the Home hero.
+Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts`) and its background ids unlock green environment themes (`BACKGROUND_INFO`). The chosen pose and theme appear in the Home hero.
 
-## Environment
+## Green environment
 
-The Home hero, sign-in and the empty Home use the `faldo-env` class with `environmentStyle()` from `components/brand/environment.tsx`: a clean off-white base with a light diagonal tint of the chosen theme (mint by default), lightest where Faldo stands, and a dark version for dark mode. On phones the hero melts into the page instead of ending on a hard line. No radial glows. `BambooDecor` is a very faint green motif used only on the sign-in panel and the empty Home, never behind text, charts or money.
+The Home hero, its loading state and the empty Home use `environmentStyle()` from `components/brand/environment.tsx`: a clean diagonal green from the chosen theme with a little depth at the bottom, and no glow at the top. White text, a white balance line and a quiet `BambooDecor` (white, about 10%) sit on it. The content below rises over it on a rounded sheet on phones. Bamboo never sits behind text or money.
+
+On phones, Search and notifications sit in a small pill on their own row under the status bar, then the date and greeting, then the balance with Faldo beside it, the balance line and the range chips.
+
+Sign-in uses the light mint version (`LIGHT_ENVIRONMENT` with the `faldo-env` class), with the bamboo motif in faint green.
 
 ## Hide amounts
 
@@ -55,7 +59,7 @@ All colours are CSS variables in `apps/web/src/app/globals.css`, with light and 
 - **Canvas:** `--background` (a soft neutral). Content groups sit on white `card-surface` / `ios-group` surfaces.
 - **Accent:** one green (`--primary`). Use it for primary actions, active navigation, positive money and Safe to Spend.
 - **Semantics:** green for income and good states, `--expense` red for problems and overspending, `--warning` amber for attention. Expenses in lists use the normal text colour, not red.
-- **Signature surfaces:** only account cards (the provider's or account's own colour) carry strong colour. The Home environment is a light tint. Safe to Spend is a calm light surface: green when healthy, amber when this week's share is used, red only when money is genuinely short.
+- **Signature surfaces:** only the Home green environment and account cards (the provider's or account's own colour) carry strong colour. Safe to Spend is a calm light surface: green when healthy, amber when this week's share is used, red only when money is genuinely short.
 
 ## Shape
 
@@ -91,7 +95,7 @@ Transactions, bills, goals and budgets are rows in one grouped surface with inse
 
 Every chart answers one question, written as its section title.
 
-- **Balance line** (`BalanceLine`): one green line over a quiet dashed grid, a compact scale on the right (hidden while amounts are hidden), first, middle and last dates below, and a dot for today. Drag across it with a finger or mouse, or use the arrow keys, to read any day; on Home that day's balance replaces the headline. Range chips run 1W to 1Y. There is no 1D range because balances are tracked per day.
+- **Balance line** (`BalanceLine`): one green line over a quiet dashed grid, a compact scale on the right (hidden while amounts are hidden), first, middle and last dates below, and a dot for today. Drag across it with a finger or mouse, or use the arrow keys, to read any day; on Home it is white on green and that day's balance replaces the headline. Range chips run 1W to 1Y. There is no 1D range because balances are tracked per day.
 - **Where it went:** a ranked list with bars sized to the largest category, not a pie.
 - **Money in and out:** restrained 12-month bars.
 - **Forecast:** actual versus projected with a likely range, always labelled as an estimate.

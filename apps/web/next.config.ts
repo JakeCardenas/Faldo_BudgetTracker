@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   agentRules: false,
   compress: false,
+  // 90 keeps Faldo's fur and eyes crisp; everything else uses the default 75.
+  images: { qualities: [75, 90] },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiOrigin}/api/:path*` }]
   },
