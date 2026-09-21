@@ -26,8 +26,7 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
 
   return (
     <>
-      <div className={cn("sticky top-0 z-30 -mx-4 px-4 pt-safe transition-[background-color,border-color] duration-200 sm:-mx-6 sm:px-6 lg:hidden",
-        compact ? "glass border-b border-border/70" : "border-b border-transparent")}>
+      <div className={cn("sticky top-0 isolate z-30 -mx-5 px-5 pt-safe sm:-mx-6 sm:px-6 lg:hidden", compact && "scroll-edge")}>
         <div className="relative flex h-11 items-center gap-2">
           {back ? (
             <Link href={back.href} className="pressable -ml-1.5 flex h-9 items-center gap-0.5 rounded-full pr-2 text-[0.9375rem] text-primary">
@@ -46,8 +45,8 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
               <ChevronLeft className="size-4" />{back.label}
             </Link>
           )}
-          <h1 className="page-title lg:text-[2.125rem]">{title}</h1>
-          {subtitle && <p className="mt-1.5 max-w-[60ch] text-[0.9375rem] text-muted-foreground">{subtitle}</p>}
+          <h1 className="page-title lg:text-[1.875rem]">{title}</h1>
+          {subtitle && <p className="mt-1 max-w-[60ch] text-sm text-muted-foreground">{subtitle}</p>}
         </div>
         {actions && <div className={cn("flex-wrap items-center gap-2 lg:flex", mobileActions === "below" ? "flex" : "hidden")}>{actions}</div>}
       </header>
@@ -56,9 +55,10 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
   )
 }
 
+/** A small floating header control: liquid glass, a circle when it only holds an icon. */
 export function HeaderButton({ className, children, ...props }: React.ComponentProps<"button">) {
   return (
-    <button type="button" className={cn("pressable inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-card px-3.5 text-sm font-medium text-foreground shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent [&_svg]:size-4 [&_svg]:text-muted-foreground", className)} {...props}>
+    <button type="button" className={cn("glass-control pressable inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground [&_svg]:size-[1.05rem] [&_svg]:text-foreground/75", className)} {...props}>
       {children}
     </button>
   )

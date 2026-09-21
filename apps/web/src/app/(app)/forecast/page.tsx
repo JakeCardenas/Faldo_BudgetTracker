@@ -224,7 +224,7 @@ export default function ForecastPage() {
       ) : (
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
           <div className="space-y-6">
-            <section aria-label="Projected balance" className="px-1">
+            <section aria-label="Projected balance" className="">
               <p className="flex items-center gap-2 text-[0.9375rem] text-muted-foreground">
                 Projected on {formatDate(data.horizon_end, "MMM d")}
                 <span className="rounded-full bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">Estimate</span>

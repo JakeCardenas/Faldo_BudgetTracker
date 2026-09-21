@@ -40,7 +40,7 @@ export function UserMenu() {
           <p className="truncate text-xs text-muted-foreground">{me?.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><Link href="/you"><CircleUserRound /> You</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link href="/you"><CircleUserRound /> Profile</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link href="/settings"><Settings /> Settings</Link></DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={logout}><LogOut /> Sign out</DropdownMenuItem>

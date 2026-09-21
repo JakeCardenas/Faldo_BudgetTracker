@@ -19,7 +19,7 @@ export default function LearnPage() {
 
   return (
     <div className="space-y-6">
-      <LargeTitle title="Learn" subtitle="Short lessons on everyday money in the Philippines" back={{ href: "/you", label: "You" }} />
+      <LargeTitle title="Learn" subtitle="Short lessons on everyday money in the Philippines" back={{ href: "/you", label: "Profile" }} />
 
       <section className="card-surface overflow-hidden">
         <div className="flex items-center gap-4 p-4 sm:p-5">
@@ -43,7 +43,7 @@ export default function LearnPage() {
         const lessons = LESSONS.filter((l) => l.level === level)
         return (
           <section key={level} className="space-y-2">
-            <div className="flex items-baseline justify-between px-1">
+            <div className="flex items-baseline justify-between">
               <h2 className="section-title">{level}</h2>
               <span className="tabular text-[0.8125rem] text-muted-foreground">{lessons.filter((l) => done.has(l.slug)).length} of {lessons.length}</span>
             </div>

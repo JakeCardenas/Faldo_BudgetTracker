@@ -53,7 +53,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-5">
-      <LargeTitle title={account.name} back={{ href: "/accounts", label: "Accounts" }}
+      <LargeTitle title={account.name} back={{ href: "/accounts", label: "Wallet" }}
         subtitle={account.archived ? "Archived account" : undefined}
         actions={<>
           <HeaderButton onClick={toggleArchive} aria-label={account.archived ? "Restore account" : "Archive account"}>
@@ -93,7 +93,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="min-w-0 space-y-3">
-          <h2 className="section-title px-1">Activity</h2>
+          <h2 className="section-title">History</h2>
           {list.isLoading ? <Skeleton className="h-64 rounded-2xl" /> : items.length === 0 ? (
             <p className="card-surface px-4 py-10 text-center text-sm text-muted-foreground">No transactions in this account yet.</p>
           ) : (

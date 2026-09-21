@@ -38,7 +38,7 @@ export default function StreaksPage() {
   }
 
   if (isLoading || !data) {
-    return <div className="space-y-4"><LargeTitle title="Streaks" back={{ href: "/you", label: "You" }} /><Skeleton className="h-64 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
+    return <div className="space-y-4"><LargeTitle title="Streaks" back={{ href: "/you", label: "Profile" }} /><Skeleton className="h-64 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
   }
 
   const next = data.next_badge
@@ -47,7 +47,7 @@ export default function StreaksPage() {
 
   return (
     <div className="space-y-5">
-      <LargeTitle title="Streaks" subtitle="Log a little every day to build the habit and earn rewards" back={{ href: "/you", label: "You" }} />
+      <LargeTitle title="Streaks" subtitle="Log a little every day to build the habit and earn rewards" back={{ href: "/you", label: "Profile" }} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.1fr_1fr] lg:gap-5">
         <section className="card-surface px-5 py-7 text-center sm:py-8">

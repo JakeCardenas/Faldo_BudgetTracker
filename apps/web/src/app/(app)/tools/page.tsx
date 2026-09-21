@@ -7,7 +7,7 @@ import { TOOLS } from "@/lib/tools-catalog"
 export default function ToolsPage() {
   return (
     <div className="space-y-5">
-      <LargeTitle title="Tools" subtitle="Calculators and helpers for everyday money" back={{ href: "/you", label: "You" }} />
+      <LargeTitle title="Tools" subtitle="Calculators and helpers for everyday money" back={{ href: "/you", label: "Profile" }} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {TOOLS.map((tool) => {
           const Icon = tool.icon

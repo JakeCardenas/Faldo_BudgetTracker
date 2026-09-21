@@ -4,14 +4,22 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 
 ## Information architecture
 
-| Place | Question it answers | Routes |
+| Tab | Question it answers | Routes |
 |---|---|---|
-| Home | What do I have, what's safe to spend, what's next? | `/`, `/accounts`, `/import` |
-| Activity | What happened? | `/transactions`, `/reports`, `/insights` |
-| Plans | What's ahead? | `/plan`, `/plan/money`, `/bills`, `/budgets`, `/goals`, `/debts`, `/forecast` |
-| You | Everything about me and the app | `/you`, `/settings`, `/learn`, `/streaks`, `/tools`, `/assistant` |
+| Home | What do I have, what's safe to spend, what's next? | `/` |
+| Wallet | Where does my money live? | `/accounts`, `/accounts/[id]`, `/import` |
+| Plan | What's ahead? | `/plan`, `/plan/money`, `/bills`, `/budgets`, `/goals`, `/debts`, `/forecast` |
+| History | What happened? | `/transactions`, `/reports`, `/insights` |
 
-The **+** (phone tab bar, desktop "Add") opens one menu: type it like a text, Expense, Income, Transfer, then receipt, goal, money owed, planned purchase, Faldo Check and import.
+**Profile** (`/you`, with `/settings`, `/learn`, `/streaks`, `/tools`, `/assistant`) is not a tab. It opens from the avatar on Home (phones) and the avatar menu (desktop); its pages select no tab.
+
+The **+** (its own circle beside the tab bar on phones, "Add" on desktop) opens one menu: type it like a text, Expense, Income, Transfer, then receipt (photo or camera), goal, money owed, planned purchase, Faldo Check and import.
+
+## Navigation
+
+Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle to its right, both on the page's 20px margins and above the home indicator. The selected tab sits in a green lens that feels set into the glass. Pressing a tab springs the lens to it (440ms, about 2% overshoot) and swells it slightly while the finger is down (150ms), so the tap answers immediately. Scrolling down folds the capsule into one circle showing the current tab; scrolling up, reaching the top, tapping it or focusing it opens it again. The + never hides.
+
+Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
 Home has a hard limit: the green hero (total balance, the balance line with 1W to 1Y, Faldo), Safe to Spend, spending this month, account cards, coming up, one Faldo note and recent activity. Add to Home only by removing something.
 
@@ -63,7 +71,9 @@ All colours are CSS variables in `apps/web/src/app/globals.css`, with light and 
 
 ## Shape
 
-- Buttons, chips, segmented controls and tabs are full pills.
+- Text buttons are rounded rectangles: 12px (default), 14px (large), 10px (small).
+- Icon-only buttons, header controls, the + and the tab bar are circles or capsules.
+- Chips and segmented controls stay pills.
 - Inputs are 12px (`rounded-lg`).
 - Inner tiles are 17px (`rounded-xl`).
 - Surfaces are 22px (`rounded-2xl`).
@@ -75,17 +85,25 @@ Geist throughout. Money always uses tabular figures.
 
 | Use | Class |
 |---|---|
-| Hero money (balance, Safe to Spend) | `display-xl` (44px, 52px on desktop) |
-| Page titles | `page-title` (30px, 34px on desktop) |
-| Section titles | `section-title` (17px semibold) |
-| Body and rows | 15px |
-| Secondary | 13px muted |
+| Home balance | 32 to 40px bold on phones (steps down for long amounts), 52px on desktop |
+| Major money (Safe to Spend, net worth) | `display-xl` (32px bold) |
+| Page titles | `page-title` (26px bold, 30px on desktop) |
+| Section titles | `section-title` (16px bold) |
+| Card and row titles | 15px medium to semibold |
+| Body and supporting text | 13 to 14px |
+| Small labels | `eyebrow` (12px semibold, muted) |
+
+Weight carries the hierarchy: titles and money are bold, supporting text stays regular. Negative amounts keep their sign and colour; positive money can use Faldo green.
 
 Sentence case everywhere. No uppercase labels, no em dashes in copy.
 
 ## Glass
 
-`glass-float` is a web approximation of a liquid-glass material (backdrop blur, layered edge, top highlight). It is used only for floating controls: the phone tab bar and the desktop top bar (`glass`). Never on cards, charts or financial figures. `prefers-reduced-transparency` falls back to a solid surface.
+Content is solid; controls float. `glass-float` (tab bar, +) and `glass-control` (small header buttons) are a web approximation of liquid glass: a clear backdrop blur with strong colour pickup (content shows through and tints it), a bright thin rim, a soft specular sheen and a soft shadow. `glass-on-green` is the same idea on the Home environment. The selected-tab lens is the only glass state inside the bar. Never on cards, lists, charts or money. Page tops use `scroll-edge`, a soft fade and blur where content passes under the floating header, instead of a hard bar. `prefers-reduced-transparency` falls back to solid surfaces.
+
+## Spacing and alignment
+
+Phones use 20px page margins; tablets 24px; desktop 32px. The scale is 4, 8, 12, 16, 20, 24, 32, 40, 48. Section titles sit 12px above their content, sections are 24 to 32px apart, and cards pad 16 to 20px. Page titles, section titles, cards, the tab bar and the + share the same left and right edges; nothing is inset by a few pixels.
 
 ## Lists before cards
 
@@ -102,7 +120,15 @@ Every chart answers one question, written as its section title.
 
 ## Motion
 
-Short and purposeful: the tab indicator slides (300ms), sheets rise, money counts up, buttons press to 97%. `prefers-reduced-motion` disables animation globally.
+Fast and ordered, using transforms and opacity only.
+
+- **Tabs:** lens swell on press (150ms), spring glide to the new tab (440ms, `--ease-spring`, a `linear()` spring with a smooth fallback).
+- **Pages:** the first visit plays `page-enter`: the header settles in 180ms, then each group below follows at 60ms steps (260ms each: fade, a 6px rise, 3px blur to sharp). Coming back to a page is instant.
+- **Scroll:** the tab bar folds to a circle on scroll down and opens on scroll up.
+- **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
+- **Everything else:** sheets rise, money counts up, buttons press to 97%.
+
+`prefers-reduced-motion` turns all of it into instant state changes.
 
 ## Data integrity
 

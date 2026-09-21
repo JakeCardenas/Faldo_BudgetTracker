@@ -5,7 +5,8 @@ import { LargeTitle } from "@/components/ios/nav-header"
 import { cn } from "@/lib/utils"
 
 const PLAN_CHILDREN = ["/budgets", "/goals", "/bills", "/debts", "/forecast"]
-const YOU_CHILDREN = ["/settings", "/streaks", "/learn", "/tools", "/insights"]
+const HISTORY_CHILDREN = ["/insights"]
+const PROFILE_CHILDREN = ["/settings", "/streaks", "/learn", "/tools"]
 
 export function PageHeader({ title, description, actions, className }: {
   title: string
@@ -14,11 +15,12 @@ export function PageHeader({ title, description, actions, className }: {
   className?: string
 }) {
   const pathname = usePathname()
-  const back = PLAN_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/plan", label: "Plans" }
-    : pathname.startsWith("/tools/") ? { href: "/tools", label: "Tools" }
-      : pathname.startsWith("/learn/") ? { href: "/learn", label: "Learn" }
-        : YOU_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/you", label: "You" }
-          : pathname === "/" ? undefined : { href: "/", label: "Home" }
+  const back = PLAN_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/plan", label: "Plan" }
+    : HISTORY_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/transactions", label: "History" }
+      : pathname.startsWith("/tools/") ? { href: "/tools", label: "Tools" }
+        : pathname.startsWith("/learn/") ? { href: "/learn", label: "Learn" }
+          : PROFILE_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/you", label: "Profile" }
+            : pathname === "/" ? undefined : { href: "/", label: "Home" }
   return <LargeTitle title={title} subtitle={description} actions={actions} back={back} className={className} mobileActions="below" />
 }
 

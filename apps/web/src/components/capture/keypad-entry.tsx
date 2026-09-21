@@ -297,7 +297,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
         {templates.length > 0 && (
           <div className="space-y-2">
             <p className="text-[0.8125rem] font-medium text-muted-foreground">Recent {type === "income" ? "income" : type === "transfer" ? "transfers" : "expenses"}</p>
-            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+            <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 scrollbar-none">
               {templates.map((t) => (
                 <button key={t.id} type="button" onClick={() => {
                   play("select")

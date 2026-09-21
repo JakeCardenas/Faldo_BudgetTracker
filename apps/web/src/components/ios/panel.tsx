@@ -27,7 +27,7 @@ export function Section({ title, description, href, linkLabel = "See all", actio
   return (
     <section id={id} className={cn("min-w-0", className)} aria-labelledby={id ? `${id}-title` : undefined}>
       {(title || action || href) && (
-        <div className="mb-2.5 flex items-end justify-between gap-3 px-1">
+        <div className="mb-3 flex items-end justify-between gap-3">
           <div className="min-w-0">
             {title && <h2 id={id ? `${id}-title` : undefined} className="section-title truncate">{title}</h2>}
             {description && <p className="truncate text-[0.8125rem] text-muted-foreground">{description}</p>}

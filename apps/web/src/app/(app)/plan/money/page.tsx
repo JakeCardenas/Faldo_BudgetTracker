@@ -312,7 +312,7 @@ export default function MoneyPlanPage() {
   const { data: plan, isLoading, error } = useMoneyPlan()
   return (
     <div className="space-y-5">
-      <LargeTitle title="Money plan" subtitle="Give every payday a job" back={{ href: "/plan", label: "Plans" }} />
+      <LargeTitle title="Money plan" subtitle="Give every payday a job" back={{ href: "/plan", label: "Plan" }} />
       {error ? <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">Couldn&apos;t load your plan. {error.message}</p>
         : isLoading || !plan ? <div className="space-y-4"><Skeleton className="h-36 rounded-xl" /><Skeleton className="h-96 rounded-xl" /></div> : (
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">

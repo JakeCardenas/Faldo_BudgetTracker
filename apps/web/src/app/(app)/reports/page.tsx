@@ -47,7 +47,7 @@ function WhereItWent({ report }: { report: MonthlyReport }) {
         ))}
       </ul>
       {rows.length > 6 && (
-        <button type="button" onClick={() => setAll((v) => !v)} className="mt-2 inline-flex items-center gap-1 px-1 text-sm font-medium text-primary">
+        <button type="button" onClick={() => setAll((v) => !v)} className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary">
           {all ? "Show fewer" : `Show all ${rows.length}`} <ChevronDown className={cn("size-3.5 transition-transform", all && "rotate-180")} />
         </button>
       )}
@@ -194,16 +194,16 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <LargeTitle title="Statistics" back={{ href: "/transactions", label: "Activity" }} actions={switcher} />
+      <LargeTitle title="Statistics" back={{ href: "/transactions", label: "History" }} actions={switcher} />
 
       {isLoading || !report || !s ? (
-        <div className="space-y-6"><div className="space-y-3 px-1"><Skeleton className="h-4 w-32" /><Skeleton className="h-11 w-52" /><Skeleton className="h-4 w-64" /></div><Skeleton className="h-72 rounded-2xl" /></div>
+        <div className="space-y-6"><div className="space-y-3"><Skeleton className="h-4 w-32" /><Skeleton className="h-11 w-52" /><Skeleton className="h-4 w-64" /></div><Skeleton className="h-72 rounded-2xl" /></div>
       ) : s.transaction_count === 0 ? (
         <div className="card-surface"><EmptyState icon={BarChart3} title={`No activity in ${report.label}`} description="Statistics fill in as you record transactions." /></div>
       ) : (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-10">
           <div className="space-y-8">
-            <section aria-label="Month summary" className="px-1">
+            <section aria-label="Month summary" className="">
               <p className="text-[0.9375rem] text-muted-foreground">Spent in {report.label}{report.is_partial && " so far"}</p>
               <Money minor={s.expense_minor} className="display-xl mt-1.5 block" />
               <p className="mt-2 text-sm text-muted-foreground">

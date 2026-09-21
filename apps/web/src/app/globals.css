@@ -64,6 +64,8 @@
   --shadow-card: var(--elevation-card);
   --shadow-float: var(--elevation-float);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  /* A soft spring for moving controls (about 2% overshoot); browsers without linear() get a smooth ease. */
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /*
@@ -124,13 +126,15 @@
   --elevation-card: 0 1px 2px rgb(16 36 24 / 0.04), 0 8px 24px -14px rgb(16 36 24 / 0.12);
   --elevation-float: 0 22px 48px -18px rgb(16 36 24 / 0.3), 0 4px 14px -6px rgb(16 36 24 / 0.1);
   --surface-ring: 0 0 #0000;
-  --glass-bg: rgb(255 255 255 / 0.66);
-  --glass-border: rgb(255 255 255 / 0.7);
-  --glass-edge: rgb(16 36 24 / 0.07);
-  --glass-highlight: rgb(255 255 255 / 0.9);
-  --glass-shadow: 0 18px 40px -16px rgb(16 36 24 / 0.28), 0 2px 8px -2px rgb(16 36 24 / 0.08);
+  --glass-bg: rgb(255 255 255 / 0.52);
+  --glass-border: rgb(255 255 255 / 0.8);
+  --glass-edge: rgb(16 36 24 / 0.08);
+  --glass-highlight: rgb(255 255 255 / 0.95);
+  --glass-shadow: 0 12px 32px -14px rgb(16 36 24 / 0.3), 0 1px 3px rgb(16 36 24 / 0.07);
+  --glass-shadow-sm: 0 6px 16px -8px rgb(16 36 24 / 0.28), 0 1px 2px rgb(16 36 24 / 0.06);
   --glass-solid: #fbfbfa;
   --tab-indicator: rgb(16 36 24 / 0.07);
+  --tab-lens: rgb(44 117 73 / 0.13);
 }
 
 .dark {
@@ -182,13 +186,15 @@
   --elevation-card: 0 0 #0000;
   --elevation-float: 0 22px 48px -14px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05);
   --surface-ring: inset 0 0 0 1px rgb(255 255 255 / 0.055);
-  --glass-bg: rgb(30 34 31 / 0.62);
-  --glass-border: rgb(255 255 255 / 0.1);
-  --glass-edge: rgb(0 0 0 / 0.4);
-  --glass-highlight: rgb(255 255 255 / 0.12);
-  --glass-shadow: 0 18px 44px -14px rgb(0 0 0 / 0.75), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  --glass-bg: rgb(32 37 34 / 0.55);
+  --glass-border: rgb(255 255 255 / 0.13);
+  --glass-edge: rgb(0 0 0 / 0.45);
+  --glass-highlight: rgb(255 255 255 / 0.16);
+  --glass-shadow: 0 14px 36px -14px rgb(0 0 0 / 0.8), 0 1px 3px rgb(0 0 0 / 0.4);
+  --glass-shadow-sm: 0 6px 16px -8px rgb(0 0 0 / 0.7), 0 1px 2px rgb(0 0 0 / 0.35);
   --glass-solid: #1a1e1b;
   --tab-indicator: rgb(255 255 255 / 0.1);
+  --tab-lens: rgb(124 203 147 / 0.17);
 }
 
 @layer base {
@@ -254,7 +260,7 @@
   }
   /* Horizontal rails (account cards) that bleed to the screen edge on phones. */
   .rail {
-    @apply -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 sm:-mx-6 sm:scroll-px-6 sm:px-6;
+    @apply -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-5 px-5 pb-1 sm:-mx-6 sm:scroll-px-6 sm:px-6;
     scrollbar-width: none;
   }
   .rail::-webkit-scrollbar {
@@ -274,42 +280,77 @@
     @apply bg-background/80 backdrop-blur-xl backdrop-saturate-150;
   }
   /*
-    Floating glass material for the tab bar and desktop nav. A web approximation of a liquid-glass look
-    (backdrop blur, layered edge and top highlight), not Apple's native material. Solid fallback below.
+    Liquid glass for floating controls only: the tab bar, the + button, the selected-tab lens and small
+    header buttons. A web approximation (clear backdrop blur with strong colour pickup, a bright thin
+    rim and a soft specular sheen), not Apple's native material. Never on cards, lists, charts or money.
+    Solid fallback below for reduced transparency.
   */
-  .glass-float {
+  .glass-float,
+  .glass-control {
     position: relative;
     isolation: isolate;
     background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 60%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.16), transparent 45%, rgb(255 255 255 / 0.05)),
       var(--glass-bg);
-    -webkit-backdrop-filter: blur(22px) saturate(180%);
-    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(190%);
+    backdrop-filter: blur(16px) saturate(190%);
     box-shadow:
       inset 0 1px 0 var(--glass-highlight),
       inset 0 0 0 1px var(--glass-border),
-      0 0 0 1px var(--glass-edge),
+      0 0 0 0.5px var(--glass-edge),
       var(--glass-shadow);
+  }
+  .glass-control {
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      inset 0 0 0 1px var(--glass-border),
+      0 0 0 0.5px var(--glass-edge),
+      var(--glass-shadow-sm);
+  }
+  /* The same material on the green Home environment: white-tinted and see-through. */
+  .glass-on-green {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.08));
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), inset 0 0 0 1px rgb(255 255 255 / 0.16), 0 6px 16px -8px rgb(0 0 0 / 0.3);
+  }
+  /*
+    Page tops on phones: content fades and softens as it scrolls under the floating header, instead of
+    ending on a hard bar.
+  */
+  .scroll-edge {
+    background: linear-gradient(180deg, var(--background) 0%, color-mix(in oklab, var(--background) 82%, transparent) 55%, transparent);
+  }
+  .scroll-edge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent);
+    mask-image: linear-gradient(180deg, #000 45%, transparent);
   }
   .pressable {
     transition: scale 160ms var(--ease-out-quint), background-color 160ms ease-out, color 160ms ease-out, opacity 160ms ease-out, border-color 160ms ease-out;
     @apply active:scale-[0.97];
   }
+  /* Type scale. Weight carries the hierarchy: titles and money are bold, supporting text stays regular. */
   .eyebrow {
-    @apply text-[0.8125rem] font-medium text-muted-foreground;
+    @apply text-[0.75rem] font-semibold tracking-[0.005em] text-muted-foreground;
   }
   .page-title {
-    @apply text-[1.875rem] leading-[1.1] font-semibold tracking-[-0.03em];
+    @apply text-[1.625rem] leading-[1.12] font-bold tracking-[-0.032em];
   }
   .section-title {
-    @apply text-[1.0625rem] leading-6 font-semibold tracking-[-0.015em];
+    @apply text-[1rem] leading-6 font-bold tracking-[-0.015em];
   }
   .display-number {
-    @apply text-[2.5rem] leading-none font-semibold tracking-[-0.04em];
+    @apply text-[1.75rem] leading-none font-bold tracking-[-0.04em];
     font-variant-numeric: tabular-nums;
   }
   .display-xl {
-    @apply text-[2.75rem] leading-none font-semibold tracking-[-0.045em];
+    @apply text-[2rem] leading-none font-bold tracking-[-0.042em];
     font-variant-numeric: tabular-nums;
   }
   .text-balance-safe {
@@ -345,6 +386,9 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .glass-float,
+  .glass-control,
+  .glass-on-green,
+  .scroll-edge::before,
   .glass {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -383,6 +427,39 @@
 /* "backwards" (not "both") so no transform lingers after the animation and creates a stacking context. */
 .animate-rise {
   animation: rise-in 280ms var(--ease-out-quint) backwards;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/*
+  First visit to a page: the header settles first (180ms), then each group below it follows at 60ms steps
+  (260ms each). Returning to a page skips this, so going back feels instant.
+*/
+.page-enter > * > * {
+  animation: page-in 260ms var(--ease-out-quint) backwards;
+  animation-delay: 60ms;
+}
+.page-enter > * > *:first-child { animation-duration: 180ms; animation-delay: 0ms; }
+.page-enter > * > *:nth-child(3) { animation-delay: 120ms; }
+.page-enter > * > *:nth-child(4) { animation-delay: 180ms; }
+.page-enter > * > *:nth-child(n + 5) { animation-delay: 240ms; }
+
+/* Theme changes crossfade instead of snapping. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: ease-out;
 }
 
 .stagger > * {
@@ -487,7 +564,17 @@ html:not([data-splash="skip"]) .boot-quiet {
   }
 }
 
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: linear(0, 0.035, 0.119, 0.231, 0.352, 0.472, 0.583, 0.681, 0.765, 0.834, 0.889, 0.932, 0.963, 0.986, 1.002, 1.011, 1.017, 1.02, 1.02, 1.019, 1.017, 1.015, 1.012, 1.01, 1.008, 1.006, 1.004, 1.003, 1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
   *,
   *::before,
   *::after {

@@ -11,6 +11,7 @@ import { HideAmountsButton } from "@/components/finance/hide-amounts"
 import { AnimatedMoney } from "@/components/finance/money"
 import { useFaldoNote } from "@/components/home/sections"
 import { useAppActions } from "@/components/layout/app-context"
+import { initialsOf } from "@/components/layout/mobile-nav"
 import { Notifications } from "@/components/layout/notifications"
 import { Skeleton } from "@/components/ui/skeleton"
 import { poseFor } from "@/lib/catalog"
@@ -31,9 +32,9 @@ const RANGES = [
 
 /** Long balances step down a size on phones so they never collide with Faldo. */
 function balanceSize(text: string) {
-  if (text.length <= 8) return "text-[clamp(2.25rem,10.2vw,3.5rem)]"
-  if (text.length <= 10) return "text-[clamp(1.9rem,8.6vw,3.25rem)]"
-  return "text-[clamp(1.6rem,7.2vw,3rem)]"
+  if (text.length <= 8) return "text-[clamp(2rem,9.2vw,2.5rem)]"
+  if (text.length <= 10) return "text-[clamp(1.75rem,8vw,2.25rem)]"
+  return "text-[clamp(1.5rem,6.8vw,2rem)]"
 }
 
 /** Faldo's speech bubble beside the panda on larger screens. */
@@ -80,12 +81,16 @@ export function BalanceHero({ data }: { data: Dashboard }) {
 
   return (
     <section aria-labelledby="balance-title" style={environmentStyle(me?.settings.home_background)}
-      className="relative isolate -mx-4 overflow-hidden px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-12 text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-9 lg:pb-9">
+      className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-12 text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-9 lg:pb-9">
       <BambooDecor className="absolute top-0 -right-8 -z-10 h-[18rem] lg:top-auto lg:right-2 lg:-bottom-12 lg:h-[30rem]" />
 
-      {/* Phones: search and notifications get their own row under the status bar, so the greeting sits lower. */}
-      <div className="flex justify-end lg:hidden">
-        <div className="flex items-center gap-0.5 rounded-full bg-white/12 p-1 ring-1 ring-white/10 ring-inset">
+      {/* Phones: Profile on the left, search and notifications on the right, in their own row under the status bar. */}
+      <div className="flex items-center justify-between lg:hidden">
+        <Link href="/you" aria-label="Profile" onClick={() => play("tap")}
+          className="glass-on-green pressable flex size-11 items-center justify-center rounded-full text-[0.8125rem] font-bold text-white">
+          {initialsOf(me?.display_name)}
+        </Link>
+        <div className="glass-on-green flex items-center gap-0.5 rounded-full p-1">
           <button type="button" onClick={openSearch} aria-label="Search"
             className="pressable flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15">
             <Search className="size-[1.1rem]" strokeWidth={2} />
@@ -106,7 +111,7 @@ export function BalanceHero({ data }: { data: Dashboard }) {
                 <h2 id="balance-title" className="text-[0.9375rem] text-white/80">Total balance</h2>
                 <HideAmountsButton tone="light" className="-my-1" />
               </div>
-              <AnimatedMoney minor={shown} className={cn("mt-1 block leading-none font-semibold tracking-[-0.045em] lg:text-[3.5rem]", balanceSize(formatMoney(shown)))} symbolClassName="text-white/70" />
+              <AnimatedMoney minor={shown} className={cn("mt-1 block leading-none font-bold tracking-[-0.045em] lg:text-[3.25rem]", balanceSize(formatMoney(shown)))} symbolClassName="text-white/70" />
               <p className="mt-2.5 flex min-h-6 flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-white/85">
                 {hover ? (
                   <span className="font-medium text-white">{format(parseISO(hover.date), "EEEE, MMM d")}</span>

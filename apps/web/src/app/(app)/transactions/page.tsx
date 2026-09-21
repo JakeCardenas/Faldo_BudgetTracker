@@ -90,9 +90,9 @@ function HistoryView() {
 
   return (
     <div className="space-y-4">
-      <LargeTitle title="Activity"
+      <LargeTitle title="History"
         actions={<>
-          <a href="/api/v1/me/export" className="pressable hidden h-9 items-center gap-1.5 rounded-full bg-card px-3.5 text-sm font-medium shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent lg:flex"><Download className="size-4 text-muted-foreground" /> Export</a>
+          <a href="/api/v1/me/export" className="glass-control pressable hidden h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold lg:flex"><Download className="size-[1.05rem] text-foreground/75" /> Export</a>
           <HeaderButton onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Add</HeaderButton>
         </>} />
 
@@ -109,7 +109,7 @@ function HistoryView() {
         </div>
       )}
 
-      <div className="glass sticky top-[calc(2.75rem+env(safe-area-inset-top))] z-20 -mx-4 space-y-2.5 px-4 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
+      <div className="glass sticky top-[calc(2.75rem+env(safe-area-inset-top))] z-20 -mx-5 space-y-2.5 px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
         <div className="flex gap-2">
           <label className="flex h-11 flex-1 items-center gap-2 rounded-full bg-card px-4 shadow-[inset_0_0_0_1px_var(--border)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_var(--ring)] focus-within:ring-3 focus-within:ring-ring/20">
             <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -141,7 +141,7 @@ function HistoryView() {
       </div>
 
       {summary && summary.total_count > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
           <p className="text-sm text-muted-foreground">
             <span className="tabular">{summary.total_count}</span> {summary.total_count === 1 ? "transaction" : "transactions"},{" "}
             <Money minor={summary.total_income_minor} className={cn("font-medium", summary.total_income_minor > 0 ? "text-income" : "text-foreground")} /> in,{" "}

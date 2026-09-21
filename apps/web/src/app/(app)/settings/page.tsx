@@ -4,13 +4,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { useTheme } from "next-themes"
 import { ChevronRight, Download, EyeOff, Flame, Monitor, Moon, Pencil, Plus, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
 import { environmentStyle } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
 import { Segmented } from "@/components/ios/segmented"
 import { BACKGROUND_INFO, OUTFIT_INFO, poseFor } from "@/lib/catalog"
 import { setAmountsHidden, useAmountsHidden } from "@/lib/privacy"
+import { useSmoothTheme } from "@/lib/theme"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
@@ -34,7 +34,7 @@ const TIMEZONES = ["Asia/Manila", "Asia/Singapore", "Asia/Tokyo", "Asia/Dubai", 
 
 function Appearance({ me }: { me: Me }) {
   const update = useUpdateSettings()
-  const { setTheme } = useTheme()
+  const { setTheme } = useSmoothTheme()
   const [sounds, setSounds] = useState(soundsEnabled)
   const hideAmounts = useAmountsHidden()
   const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Bamboo buddy"
@@ -86,7 +86,7 @@ function Appearance({ me }: { me: Me }) {
             <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
         </div>
-        <p className="flex items-start gap-2 px-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
           <Smartphone className="mt-0.5 size-4 shrink-0" />
           <span>Use Faldo like an app: on iPhone, open it in Safari, tap Share, then <b>Add to Home Screen</b>. On Android, tap the menu and choose <b>Install app</b>.</span>
         </p>

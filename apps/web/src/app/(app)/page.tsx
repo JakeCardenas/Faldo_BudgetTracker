@@ -18,7 +18,7 @@ function HomeSkeleton() {
   const { data: me } = useMe()
   return (
     <div aria-busy="true" aria-label="Loading your home screen">
-      <div style={environmentStyle(me?.settings.home_background)} className="-mx-4 px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-12 sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-9 lg:pb-9">
+      <div style={environmentStyle(me?.settings.home_background)} className="-mx-5 px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] pb-12 sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-9 lg:pb-9">
         <div className="flex justify-end lg:hidden"><Skeleton className="h-11 w-24 rounded-full bg-white/12" /></div>
         <Skeleton className="mt-4 h-4 w-32 bg-white/15 lg:mt-0" /><Skeleton className="mt-2 h-7 w-52 bg-white/15" />
         <Skeleton className="mt-8 h-4 w-24 bg-white/15" /><Skeleton className="mt-2 h-11 w-48 bg-white/15" />
@@ -38,7 +38,7 @@ function Welcome() {
   const name = me?.display_name?.split(" ")[0]
   return (
     <section style={environmentStyle(me?.settings.home_background)}
-      className="relative isolate -mx-4 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(env(safe-area-inset-top)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
+      className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(env(safe-area-inset-top)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
       <BambooDecor className="absolute -right-8 -bottom-10 -z-10 h-[26rem]" />
       <Panda pose="wave" priority sizes="192px" className="w-44 drop-shadow-[0_18px_28px_rgb(0_0_0/0.28)] sm:w-48" />
       <h1 className="mt-6 text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">{greeting()}{name ? `, ${name}` : ""}</h1>

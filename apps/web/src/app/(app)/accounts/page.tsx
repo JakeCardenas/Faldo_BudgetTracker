@@ -153,7 +153,7 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-5">
-      <LargeTitle title="Accounts" back={{ href: "/", label: "Home" }}
+      <LargeTitle title="Wallet" subtitle="Cash, e-wallets, banks and cards you track by hand"
         actions={arranging
           ? <div className="flex gap-2">
               <HeaderButton onClick={() => setArranging(false)}>Cancel</HeaderButton>
@@ -165,7 +165,7 @@ export default function AccountsPage() {
             </div>} />
 
       {isLoading ? (
-        <div className="space-y-6"><div className="space-y-3 px-1"><Skeleton className="h-8 w-60 rounded-full" /><Skeleton className="h-11 w-48" /><Skeleton className="h-40 rounded-2xl" /></div><div className="grid grid-cols-1 gap-4 min-[560px]:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[1.586] rounded-[1.125rem]" />)}</div></div>
+        <div className="space-y-6"><div className="space-y-3"><Skeleton className="h-8 w-60 rounded-full" /><Skeleton className="h-11 w-48" /><Skeleton className="h-40 rounded-2xl" /></div><div className="grid grid-cols-1 gap-4 min-[560px]:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="aspect-[1.586] rounded-[1.125rem]" />)}</div></div>
       ) : active.length === 0 ? (
         <div className="card-surface">
           <EmptyState icon={Wallet} title="Add your first account" description="Start with where your money lives: cash, GCash, Maya or a bank account. Faldo never connects to your bank."
@@ -173,7 +173,7 @@ export default function AccountsPage() {
         </div>
       ) : (
         <>
-          <section aria-label="Balance" className="px-1 lg:grid lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-end lg:gap-10">
+          <section aria-label="Balance" className="lg:grid lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-end lg:gap-10">
             <div>
               <Segmented label="Balance view" size="sm" value={view} onChange={setView}
                 options={[{ value: "all", label: "Net worth" }, { value: "assets", label: "Assets" }, { value: "liabilities", label: "Liabilities" }]} />
@@ -188,7 +188,7 @@ export default function AccountsPage() {
 
           {arranging ? (
             <section aria-label="Reorder accounts" className="space-y-2.5">
-              <p className="px-1 text-[0.8125rem] text-muted-foreground">Move accounts up or down, then tap Done. Home shows them in this order.</p>
+              <p className="text-[0.8125rem] text-muted-foreground">Move accounts up or down, then tap Done. Home shows them in this order.</p>
               <ol className="ios-group divide-y divide-border/60">
                 {ordered.map((account, i) => (
                   <li key={account.id} className="flex items-center gap-3 py-2.5 pr-2 pl-4">
@@ -242,7 +242,7 @@ export default function AccountsPage() {
                 return (
                   <section key={group.type} className="space-y-2.5">
                     <button type="button" aria-expanded={!isCollapsed} onClick={() => setCollapsed((c) => { const n = new Set(c); if (n.has(group.type)) n.delete(group.type); else n.add(group.type); return n })}
-                      className="flex w-full items-center gap-1.5 rounded-md px-1 text-left">
+                      className="flex w-full items-center gap-1.5 rounded-md text-left">
                       <span className="section-title flex-1">{group.label}</span>
                       <span className={cn("tabular text-[0.8125rem] font-medium", total < 0 ? "text-expense" : "text-muted-foreground")}>{formatMoney(total)}</span>
                       <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", isCollapsed && "-rotate-90")} />

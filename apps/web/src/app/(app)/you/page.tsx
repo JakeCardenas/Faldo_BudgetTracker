@@ -23,9 +23,9 @@ export default function YouPage() {
 
   return (
     <div className="space-y-6">
-      <LargeTitle title="You" />
+      <LargeTitle title="Profile" back={{ href: "/", label: "Home" }} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-10">
-        <section className="flex items-center gap-4 px-1 lg:sticky lg:top-24 lg:flex-col lg:items-start lg:gap-5 lg:rounded-2xl lg:bg-card lg:p-6 lg:shadow-(--shadow-card)">
+        <section className="flex items-center gap-4 lg:sticky lg:top-24 lg:flex-col lg:items-start lg:gap-5 lg:rounded-2xl lg:bg-card lg:p-6 lg:shadow-(--shadow-card)">
           <Avatar name={me?.display_name} className="size-16 text-lg lg:size-20 lg:text-2xl" />
           <div className="min-w-0 flex-1">
             {isLoading ? <><Skeleton className="h-5 w-32" /><Skeleton className="mt-2 h-4 w-44" /></> : (

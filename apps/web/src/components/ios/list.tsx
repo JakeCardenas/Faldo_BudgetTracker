@@ -12,13 +12,13 @@ export function ListGroup({ title, footer, action, children, className }: {
   return (
     <section className={cn("space-y-2", className)}>
       {(title || action) && (
-        <div className="flex items-end justify-between gap-3 px-1">
+        <div className="flex items-end justify-between gap-3">
           {title && <h2 className="text-[0.875rem] font-medium text-muted-foreground">{title}</h2>}
           {action}
         </div>
       )}
       <div className="ios-group divide-y divide-border/60 [&>*]:border-border/60">{children}</div>
-      {footer && <p className="px-1 text-xs leading-relaxed text-muted-foreground">{footer}</p>}
+      {footer && <p className="text-xs leading-relaxed text-muted-foreground">{footer}</p>}
     </section>
   )
 }

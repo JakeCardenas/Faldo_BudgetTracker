@@ -124,7 +124,7 @@ export default function BudgetsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10">
           <div className="space-y-6">
-            <section aria-label="This month" className="px-1">
+            <section aria-label="This month" className="">
               <p className="text-[0.9375rem] text-muted-foreground">{format(monthDate, "MMMM")} budget</p>
               <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
                 <Money minor={budget.total_spent_minor} className="display-xl" />
@@ -192,7 +192,7 @@ export default function BudgetsPage() {
                     <Bar dataKey="spent_minor" fill="var(--chart-1)" radius={[6, 6, 2, 2]} maxBarSize={16} />
                   </BarChart>
                 </ResponsiveContainer>
-                <div className="flex gap-4 px-1 pt-1 pb-1 text-xs text-muted-foreground">
+                <div className="flex gap-4 pt-1 pb-1 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-3" /> Budgeted</span>
                   <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-1" /> Spent</span>
                 </div>

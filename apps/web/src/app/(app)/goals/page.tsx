@@ -253,7 +253,7 @@ export default function GoalsPage() {
       ) : (
         <>
           {active.length > 1 && (
-            <section aria-label="All goals" className="px-1">
+            <section aria-label="All goals" className="">
               <p className="text-[0.9375rem] text-muted-foreground">Saved toward {active.length} goals</p>
               <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
                 <Money minor={totalSaved} className="display-xl" />

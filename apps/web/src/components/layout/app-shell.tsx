@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { usePathname, useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
 import { AddTransactionDialog, type AddMode } from "@/components/capture/add-transaction-dialog"
 import type { EntryPreset } from "@/components/capture/keypad-entry"
 import Image from "next/image"
@@ -16,19 +15,30 @@ import { CommandSearch } from "@/components/layout/command-search"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { TopNav } from "@/components/layout/top-nav"
 import { useAmountsHidden } from "@/lib/privacy"
+import { useSmoothTheme } from "@/lib/theme"
 import { useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Receipt } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 const ADD_MODES: AddModeOption[] = ["expense", "income", "transfer", "describe", "manual", "receipt"]
 const WelcomeSplash = dynamic(() => import("@/components/brand/welcome-splash"), { ssr: false })
+
+const visited = new Set<string>()
+
+/** The page area. The first visit to a page plays a short entrance; coming back to it is instant. */
+function PageMain({ pathname, className, children }: { pathname: string; className: string; children: React.ReactNode }) {
+  const [firstVisit] = useState(() => !visited.has(pathname))
+  useEffect(() => { visited.add(pathname) }, [pathname])
+  return <main id="main" className={cn(className, firstVisit && "page-enter")}>{children}</main>
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { data: me, isLoading } = useMe()
   const hideAmounts = useAmountsHidden()
-  const { setTheme } = useTheme()
+  const { setTheme } = useSmoothTheme()
   const [addOpen, setAddOpen] = useState(false)
   const [addMode, setAddMode] = useState<AddMode>("expense")
   const [receipt, setReceipt] = useState<Receipt | null>(null)
@@ -95,11 +105,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
           <div className="flex min-h-dvh flex-col">
             {!fullBleed && <TopNav />}
-            <main id="main" key={`${pathname}:${hideAmounts ? "hidden" : "shown"}`} className={fullBleed
+            <PageMain key={`${pathname}:${hideAmounts ? "hidden" : "shown"}`} pathname={pathname} className={fullBleed
               ? "w-full flex-1"
-              : "animate-rise mx-auto w-full max-w-[1240px] flex-1 px-4 pb-[calc(6.75rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-20"}>
+              : "mx-auto w-full max-w-[1240px] flex-1 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-20"}>
               {children}
-            </main>
+            </PageMain>
           </div>
           <MobileNav />
           <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} text={text} />

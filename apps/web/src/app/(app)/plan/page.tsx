@@ -44,7 +44,7 @@ function AffordCheck() {
           <div className="animate-rise mt-4">
             <CheckResultView result={check.data} />
             <Link href={`/assistant?q=${encodeURIComponent(`Can I afford a ${formatMoney(check.data.amount_minor)} purchase?`)}`}
-              className="mt-3 inline-flex items-center gap-1 px-1 text-[0.8125rem] font-medium text-primary hover:opacity-80">
+              className="mt-3 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:opacity-80">
               Ask Faldo about it <ArrowRight className="size-3.5" />
             </Link>
           </div>
@@ -257,7 +257,7 @@ function MoreAhead() {
 export default function PlansPage() {
   return (
     <div className="space-y-6">
-      <LargeTitle title="Plans" subtitle="What's due, what you're saving for and what you want to buy." />
+      <LargeTitle title="Plan" subtitle="What's due, what you're saving for and what you want to buy." />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-10">
         <div className="space-y-8">
           <AffordCheck />
