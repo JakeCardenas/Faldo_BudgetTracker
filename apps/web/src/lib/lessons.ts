@@ -163,7 +163,7 @@ export const LESSONS: Lesson[] = [
       answer: 1,
       explanation: "Paying the statement balance in full by the due date usually means zero interest.",
     },
-    tryIt: { label: "Track installments in Plan", href: "/plan#installments" },
+    tryIt: { label: "Track installments in Plans", href: "/bills" },
   },
   {
     slug: "debt-snowball-avalanche",

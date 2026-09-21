@@ -5,18 +5,19 @@ import { use, useState } from "react"
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Archive, ArchiveRestore, ArrowLeftRight, Loader2, Minus, Pencil, Plus } from "lucide-react"
 import { toast } from "sonner"
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts"
+import { BalanceLine } from "@/components/charts/charts"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { DayGroups } from "@/components/finance/day-groups"
 import { EmptyState } from "@/components/finance/empty-state"
 import { HeaderButton, LargeTitle } from "@/components/ios/nav-header"
-import { Segmented } from "@/components/ios/segmented"
 import { Button } from "@/components/ui/button"
 import { useAppActions } from "@/components/layout/app-context"
 import { AccountCard } from "@/components/wallet/account-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney } from "@/lib/format"
+import { formatDate } from "@/lib/format"
+import { play } from "@/lib/sound"
+import { cn } from "@/lib/utils"
 import { invalidateFinancialData, useAccounts } from "@/lib/queries"
 import type { TransactionList } from "@/lib/types"
 
@@ -26,6 +27,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
   const { openTransaction, openAddTransaction } = useAppActions()
   const [editing, setEditing] = useState(false)
   const [days, setDays] = useState<"30" | "90" | "365">("90")
+  const ranges = [{ value: "30", label: "1M" }, { value: "90", label: "3M" }, { value: "365", label: "1Y" }] as const
   const { data: accounts, isLoading } = useAccounts(true)
   const account = accounts?.find((a) => a.id === id)
   const { data: history } = useQuery({
@@ -40,8 +42,8 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
   })
   const items = list.data?.pages.flatMap((p) => p.items) ?? []
 
-  if (isLoading) return <div className="space-y-4 pt-16 lg:pt-24"><Skeleton className="h-44 rounded-xl" /><Skeleton className="h-80 rounded-xl" /></div>
-  if (!account) return <EmptyState icon={Archive} title="Account not found" action={<Button variant="outline" asChild><Link href="/accounts">Back to wallet</Link></Button>} />
+  if (isLoading) return <div className="space-y-4 pt-16 lg:pt-24"><Skeleton className="aspect-[1.586] w-full max-w-sm rounded-3xl" /><Skeleton className="h-80 rounded-2xl" /></div>
+  if (!account) return <EmptyState icon={Archive} title="Account not found" action={<Button variant="outline" asChild><Link href="/accounts">Back to accounts</Link></Button>} />
 
   async function toggleArchive() {
     await api.patch(`/accounts/${id}`, { archived: !account!.archived })
@@ -51,7 +53,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-5">
-      <LargeTitle title={account.name} back={{ href: "/accounts", label: "Wallet" }}
+      <LargeTitle title={account.name} back={{ href: "/accounts", label: "Accounts" }}
         subtitle={account.archived ? "Archived account" : undefined}
         actions={<>
           <HeaderButton onClick={toggleArchive} aria-label={account.archived ? "Restore account" : "Archive account"}>
@@ -60,42 +62,43 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           <HeaderButton onClick={() => setEditing(true)} aria-label="Edit account"><Pencil /><span className="max-lg:sr-only">Edit</span></HeaderButton>
         </>} />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,26rem)_1fr] lg:items-start">
-        <div className="space-y-4 lg:sticky lg:top-6">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,24rem)_1fr] lg:items-start lg:gap-12">
+        <div className="space-y-6 lg:sticky lg:top-24">
           <AccountCard account={account} large />
           <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" size="lg" className="px-2" onClick={() => openAddTransaction({ mode: "expense", preset: { account_id: id } })}><Minus className="text-muted-foreground" /> Expense</Button>
-            <Button variant="outline" size="lg" className="px-2" onClick={() => openAddTransaction({ mode: "income", preset: { account_id: id } })}><Plus className="text-muted-foreground" /> Income</Button>
-            <Button variant="outline" size="lg" className="px-2" onClick={() => openAddTransaction({ mode: "transfer", preset: { account_id: id } })}><ArrowLeftRight className="text-muted-foreground" /> Transfer</Button>
+            {([["expense", "Expense", Minus], ["income", "Income", Plus], ["transfer", "Transfer", ArrowLeftRight]] as const).map(([mode, label, Icon]) => (
+              <button key={mode} type="button" onClick={() => openAddTransaction({ mode, preset: { account_id: id } })}
+                className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-1 text-[0.8125rem] font-medium">
+                <span className="flex size-12 items-center justify-center rounded-full bg-card text-foreground shadow-(--shadow-card) ring-1 ring-border/60"><Icon className="size-5" strokeWidth={1.9} /></span>
+                {label}
+              </button>
+            ))}
           </div>
-          <section className="card-surface p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="section-title">Balance trend</p>
-              <Segmented label="Range" size="sm" value={days} onChange={setDays}
-                options={[{ value: "30", label: "30D" }, { value: "90", label: "90D" }, { value: "365", label: "1Y" }]} />
+          <section aria-label="Balance trend">
+            <div className="-mx-2 h-[168px]">
+              {history ? history.length > 1 ? <BalanceLine data={history.map((p) => ({ date: p.date, value: p.balance_minor }))} /> : (
+                <p className="flex h-full items-center justify-center text-sm text-muted-foreground">Not enough history yet.</p>
+              ) : <Skeleton className="mx-2 h-full rounded-2xl" />}
             </div>
-            {history ? (
-              <ResponsiveContainer width="100%" height={150}>
-                <AreaChart data={history} margin={{ left: 0, right: 0, top: 12, bottom: 0 }}>
-                  <defs><linearGradient id="acc-trend" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--primary)" stopOpacity={0.14} /><stop offset="100%" stopColor="var(--primary)" stopOpacity={0} /></linearGradient></defs>
-                  <XAxis dataKey="date" hide />
-                  <Tooltip formatter={(v) => formatMoney(Number(v))} labelFormatter={(d) => formatDate(String(d))}
-                    contentStyle={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--popover)", color: "var(--popover-foreground)", fontSize: 12, boxShadow: "var(--elevation-float)" }} />
-                  <Area dataKey="balance_minor" name="Balance" stroke="var(--primary)" strokeWidth={1.75} fill="url(#acc-trend)" isAnimationActive={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : <Skeleton className="mt-3 h-[150px] rounded-xl" />}
-            <p className="text-xs text-muted-foreground">{account.transaction_count} transactions{account.last_activity_on && `, last activity ${formatDate(account.last_activity_on, "MMM d")}`}</p>
+            <div className="mt-1 flex justify-center gap-1" role="radiogroup" aria-label="Chart range">
+              {ranges.map((r) => (
+                <button key={r.value} type="button" role="radio" aria-checked={days === r.value} onClick={() => { play("select"); setDays(r.value) }}
+                  className={cn("h-8 min-w-11 rounded-full px-3 text-[0.8125rem] font-medium transition-colors", days === r.value ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-center text-xs text-muted-foreground">{account.transaction_count} {account.transaction_count === 1 ? "transaction" : "transactions"}{account.last_activity_on && `, last on ${formatDate(account.last_activity_on, "MMM d")}`}</p>
           </section>
         </div>
 
         <div className="min-w-0 space-y-3">
-          <h2 className="section-title px-1">History</h2>
-          {list.isLoading ? <Skeleton className="h-64 rounded-xl" /> : items.length === 0 ? (
+          <h2 className="section-title px-1">Activity</h2>
+          {list.isLoading ? <Skeleton className="h-64 rounded-2xl" /> : items.length === 0 ? (
             <p className="card-surface px-4 py-10 text-center text-sm text-muted-foreground">No transactions in this account yet.</p>
           ) : (
             <>
-              <DayGroups items={items} onOpen={openTransaction} stickyTop="top-[calc(3rem+env(safe-area-inset-top))] lg:top-0 -mx-1 px-2 pt-2" />
+              <DayGroups items={items} onOpen={openTransaction} />
               {list.hasNextPage && (
                 <Button variant="outline" className="mx-auto flex" onClick={() => list.fetchNextPage()} disabled={list.isFetchingNextPage}>
                   {list.isFetchingNextPage && <Loader2 className="animate-spin" />} Load more

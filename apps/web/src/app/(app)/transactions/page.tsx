@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { ArrowDownUp, Download, Loader2, Plus, Receipt as ReceiptIcon, ScanLine, Search, SlidersHorizontal, X } from "lucide-react"
+import Link from "next/link"
+import { ArrowDownUp, ChevronRight, Download, Loader2, Plus, Receipt as ReceiptIcon, ScanLine, Search, SlidersHorizontal, X } from "lucide-react"
 import { DayGroups } from "@/components/finance/day-groups"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
@@ -21,6 +22,7 @@ import { api } from "@/lib/api"
 import { formatDate } from "@/lib/format"
 import { useAccounts, useCategories } from "@/lib/queries"
 import type { Receipt, TransactionList } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 const ALL = "all"
 type Kind = "all" | "expense" | "income" | "transfer"
@@ -88,15 +90,15 @@ function HistoryView() {
 
   return (
     <div className="space-y-4">
-      <LargeTitle title="History" subtitle="Every peso in and out, searchable down to the item"
+      <LargeTitle title="Activity"
         actions={<>
-          <a href="/api/v1/me/export" className="pressable hidden h-9 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm font-medium hover:bg-accent lg:flex"><Download className="size-4 text-muted-foreground" /> Export</a>
+          <a href="/api/v1/me/export" className="pressable hidden h-9 items-center gap-1.5 rounded-full bg-card px-3.5 text-sm font-medium shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent lg:flex"><Download className="size-4 text-muted-foreground" /> Export</a>
           <HeaderButton onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Add</HeaderButton>
         </>} />
 
       {pendingReceipts.length > 0 && (
-        <div className="card-surface flex items-center gap-3 p-3 pr-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary"><ScanLine className="size-4.5" strokeWidth={1.85} /></span>
+        <div className="flex items-center gap-3 rounded-2xl bg-secondary/70 p-3 pr-3 dark:bg-secondary/60">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-primary"><ScanLine className="size-4.5" strokeWidth={1.85} /></span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{pendingReceipts.length} receipt{pendingReceipts.length === 1 ? "" : "s"} to review</p>
             <p className="truncate text-[0.8125rem] text-muted-foreground">{pendingReceipts.map((r) => r.extraction?.merchant ?? "Receipt").join(", ")}</p>
@@ -107,9 +109,9 @@ function HistoryView() {
         </div>
       )}
 
-      <div className="glass sticky top-[calc(3rem+env(safe-area-inset-top))] z-20 -mx-4 space-y-2.5 px-4 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-2 lg:px-2 lg:pt-3">
+      <div className="glass sticky top-[calc(2.75rem+env(safe-area-inset-top))] z-20 -mx-4 space-y-2.5 px-4 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
         <div className="flex gap-2">
-          <label className="flex h-10 flex-1 items-center gap-2 rounded-lg border bg-card px-3 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/25">
+          <label className="flex h-11 flex-1 items-center gap-2 rounded-full bg-card px-4 shadow-[inset_0_0_0_1px_var(--border)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_var(--ring)] focus-within:ring-3 focus-within:ring-ring/20">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <span className="sr-only">Search transactions</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search transactions"
@@ -117,11 +119,11 @@ function HistoryView() {
             {q && <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/25 text-foreground/70"><X className="size-3" /></button>}
           </label>
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-10! w-10 justify-center px-0 hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort"><ArrowDownUp className="size-4 text-foreground/80" /></SelectTrigger>
+            <SelectTrigger className="h-11! w-11 justify-center rounded-full border-0 px-0 shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort"><ArrowDownUp className="size-4 text-foreground/80" /></SelectTrigger>
             <SelectContent align="end">{SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
           </Select>
           <button type="button" onClick={() => setFiltersOpen(true)} aria-label="Filters"
-            className="pressable relative flex size-10 items-center justify-center rounded-lg border bg-card hover:bg-accent">
+            className="pressable relative flex size-11 items-center justify-center rounded-full bg-card shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent">
             <SlidersHorizontal className="size-4 text-foreground/80" />
             {activeFilters > 0 && <span className="tabular absolute -top-1.5 -right-1.5 flex size-4.5 items-center justify-center rounded-full bg-primary text-[0.625rem] font-semibold text-primary-foreground">{activeFilters}</span>}
           </button>
@@ -139,22 +141,25 @@ function HistoryView() {
       </div>
 
       {summary && summary.total_count > 0 && (
-        <div className="card-surface grid grid-cols-3 divide-x py-3 [&>div]:px-4">
-          <div><p className="text-xs text-muted-foreground">Transactions</p><p className="tabular mt-0.5 text-[1.0625rem] font-semibold">{summary.total_count}</p></div>
-          <div><p className="text-xs text-muted-foreground">Money in</p><Money minor={summary.total_income_minor} compact className="mt-0.5 block text-[1.0625rem] font-semibold text-income" /></div>
-          <div><p className="text-xs text-muted-foreground">Money out</p><Money minor={summary.total_expense_minor} compact className="mt-0.5 block text-[1.0625rem] font-semibold" /></div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
+          <p className="text-sm text-muted-foreground">
+            <span className="tabular">{summary.total_count}</span> {summary.total_count === 1 ? "transaction" : "transactions"},{" "}
+            <Money minor={summary.total_income_minor} className={cn("font-medium", summary.total_income_minor > 0 ? "text-income" : "text-foreground")} /> in,{" "}
+            <Money minor={summary.total_expense_minor} className="font-medium text-foreground" /> out
+          </p>
+          <Link href="/reports" className="inline-flex items-center gap-0.5 text-sm font-medium text-primary hover:opacity-80">Where it went <ChevronRight className="size-3.5" /></Link>
         </div>
       )}
 
       {list.isLoading ? (
-        <div className="ios-group divide-y divide-border/60">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="flex items-center gap-3 px-4 py-3"><Skeleton className="size-9 rounded-full" /><div className="flex-1 space-y-1.5"><Skeleton className="h-3.5 w-2/5" /><Skeleton className="h-3 w-1/4" /></div><Skeleton className="h-3.5 w-16" /></div>)}</div>
+        <div className="ios-group divide-y divide-border/60">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="flex items-center gap-3 px-4 py-3"><Skeleton className="size-10 rounded-full" /><div className="flex-1 space-y-1.5"><Skeleton className="h-3.5 w-2/5" /><Skeleton className="h-3 w-1/4" /></div><Skeleton className="h-3.5 w-16" /></div>)}</div>
       ) : items.length === 0 ? (
         <div className="card-surface">
           {search || activeFilters || kind !== ALL ? (
             <EmptyState icon={Search} title="No matching transactions" description="Try a different search or clear your filters."
               action={<Button variant="outline" onClick={() => { setQ(""); setKind("all"); clear() }}>Clear all</Button>} />
           ) : (
-            <EmptyState icon={ReceiptIcon} title="No transactions yet" description="Everything you log shows up here, grouped by day."
+            <EmptyState icon={ReceiptIcon} title="No transactions yet" description="Your money story starts here. Everything you log shows up in this list, grouped by day."
               action={<Button size="lg" onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Log your first expense</Button>} />
           )}
         </div>

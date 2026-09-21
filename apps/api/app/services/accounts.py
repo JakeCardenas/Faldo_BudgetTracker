@@ -77,7 +77,7 @@ def to_out(b: AccountBalance) -> AccountOut:
     return AccountOut(
         id=a.id, name=a.name, type=a.type, custom_type=a.custom_type, institution=a.institution,
         currency=a.currency, opening_balance_minor=a.opening_balance_minor, balance_minor=b.balance_minor,
-        is_spendable=a.is_spendable, credit_limit_minor=a.credit_limit_minor, color=a.color,
+        is_spendable=a.is_spendable, credit_limit_minor=a.credit_limit_minor, card_last4=a.card_last4, color=a.color,
         archived=a.archived_at is not None, sort_order=a.sort_order, transaction_count=b.transaction_count,
         last_activity_on=b.last_activity_on, updated_at=a.updated_at,
     )
@@ -97,6 +97,7 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, currency: str, da
         opening_balance_minor=data.opening_balance_minor,
         is_spendable=data.is_spendable if data.is_spendable is not None else SPENDABLE_DEFAULTS[data.type],
         credit_limit_minor=data.credit_limit_minor,
+        card_last4=data.card_last4,
         color=data.color,
         sort_order=int(await db.scalar(select(func.coalesce(func.max(Account.sort_order) + 1, 0))
                                        .where(Account.user_id == user_id)) or 0),

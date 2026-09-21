@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { AccountCard } from "@/components/wallet/account-card"
 import { api, ApiError } from "@/lib/api"
 import { ACCOUNT_PALETTE, ACCOUNT_TEMPLATES } from "@/lib/account-templates"
 import { ACCOUNT_TYPE_LABELS, minorToInput, toMinor } from "@/lib/format"
@@ -28,21 +29,35 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
   const [limit, setLimit] = useState(minorToInput(account?.credit_limit_minor))
   const [spendable, setSpendable] = useState(account?.is_spendable ?? true)
   const [color, setColor] = useState(account?.color ?? ACCOUNT_PALETTE[0])
+  const [last4, setLast4] = useState(account?.card_last4 ?? "")
   const [busy, setBusy] = useState(false)
+  const hasCardNumber = type === "credit_card" || type === "bank" || type === "savings"
+  const cardLast4 = hasCardNumber && last4.length === 4 ? last4 : null
+  const openingMinorPreview = toMinor(opening || "0") ?? 0
+  const preview: Account = {
+    id: account?.id ?? "preview", name: name || "New account", type, custom_type: customType || null, institution: institution || null,
+    currency: account?.currency ?? "PHP", opening_balance_minor: 0, balance_minor: account ? account.balance_minor : type === "credit_card" ? -openingMinorPreview : openingMinorPreview,
+    is_spendable: type === "savings" || type === "credit_card" ? false : spendable, credit_limit_minor: type === "credit_card" ? toMinor(limit) : null,
+    card_last4: cardLast4, color, archived: false, sort_order: 0, transaction_count: 0, last_activity_on: null, updated_at: "",
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const openingMinor = toMinor(opening || "0") ?? 0
     const signed = type === "credit_card" ? -openingMinor : openingMinor
+    if (hasCardNumber && last4 && last4.length !== 4) {
+      toast.error("Enter exactly the last 4 digits, or leave it empty.")
+      return
+    }
     setBusy(true)
     try {
       if (account) {
         await api.patch(`/accounts/${account.id}`, { name, institution: institution || null, custom_type: customType || null,
-          opening_balance_minor: signed, is_spendable: spendable, credit_limit_minor: type === "credit_card" ? toMinor(limit) : null, color })
+          opening_balance_minor: signed, is_spendable: spendable, credit_limit_minor: type === "credit_card" ? toMinor(limit) : null, card_last4: cardLast4, color })
       } else {
         await api.post("/accounts", { name, type, institution: institution || null, custom_type: type === "custom" ? customType : null,
           opening_balance_minor: signed, is_spendable: type === "savings" || type === "credit_card" ? false : spendable,
-          credit_limit_minor: type === "credit_card" ? toMinor(limit) : null, color })
+          credit_limit_minor: type === "credit_card" ? toMinor(limit) : null, card_last4: cardLast4, color })
       }
       await invalidateFinancialData(qc)
       toast.success(account ? "Account updated" : "Account added")
@@ -61,6 +76,9 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
           <DialogTitle>{account ? "Edit account" : "Add account"}</DialogTitle>
           <DialogDescription>Faldo uses manual accounts. It never connects to your bank or e-wallet.</DialogDescription>
         </DialogHeader>
+        <div className="flex justify-center rounded-2xl bg-muted/50 py-4" aria-hidden>
+          <AccountCard account={preview} size="md" static />
+        </div>
         <form onSubmit={submit} className="space-y-4">
           {!account && (
             <div className="space-y-2">
@@ -70,8 +88,8 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
                   <button key={t.name} type="button" onClick={() => {
                     setName(t.name); setType(t.type); setInstitution(t.institution); setColor(t.color)
                     setSpendable(t.type !== "savings" && t.type !== "credit_card")
-                  }} className={cn("pressable flex shrink-0 items-center gap-2 rounded-lg border py-1 pr-2.5 pl-1 text-xs font-medium hover:bg-accent/60", name === t.name && "border-primary/45 bg-secondary hover:bg-secondary")}>
-                    <span className="flex size-6 items-center justify-center rounded-md text-[0.5625rem] font-semibold text-white" style={{ backgroundColor: t.color }}>{t.name.slice(0, 2).toUpperCase()}</span>
+                  }} className={cn("pressable flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-xs font-medium hover:bg-accent/60", name === t.name && "border-primary/45 bg-secondary hover:bg-secondary")}>
+                    <span className="size-6 rounded-full" style={{ backgroundColor: t.color }} />
                     {t.name}
                   </button>
                 ))}
@@ -119,6 +137,14 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
             <div className="space-y-1.5">
               <Label htmlFor="acc-limit">Credit limit</Label>
               <AmountInput id="acc-limit" value={limit} onValueChange={setLimit} placeholder="Optional" />
+            </div>
+          )}
+          {hasCardNumber && (
+            <div className="space-y-1.5">
+              <Label htmlFor="acc-last4">Last 4 digits <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input id="acc-last4" value={last4} onChange={(e) => setLast4(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                inputMode="numeric" autoComplete="off" pattern="[0-9]{4}" maxLength={4} placeholder="4821" className="tabular w-28 tracking-[0.2em]" />
+              <p className="text-xs text-muted-foreground">Only so you can tell your cards apart. Never enter a full card number, CVV, PIN or password.</p>
             </div>
           )}
           {type !== "credit_card" && type !== "savings" && (

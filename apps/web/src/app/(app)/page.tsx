@@ -1,13 +1,11 @@
 "use client"
 
-import Link from "next/link"
-import { Plus } from "lucide-react"
+import { useState } from "react"
+import { Plus, Wallet } from "lucide-react"
 import { Mascot } from "@/components/brand/mascot"
-import { AttentionCard } from "@/components/home/attention"
-import { GoalsCard, RecentCard, UpcomingCard, YourMoneyCard } from "@/components/home/cards"
-import { CompanionCard, HomeHeader, HomeTopBar } from "@/components/home/greeting"
-import { QuickActionsCard } from "@/components/home/quick-actions"
-import { SafeToSpendHero } from "@/components/home/safe-to-spend"
+import { AccountDialog } from "@/components/finance/account-dialog"
+import { SafeToSpendCard } from "@/components/home/safe-to-spend"
+import { AccountsRail, ComingUp, GoalGlance, HomeHeader, InsightNote, RecentActivity, TotalBalance } from "@/components/home/sections"
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -15,70 +13,67 @@ import { useDashboard, useMe } from "@/lib/queries"
 
 function HomeSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5" aria-busy="true" aria-label="Loading your home screen">
-      <div className="space-y-4 lg:col-span-8 lg:space-y-5">
-        <Skeleton className="h-72 rounded-xl" />
-        <Skeleton className="h-44 rounded-xl" />
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]" aria-busy="true" aria-label="Loading your home screen">
+      <div className="space-y-6">
+        <div className="space-y-3 px-1"><Skeleton className="h-4 w-28" /><Skeleton className="h-11 w-52" /><Skeleton className="h-4 w-40" /></div>
+        <Skeleton className="h-60 rounded-3xl" />
+        <div className="flex gap-3 overflow-hidden"><Skeleton className="h-39 w-62 shrink-0 rounded-2xl" /><Skeleton className="h-39 w-62 shrink-0 rounded-2xl" /></div>
       </div>
-      <div className="space-y-4 lg:col-span-4 lg:space-y-5">
-        <Skeleton className="h-52 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-      </div>
+      <div className="hidden space-y-6 lg:block"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>
     </div>
   )
 }
 
-export default function HomePage() {
+function Welcome() {
   const { data: me } = useMe()
-  const { data, isLoading, error, refetch } = useDashboard("this_month")
   const { openAddTransaction } = useAppActions()
+  const [adding, setAdding] = useState(false)
+  return (
+    <section className="mx-auto flex max-w-md flex-col items-center px-4 pt-10 pb-6 text-center lg:pt-16">
+      <span className="flex size-24 items-end justify-center overflow-hidden rounded-full bg-secondary" aria-hidden>
+        <Mascot className="-mb-2 w-20" outfit={me?.settings.mascot_outfit} coin={false} />
+      </span>
+      <h2 className="mt-6 text-[1.625rem] leading-tight font-semibold tracking-[-0.03em]">Your money story starts here</h2>
+      <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted-foreground">
+        Add where your money lives and log what you spend. Faldo works out what&apos;s safe to spend from money you already have.
+      </p>
+      <div className="mt-7 flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
+        <Button size="lg" onClick={() => setAdding(true)}><Wallet /> Add an account</Button>
+        <Button size="lg" variant="secondary" onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Log an expense</Button>
+      </div>
+      {adding && <AccountDialog open={adding} onOpenChange={setAdding} />}
+    </section>
+  )
+}
+
+/**
+ * Home answers five questions and stops: what you have, what's safe to spend, anything important,
+ * what's coming, and what just happened. Everything else lives in Activity, Plans or You.
+ */
+export default function HomePage() {
+  const { data, isLoading, error, refetch } = useDashboard("this_month")
 
   return (
-    <div className="space-y-5 pb-2 lg:space-y-6">
-      <div>
-        <HomeTopBar />
-        <HomeHeader />
-      </div>
+    <div className="space-y-7 pb-4 lg:space-y-8">
+      <HomeHeader />
       {error ? (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/20 bg-danger-soft px-4 py-3 text-sm text-destructive">
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">
           <span className="flex-1">Couldn&apos;t load your home screen. {error.message}</span>
           <Button size="sm" variant="outline" onClick={() => refetch()}>Try again</Button>
         </div>
-      ) : isLoading || !data ? <HomeSkeleton /> : !data.has_data ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start lg:gap-5">
-          <section className="card-surface flex flex-col items-center gap-5 px-6 py-12 text-center lg:col-span-8">
-            <Mascot className="w-20" outfit={me?.settings.mascot_outfit} coin={false} />
-            <div className="space-y-1.5">
-              <h2 className="text-xl font-semibold tracking-[-0.02em]">Log your first peso</h2>
-              <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Add what you spend or earn. Faldo works out what&apos;s safe to spend from the money you already have.
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button size="lg" onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Log an expense</Button>
-              <Button size="lg" variant="outline" asChild><Link href="/accounts">Set up wallets</Link></Button>
-            </div>
-          </section>
-          <div className="space-y-4 lg:col-span-4 lg:space-y-5">
-            <CompanionCard mood="happy" />
-            <QuickActionsCard />
+      ) : isLoading || !data ? <HomeSkeleton /> : !data.has_data && data.accounts.length === 0 ? <Welcome /> : (
+        <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-x-10 lg:gap-y-8">
+          <div className="contents lg:flex lg:flex-col lg:gap-8">
+            <TotalBalance data={data} />
+            <SafeToSpendCard sts={data.safe_to_spend} />
+            <AccountsRail data={data} />
+            <div className="order-last lg:order-none"><RecentActivity data={data} /></div>
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 lg:grid-cols-12 lg:gap-5">
-          <div className="contents lg:col-span-8 lg:flex lg:flex-col lg:gap-5">
-            <SafeToSpendHero sts={data.safe_to_spend} className="order-1 md:col-span-2 lg:order-none" />
-            <AttentionCard items={data.attention} className="order-2 md:col-span-2 lg:order-none" />
-            <UpcomingCard items={data.upcoming} className="order-4 md:col-span-2 lg:order-none" />
-            <RecentCard transactions={data.recent_transactions} className="order-6 md:col-span-2 lg:order-none" />
-          </div>
-          <div className="contents lg:col-span-4 lg:flex lg:flex-col lg:gap-5">
-            <YourMoneyCard data={data} className="order-3 lg:order-none" />
-            <CompanionCard className="order-5 lg:order-none"
-              mood={data.safe_to_spend.status === "short" || data.budget.lines.some((l) => l.status === "over") ? "worried" : "happy"} />
-            <GoalsCard data={data} className="order-7 lg:order-none" />
-            <QuickActionsCard className="order-8 md:col-span-2 lg:order-none" />
-          </div>
+          <aside className="contents lg:sticky lg:top-24 lg:flex lg:flex-col lg:gap-8" aria-label="Heads up">
+            <InsightNote data={data} />
+            <ComingUp data={data} />
+            <div className="order-last lg:order-none"><GoalGlance data={data} /></div>
+          </aside>
         </div>
       )}
     </div>

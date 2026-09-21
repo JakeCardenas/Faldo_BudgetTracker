@@ -194,3 +194,15 @@ async def test_empty_user_analytics_do_not_invent_data(client):
     assert health["score"] is None
     report = (await client.get("/api/v1/reports/monthly")).json()
     assert report["summary"]["transaction_count"] == 0
+
+
+async def test_card_last4_is_optional_and_only_four_digits(client):
+    card = await _account(client, "BPI Visa", "credit_card", 0, credit_limit_minor=5_000_000, card_last4="4821")
+    assert card["card_last4"] == "4821"
+    for bad in ("482", "48211", "4821 5555 1234 0000", "ab12", "٤٨٢١"):
+        r = await client.post("/api/v1/accounts", json={"name": f"Card {bad}", "type": "credit_card", "card_last4": bad})
+        assert r.status_code == 422, bad
+    cleared = await client.patch(f"/api/v1/accounts/{card['id']}", json={"card_last4": None})
+    assert cleared.status_code == 200 and cleared.json()["card_last4"] is None
+    cash = await _account(client, "Pitaka", "cash", 1_000)
+    assert cash["card_last4"] is None

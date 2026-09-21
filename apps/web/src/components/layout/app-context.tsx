@@ -8,9 +8,10 @@ import type { Receipt } from "@/lib/types"
 export type AddModeOption = "expense" | "income" | "transfer" | "describe" | "manual" | "receipt"
 
 export interface AppActions {
-  openAddTransaction: (options?: { mode?: AddModeOption; receipt?: Receipt; preset?: EntryPreset }) => void
+  openAddTransaction: (options?: { mode?: AddModeOption; receipt?: Receipt; preset?: EntryPreset; text?: string }) => void
+  /** The + menu: every way to record or plan money. */
+  openAddMenu: () => void
   openCheck: (preset?: CheckPreset) => void
-  openMore: () => void
   openSearch: () => void
   openTransaction: (id: string) => void
 }

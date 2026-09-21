@@ -19,7 +19,7 @@ export function IosSheet({ open, onOpenChange, title, description, children, foo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false}
-        className={cn("flex max-h-[92dvh] flex-col gap-0 overflow-hidden bg-popover p-0", SHEET_CLASSES,
+        className={cn("flex max-h-[92dvh] flex-col gap-0 overflow-hidden bg-popover p-0 max-sm:rounded-t-[1.75rem]", SHEET_CLASSES,
           size === "sm" ? "sm:max-w-md" : size === "lg" ? "sm:max-w-3xl" : "sm:max-w-xl", className)}>
         <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-foreground/15 sm:hidden" aria-hidden />
         <div className="flex items-start gap-3 px-5 pt-3 pb-4 sm:px-6 sm:pt-5">
@@ -29,8 +29,8 @@ export function IosSheet({ open, onOpenChange, title, description, children, foo
               : <DialogDescription className="sr-only">{title}</DialogDescription>}
           </div>
           <button type="button" onClick={() => onOpenChange(false)} aria-label="Close"
-            className="pressable -mt-0.5 -mr-1.5 flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
-            <X className="size-4.5" />
+            className="pressable -mt-0.5 -mr-1.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-accent hover:text-foreground">
+            <X className="size-4" strokeWidth={2.2} />
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 sm:px-6 sm:pb-6">{children}</div>

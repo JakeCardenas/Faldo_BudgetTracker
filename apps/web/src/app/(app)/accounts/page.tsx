@@ -4,9 +4,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { format, parseISO } from "date-fns"
-import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, FileUp, LayoutGrid, List, Lightbulb, Plus, Wallet } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, FileUp, LayoutGrid, List, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
+import { BalanceLine } from "@/components/charts/charts"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { EmptyState } from "@/components/finance/empty-state"
 import { AnimatedMoney } from "@/components/finance/money"
@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ACCOUNT_GROUPS } from "@/lib/account-templates"
 import { api } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
-import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights } from "@/lib/queries"
+import { invalidateFinancialData, useAccounts, useBalanceHistory } from "@/lib/queries"
 import type { Account, AccountType } from "@/lib/types"
 import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
@@ -50,44 +50,48 @@ function useLongPress(onLongPress: () => void, ms = 480) {
   }
 }
 
-function DailyBalance() {
-  const { data: history, isLoading } = useBalanceHistory(6)
-  const values = history?.map((p) => p.net_minor) ?? []
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  return (
-    <div className="min-w-0">
-      <p className="text-xs text-muted-foreground">Daily balance</p>
-      {isLoading ? <Skeleton className="mt-2 h-16" /> : (
-        <div className="mt-2 flex h-16 items-end gap-1.5">
-          {history?.map((p, i) => {
-            const last = i === history.length - 1
-            const height = max === min ? 60 : 25 + ((p.net_minor - min) / (max - min)) * 75
-            return (
-              <div key={p.date} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${format(parseISO(p.date), "EEE, MMM d")}: ${formatMoney(p.net_minor)}`}>
-                <div className={cn("w-full max-w-4 rounded-[3px]", last ? "bg-primary" : "bg-foreground/12 dark:bg-foreground/15")} style={{ height: `${height}%` }} />
-                <span className={cn("text-[0.625rem]", last ? "font-semibold text-foreground" : "text-muted-foreground")}>{format(parseISO(p.date), "EEEEE")}</span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
+const RANGES = [
+  { label: "1W", days: 7, phrase: "this week" },
+  { label: "1M", days: 30, phrase: "this month" },
+  { label: "3M", days: 90, phrase: "in 3 months" },
+  { label: "6M", days: 180, phrase: "in 6 months" },
+  { label: "1Y", days: 365, phrase: "this year" },
+] as const
 
-function InsightRow({ assets }: { assets: number }) {
-  const { data: insights = [] } = useInsights()
-  const insight = insights[0]
-  const fallback = assets >= 50_000_00
-    ? "That's a healthy cushion of liquid money. Keep a slice parked in savings so it stays that way."
-    : "Every peso you track makes the forecast sharper. Log today's spending to keep the picture clear."
+/** Answers "how has my money moved?" for the chosen view and range. */
+function BalanceTrend({ view, current }: { view: View; current: number }) {
+  const [range, setRange] = useState<(typeof RANGES)[number]>(RANGES[1])
+  const { data: history, isLoading } = useBalanceHistory(range.days)
+  const key = view === "all" ? "net_minor" : view === "assets" ? "assets_minor" : "liabilities_minor"
+  const series = (history ?? []).map((p) => ({ date: p.date, value: p[key] }))
+  const first = series[0]?.value
+  const change = first !== undefined ? current - first : null
+  const pct = first ? (change! / Math.abs(first)) * 100 : null
+  const good = change !== null && (view === "liabilities" ? change <= 0 : change >= 0)
   return (
-    <Link href="/forecast" className="group flex items-start gap-3 border-t px-4 py-3.5 transition-colors hover:bg-accent/50 sm:px-5">
-      <Lightbulb className="mt-0.5 size-4 shrink-0 text-muted-foreground" strokeWidth={1.85} />
-      <p className="min-w-0 flex-1 text-sm leading-relaxed"><span className="line-clamp-2">{insight ? <><span className="font-medium">{insight.title}.</span> <span className="text-muted-foreground">{insight.body}</span></> : fallback}</span></p>
-      <span className="hidden shrink-0 items-center gap-0.5 text-[0.8125rem] font-medium text-primary sm:flex">Forecast <ChevronRight className="size-3.5" /></span>
-    </Link>
+    <div>
+      {change !== null && change !== 0 && (
+        <p className={cn("tabular mt-2 inline-flex items-center gap-1 text-sm font-medium", good ? "text-income" : "text-expense")}>
+          {change > 0 ? <ArrowUpRight className="size-4" /> : <ArrowDownRight className="size-4" />}
+          {formatMoney(Math.abs(change))}{pct !== null && Number.isFinite(pct) && ` (${Math.abs(pct).toFixed(1)}%)`}
+          <span className="font-normal text-muted-foreground">{range.phrase}</span>
+        </p>
+      )}
+      <div className="-mx-2 mt-3 h-[168px]">
+        {isLoading ? <Skeleton className="mx-2 h-full rounded-2xl" /> : series.length > 1 ? <BalanceLine data={series} /> : (
+          <p className="flex h-full items-center justify-center text-sm text-muted-foreground">Your balance line appears after a few days of activity.</p>
+        )}
+      </div>
+      <div className="mt-2 flex justify-center gap-1" role="radiogroup" aria-label="Chart range">
+        {RANGES.map((r) => (
+          <button key={r.label} type="button" role="radio" aria-checked={r.label === range.label} onClick={() => { play("select"); setRange(r) }}
+            className={cn("h-8 min-w-11 rounded-full px-3 text-[0.8125rem] font-medium transition-colors",
+              r.label === range.label ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
+            {r.label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -113,9 +117,6 @@ export default function AccountsPage() {
   const assets = active.filter((a) => a.balance_minor > 0).reduce((s, a) => s + a.balance_minor, 0)
   const liabilities = active.filter((a) => a.balance_minor < 0).reduce((s, a) => s - a.balance_minor, 0)
   const net = assets - liabilities
-  const { data: history } = useBalanceHistory(30)
-  const monthAgo = history?.[0]?.net_minor
-  const trend = monthAgo ? ((net - monthAgo) / Math.abs(monthAgo)) * 100 : null
 
   function startArranging() {
     play("select")
@@ -129,7 +130,7 @@ export default function AccountsPage() {
     try {
       await api.put("/accounts/order", { ids: order })
       await invalidateFinancialData(qc)
-      toast.success("Wallet order saved")
+      toast.success("Account order saved")
     } catch {
       toast.error("Couldn't save the new order.")
     }
@@ -155,52 +156,45 @@ export default function AccountsPage() {
   }
 
   const filters = ACCOUNT_GROUPS.filter((g) => active.some((a) => a.type === g.type))
+  const inView = (a: Account) => view === "all" || (view === "assets" ? a.balance_minor >= 0 : a.balance_minor < 0)
+  const shown = ordered.filter((a) => (filter === "all" || a.type === filter) && inView(a))
+  const shownIds = shown.map((a) => a.id)
   const groups = ACCOUNT_GROUPS
     .filter((g) => filter === "all" || g.type === filter)
-    .map((g) => ({ ...g, accounts: ordered.filter((a) => a.type === g.type && (view === "all" || (view === "assets" ? a.balance_minor >= 0 : a.balance_minor < 0))) }))
+    .map((g) => ({ ...g, accounts: ordered.filter((a) => a.type === g.type && inView(a)) }))
     .filter((g) => g.accounts.length > 0)
 
-  const headline = view === "all" ? { label: "Net worth", value: net, caption: "Assets minus liabilities" }
-    : view === "assets" ? { label: "Assets", value: assets, caption: "Accounts and receivables" }
-      : { label: "Liabilities", value: liabilities, caption: "Credit cards and money owed" }
+  const headline = view === "all" ? { label: "Net worth", value: net, caption: "Everything you have, minus what you owe on cards" }
+    : view === "assets" ? { label: "Assets", value: assets, caption: "Cash, e-wallets, banks and savings" }
+      : { label: "Liabilities", value: liabilities, caption: "What you owe on credit cards" }
 
   return (
     <div className="space-y-5">
-      <LargeTitle title="Wallet" subtitle="Your accounts and balances"
+      <LargeTitle title="Accounts" back={{ href: "/", label: "Home" }}
         actions={arranging
           ? <Button size="sm" onClick={finishArranging}>Done</Button>
           : <div className="flex gap-2">
-              <HeaderButton onClick={() => router.push("/import")}><FileUp /> Import</HeaderButton>
-              <HeaderButton onClick={() => setDialog({ open: true })}><Plus /> Add account</HeaderButton>
+              <HeaderButton onClick={() => router.push("/import")} aria-label="Import a statement"><FileUp /> <span className="max-sm:hidden">Import</span></HeaderButton>
+              <HeaderButton onClick={() => setDialog({ open: true })}><Plus /> Add</HeaderButton>
             </div>} />
 
       {isLoading ? (
-        <div className="space-y-4"><Skeleton className="h-52 rounded-xl" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-34 rounded-xl" />)}</div></div>
+        <div className="space-y-6"><div className="space-y-3 px-1"><Skeleton className="h-8 w-60 rounded-full" /><Skeleton className="h-11 w-48" /><Skeleton className="h-40 rounded-2xl" /></div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}</div></div>
       ) : active.length === 0 ? (
         <div className="card-surface">
-          <EmptyState icon={Wallet} title="Add your first wallet" description="Start with where your money lives: cash, GCash, Maya or a bank account."
+          <EmptyState icon={Wallet} title="Add your first account" description="Start with where your money lives: cash, GCash, Maya or a bank account. Faldo never connects to your bank."
             action={<Button size="lg" onClick={() => setDialog({ open: true })}><Plus /> Add account</Button>} />
         </div>
       ) : (
         <>
-          <section className="card-surface overflow-hidden">
-            <div className="grid grid-cols-1 gap-5 p-4 sm:p-5 md:grid-cols-[1fr_15rem] md:items-end">
-              <div className="min-w-0">
-                <Segmented label="Balance view" size="sm" value={view} onChange={setView}
-                  options={[{ value: "all", label: "Net worth" }, { value: "assets", label: "Assets" }, { value: "liabilities", label: "Liabilities" }]} />
-                <AnimatedMoney minor={headline.value} className="display-number mt-5 block sm:text-[2.75rem]" />
-                <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[0.8125rem] text-muted-foreground">
-                  {view === "all" && trend !== null && Number.isFinite(trend) && (
-                    <span className={cn("inline-flex items-center font-medium", trend >= 0 ? "text-income" : "text-foreground")}>
-                      {trend >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}{Math.abs(trend).toFixed(1)}% this month,
-                    </span>
-                  )}
-                  {headline.caption}
-                </p>
-              </div>
-              <DailyBalance />
+          <section aria-label="Balance" className="px-1 lg:grid lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-end lg:gap-10">
+            <div>
+              <Segmented label="Balance view" size="sm" value={view} onChange={setView}
+                options={[{ value: "all", label: "Net worth" }, { value: "assets", label: "Assets" }, { value: "liabilities", label: "Liabilities" }]} />
+              <AnimatedMoney minor={headline.value} className="display-xl mt-5 block lg:text-[3.25rem]" />
+              <p className="mt-1.5 text-sm text-muted-foreground">{headline.caption}</p>
             </div>
-            <InsightRow assets={assets} />
+            <BalanceTrend view={view} current={headline.value} />
           </section>
 
           <div className="flex items-center gap-2">
@@ -209,60 +203,61 @@ export default function AccountsPage() {
                 <Chip active={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
                 {filters.map((f) => <Chip key={f.type} active={filter === f.type} onClick={() => setFilter(f.type)}>{f.label}</Chip>)}
               </div>
-            ) : <div className="flex-1" />}
+            ) : <p className="min-w-0 flex-1 truncate px-1 text-[0.8125rem] text-muted-foreground">{arranging ? "" : "Hold a card to rearrange"}</p>}
             {!arranging && (
-              <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground" onClick={startArranging}>Reorder</Button>
+              <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground max-sm:hidden" onClick={startArranging}>Reorder</Button>
             )}
-            <div className="flex shrink-0 rounded-lg bg-muted p-0.5" role="radiogroup" aria-label="Layout">
+            <div className="flex shrink-0 rounded-full bg-muted p-1" role="radiogroup" aria-label="Layout">
               <button type="button" role="radio" aria-label="Grid view" aria-checked={layout === "grid"} onClick={() => changeLayout("grid")}
-                className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors", layout === "grid" && "bg-card text-foreground shadow-[0_1px_2px_rgb(15_20_17/0.08)] dark:bg-[#2b302c]")}><LayoutGrid className="size-3.5" /></button>
+                className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "grid" && "bg-card text-foreground shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-[#2b302c]")}><LayoutGrid className="size-3.5" /></button>
               <button type="button" role="radio" aria-label="List view" aria-checked={layout === "list"} onClick={() => changeLayout("list")}
-                className={cn("flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors", layout === "list" && "bg-card text-foreground shadow-[0_1px_2px_rgb(15_20_17/0.08)] dark:bg-[#2b302c]")}><List className="size-3.5" /></button>
+                className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "list" && "bg-card text-foreground shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-[#2b302c]")}><List className="size-3.5" /></button>
             </div>
           </div>
           {arranging && <p className="-mt-2 text-[0.8125rem] text-muted-foreground">Use the arrows to reorder, then tap Done.</p>}
 
-          <div className="space-y-6">
-            {groups.map((group) => {
-              const total = group.accounts.reduce((s, a) => s + a.balance_minor, 0)
-              const isCollapsed = collapsed.has(group.type)
-              const ids = group.accounts.map((a) => a.id)
-              return (
-                <section key={group.type} className="space-y-2.5">
-                  <button type="button" aria-expanded={!isCollapsed} onClick={() => setCollapsed((c) => { const n = new Set(c); if (n.has(group.type)) n.delete(group.type); else n.add(group.type); return n })}
-                    className="flex w-full items-center gap-1.5 rounded-md px-1 text-left">
-                    <span className="section-title flex-1">{group.label}</span>
-                    <span className={cn("tabular text-[0.8125rem] font-medium", total < 0 ? "text-expense" : "text-muted-foreground")}>{formatMoney(total)}</span>
-                    <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", isCollapsed && "-rotate-90")} />
-                  </button>
-                  {!isCollapsed && (layout === "grid" || arranging ? (
-                    <div className={cn("grid grid-cols-2 gap-3 lg:grid-cols-3", arranging && "gap-y-7 pb-3")}>
-                      {group.accounts.map((account) => (
-                        <AccountCard key={account.id} account={account} index={active.indexOf(account)} jiggle={arranging}
-                          pressHandlers={arranging ? undefined : longPress}
-                          onMove={(d) => move(account.id, d, ids)} canMoveBack={ids.indexOf(account.id) > 0} canMoveForward={ids.indexOf(account.id) < ids.length - 1}
-                          actions={{ onEdit: (a) => setDialog({ open: true, account: a }), onAdd: (a, mode) => openAddTransaction({ mode, preset: { account_id: a.id } }) }} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="ios-group divide-y divide-border/60">
-                      {group.accounts.map((account) => (
-                        <Link key={account.id} href={`/accounts/${account.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-                          <AccountBadge account={account} />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[0.9375rem]">{account.name}</span>
-                            <span className="block truncate text-[0.8125rem] text-muted-foreground">{account.institution ?? group.label}, {account.transaction_count} transactions</span>
-                          </span>
-                          <span className={cn("tabular text-[0.9375rem] font-medium", account.balance_minor < 0 && "text-expense")}>{formatMoney(account.balance_minor, account.currency)}</span>
-                          <ChevronRight className="size-4 text-muted-foreground/50" />
-                        </Link>
-                      ))}
-                    </div>
-                  ))}
-                </section>
-              )
-            })}
-          </div>
+          {layout === "grid" || arranging ? (
+            <div className={cn("grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4", arranging && "gap-y-7 pb-3")}>
+              {shown.map((account) => (
+                <AccountCard key={account.id} account={account} index={active.indexOf(account)} jiggle={arranging}
+                  pressHandlers={arranging ? undefined : longPress}
+                  onMove={(d) => move(account.id, d, shownIds)} canMoveBack={shownIds.indexOf(account.id) > 0} canMoveForward={shownIds.indexOf(account.id) < shownIds.length - 1}
+                  actions={{ onEdit: (a) => setDialog({ open: true, account: a }), onAdd: (a, mode) => openAddTransaction({ mode, preset: { account_id: a.id } }) }} />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {groups.map((group) => {
+                const total = group.accounts.reduce((s, a) => s + a.balance_minor, 0)
+                const isCollapsed = collapsed.has(group.type)
+                return (
+                  <section key={group.type} className="space-y-2.5">
+                    <button type="button" aria-expanded={!isCollapsed} onClick={() => setCollapsed((c) => { const n = new Set(c); if (n.has(group.type)) n.delete(group.type); else n.add(group.type); return n })}
+                      className="flex w-full items-center gap-1.5 rounded-md px-1 text-left">
+                      <span className="section-title flex-1">{group.label}</span>
+                      <span className={cn("tabular text-[0.8125rem] font-medium", total < 0 ? "text-expense" : "text-muted-foreground")}>{formatMoney(total)}</span>
+                      <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", isCollapsed && "-rotate-90")} />
+                    </button>
+                    {!isCollapsed && (
+                      <div className="ios-group divide-y divide-border/60">
+                        {group.accounts.map((account) => (
+                          <Link key={account.id} href={`/accounts/${account.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
+                            <AccountBadge account={account} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[0.9375rem] font-medium">{account.name}{account.card_last4 && <span className="tabular ml-1.5 text-[0.8125rem] font-normal text-muted-foreground">•••• {account.card_last4}</span>}</span>
+                              <span className="block truncate text-[0.8125rem] text-muted-foreground">{account.institution ?? group.label}, {account.transaction_count} {account.transaction_count === 1 ? "transaction" : "transactions"}</span>
+                            </span>
+                            <span className={cn("tabular text-[0.9375rem] font-semibold", account.balance_minor < 0 && "text-expense")}>{formatMoney(account.balance_minor, account.currency)}</span>
+                            <ChevronRight className="size-4 text-muted-foreground/50" />
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )
+              })}
+            </div>
+          )}
         </>
       )}
       {dialog.open && <AccountDialog open={dialog.open} onOpenChange={(open) => setDialog((d) => ({ ...d, open }))} account={dialog.account} />}

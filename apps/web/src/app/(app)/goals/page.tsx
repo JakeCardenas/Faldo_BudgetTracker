@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { CalendarCheck, MoreHorizontal, Plus, Sparkles, Target, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
@@ -21,6 +21,7 @@ import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, formatPct, minorToInput, toMinor, todayISO } from "@/lib/format"
 import { GOAL_ICONS, GoalIcon, goalIconId } from "@/lib/goal-icons"
 import { invalidateFinancialData, useAccounts, useGoals } from "@/lib/queries"
+import { useUrlIntent } from "@/lib/use-url-intent"
 import type { Goal } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -211,6 +212,22 @@ export default function GoalsPage() {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Goal | null>(null)
   const [contributing, setContributing] = useState<Goal | null>(null)
+  const wantsNew = useUrlIntent("new")
+  const contributeTo = useUrlIntent("contribute")
+
+  useEffect(() => {
+    if (!wantsNew) return
+    const timer = setTimeout(() => setCreating(true), 0)
+    return () => clearTimeout(timer)
+  }, [wantsNew])
+
+  useEffect(() => {
+    const goal = contributeTo ? goals?.find((g) => g.id === contributeTo) : undefined
+    if (!goal) return
+    const timer = setTimeout(() => setContributing(goal), 0)
+    return () => clearTimeout(timer)
+  }, [contributeTo, goals])
+
   const totalSaved = goals?.reduce((s, g) => s + g.saved_minor, 0) ?? 0
   const totalTarget = goals?.reduce((s, g) => s + g.target_minor, 0) ?? 0
   const monthly = goals?.reduce((s, g) => s + (g.monthly_contribution_minor ?? 0), 0) ?? 0
@@ -223,10 +240,10 @@ export default function GoalsPage() {
         <div className="card-surface"><EmptyState icon={Target} title="What are you saving for?" description="A MacBook, an emergency fund, a trip to Japan. Faldo tells you how much to set aside and when you'll get there." action={<Button onClick={() => setCreating(true)}><Plus /> Create your first goal</Button>} /></div>
       ) : (
         <>
-          <div className="card-surface grid gap-4 p-5 sm:grid-cols-3">
-            <div><p className="text-[0.8125rem] text-muted-foreground">Total saved</p><Money minor={totalSaved} className="block text-2xl font-semibold tracking-[-0.025em]" /></div>
-            <div><p className="text-[0.8125rem] text-muted-foreground">Across all targets</p><Money minor={totalTarget} className="block text-2xl font-semibold tracking-[-0.025em]" /></div>
-            <div><p className="text-[0.8125rem] text-muted-foreground">Planned per month</p><Money minor={monthly} className="block text-2xl font-semibold tracking-[-0.025em]" /></div>
+          <div className="card-surface grid grid-cols-3 divide-x divide-border/60 py-4 [&>div]:min-w-0 [&>div]:px-3 sm:[&>div]:px-5">
+            <div><p className="truncate text-xs text-muted-foreground sm:text-sm">Saved</p><Money minor={totalSaved} className="block text-[1.0625rem] font-semibold tracking-[-0.02em] sm:text-2xl" /></div>
+            <div><p className="truncate text-xs text-muted-foreground sm:text-sm">Of targets</p><Money minor={totalTarget} className="block text-[1.0625rem] font-semibold tracking-[-0.02em] sm:text-2xl" /></div>
+            <div><p className="truncate text-xs text-muted-foreground sm:text-sm">Planned a month</p><Money minor={monthly} className="block text-[1.0625rem] font-semibold tracking-[-0.02em] sm:text-2xl" /></div>
           </div>
           <div className="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {goals.map((g) => <GoalCard key={g.id} goal={g} onEdit={() => setEditing(g)} onContribute={() => setContributing(g)} />)}

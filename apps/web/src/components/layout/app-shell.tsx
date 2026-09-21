@@ -11,10 +11,10 @@ import { SplashContent } from "@/components/brand/splash"
 import { FaldoCheckSheet, type CheckPreset } from "@/components/decide/faldo-check"
 import { TransactionSheet } from "@/components/finance/transaction-sheet"
 import { AppActionsContext, type AddModeOption } from "@/components/layout/app-context"
+import { AddMenu } from "@/components/layout/add-menu"
 import { CommandSearch } from "@/components/layout/command-search"
 import { MobileNav } from "@/components/layout/mobile-nav"
-import { MoreSheet } from "@/components/layout/more-sheet"
-import { Sidebar } from "@/components/layout/sidebar"
+import { TopNav } from "@/components/layout/top-nav"
 import { useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Receipt } from "@/lib/types"
@@ -31,8 +31,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [addMode, setAddMode] = useState<AddMode>("expense")
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const [preset, setPreset] = useState<EntryPreset | undefined>()
+  const [text, setText] = useState<string | undefined>()
   const [searchOpen, setSearchOpen] = useState(false)
-  const [moreOpen, setMoreOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [transactionId, setTransactionId] = useState<string | null>(null)
   const [checkOpen, setCheckOpen] = useState(false)
   const [checkPreset, setCheckPreset] = useState<CheckPreset | undefined>()
@@ -46,9 +47,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (theme) setTheme(theme)
   }, [theme, setTheme])
 
-  const openAddTransaction = useCallback((options?: { mode?: AddModeOption; receipt?: Receipt; preset?: EntryPreset }) => {
+  const openAddTransaction = useCallback((options?: { mode?: AddModeOption; receipt?: Receipt; preset?: EntryPreset; text?: string }) => {
     setReceipt(options?.receipt ?? null)
     setPreset(options?.preset)
+    setText(options?.text)
     setAddMode(options?.receipt ? "receipt" : options?.mode ?? "expense")
     setAddOpen(true)
     play("open")
@@ -67,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const actions = useMemo(() => ({
     openAddTransaction,
-    openMore: () => { play("open"); setMoreOpen(true) },
+    openAddMenu: () => { play("open"); setMenuOpen(true) },
     openSearch: () => setSearchOpen(true),
     openTransaction: (id: string) => setTransactionId(id),
     openCheck: (preset?: CheckPreset) => { setCheckPreset(preset); setCheckOpen(true); play("open") },
@@ -89,19 +91,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : (
         <AppActionsContext.Provider value={actions}>
           <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
-          <div className="flex min-h-dvh">
-            <Sidebar />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <main id="main" key={pathname} className={fullBleed
-                ? "w-full flex-1"
-                : "animate-rise mx-auto w-full max-w-[1120px] flex-1 px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pb-16"}>
-                {children}
-              </main>
-            </div>
+          <div className="flex min-h-dvh flex-col">
+            {!fullBleed && <TopNav />}
+            <main id="main" key={pathname} className={fullBleed
+              ? "w-full flex-1"
+              : "animate-rise mx-auto w-full max-w-[1240px] flex-1 px-4 pb-[calc(6.75rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-20"}>
+              {children}
+            </main>
           </div>
           <MobileNav />
-          <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} />
-          <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
+          <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} text={text} />
+          <AddMenu open={menuOpen} onOpenChange={setMenuOpen} />
           <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} onAddTransaction={() => openAddTransaction()} onOpenTransaction={setTransactionId} />
           <TransactionSheet id={transactionId} onOpenChange={(open) => { if (!open) setTransactionId(null) }} />
           <FaldoCheckSheet open={checkOpen} onOpenChange={setCheckOpen} preset={checkPreset} />

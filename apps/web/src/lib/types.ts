@@ -39,6 +39,7 @@ export interface Account {
   balance_minor: number
   is_spendable: boolean
   credit_limit_minor: number | null
+  card_last4: string | null
   color: string | null
   archived: boolean
   sort_order: number

@@ -8,6 +8,9 @@ from pydantic import Field, StringConstraints, model_validator
 from app.models.enums import MONEY_OWED_TYPES, AccountType, CategoryKind, TransactionSource, TransactionType
 from app.schemas.common import ApiModel, CurrencyCode, LongText, Name, OutModel, PositiveMoney, SignedMoney
 
+# The last four digits of a card or account number, and nothing more.
+CardLast4 = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^[0-9]{4}$")]
+
 
 class AccountIn(ApiModel):
     name: Name
@@ -18,6 +21,7 @@ class AccountIn(ApiModel):
     opening_balance_minor: SignedMoney = 0
     is_spendable: bool | None = None
     credit_limit_minor: PositiveMoney | None = None
+    card_last4: CardLast4 | None = None
     color: Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")] | None = None
 
 
@@ -28,6 +32,7 @@ class AccountUpdate(ApiModel):
     opening_balance_minor: SignedMoney | None = None
     is_spendable: bool | None = None
     credit_limit_minor: PositiveMoney | None = None
+    card_last4: CardLast4 | None = None
     color: Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")] | None = None
     archived: bool | None = None
 
@@ -43,6 +48,7 @@ class AccountOut(OutModel):
     balance_minor: int
     is_spendable: bool
     credit_limit_minor: int | None
+    card_last4: str | None
     color: str | None
     archived: bool
     sort_order: int

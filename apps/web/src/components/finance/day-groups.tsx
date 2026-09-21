@@ -31,8 +31,8 @@ export function DayGroups({ items, onOpen, stickyTop = false }: { items: Transac
     <div className="space-y-6">
       {groupByDay(items).map((group) => (
         <section key={group.date}>
-          <div className={cn("flex items-center justify-between px-1 pb-2", stickyTop && `glass sticky z-10 ${stickyTop}`)}>
-            <h3 className="text-[0.8125rem] font-medium text-muted-foreground">{dayLabel(group.date)}</h3>
+          <div className={cn("flex items-baseline justify-between px-1 pb-2", stickyTop && `glass sticky z-10 ${stickyTop}`)}>
+            <h3 className="text-[0.9375rem] font-semibold tracking-[-0.01em]">{dayLabel(group.date)}</h3>
             <span className={cn("tabular text-[0.8125rem] font-medium", group.net > 0 ? "text-income" : "text-muted-foreground")}>
               {formatMoney(group.net, "PHP", { signed: true })}
             </span>

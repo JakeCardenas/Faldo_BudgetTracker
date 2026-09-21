@@ -5,6 +5,7 @@ import { LargeTitle } from "@/components/ios/nav-header"
 import { cn } from "@/lib/utils"
 
 const PLAN_CHILDREN = ["/budgets", "/goals", "/bills", "/debts", "/forecast"]
+const YOU_CHILDREN = ["/settings", "/streaks", "/learn", "/tools", "/insights"]
 
 export function PageHeader({ title, description, actions, className }: {
   title: string
@@ -13,10 +14,11 @@ export function PageHeader({ title, description, actions, className }: {
   className?: string
 }) {
   const pathname = usePathname()
-  const back = PLAN_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/plan", label: "Plan" }
+  const back = PLAN_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/plan", label: "Plans" }
     : pathname.startsWith("/tools/") ? { href: "/tools", label: "Tools" }
       : pathname.startsWith("/learn/") ? { href: "/learn", label: "Learn" }
-        : pathname === "/" ? undefined : { href: "/", label: "Home" }
+        : YOU_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/you", label: "You" }
+          : pathname === "/" ? undefined : { href: "/", label: "Home" }
   return <LargeTitle title={title} subtitle={description} actions={actions} back={back} className={className} mobileActions="below" />
 }
 
@@ -31,7 +33,7 @@ export function SectionCard({ title, description, action, children, className, b
   return (
     <section className={cn("card-surface flex min-w-0 flex-col", className)}>
       {(title || action) && (
-        <div className="flex items-start justify-between gap-3 px-5 pt-4">
+        <div className="flex items-start justify-between gap-3 px-5 pt-5">
           <div className="min-w-0 space-y-0.5">
             {title && <h2 className="section-title">{title}</h2>}
             {description && <p className="text-[0.8125rem] text-muted-foreground">{description}</p>}

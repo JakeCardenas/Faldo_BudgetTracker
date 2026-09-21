@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { HandCoins, MoreHorizontal, Plus } from "lucide-react"
 import { toast } from "sonner"
@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
 import { invalidateFinancialData, useAccounts, useCategories, useDebts } from "@/lib/queries"
+import { useUrlIntent } from "@/lib/use-url-intent"
 import type { Debt } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -148,6 +149,13 @@ export default function DebtsPage() {
   const [paying, setPaying] = useState<Debt | null>(null)
   const [deleting, setDeleting] = useState<Debt | null>(null)
   const [tab, setTab] = useState("open")
+  const wantsNew = useUrlIntent("new")
+
+  useEffect(() => {
+    if (!wantsNew) return
+    const timer = setTimeout(() => setCreating(true), 0)
+    return () => clearTimeout(timer)
+  }, [wantsNew])
   const list = (debts ?? []).filter((d) => (tab === "open" ? d.status === "open" : d.status !== "open"))
   const iOwe = (debts ?? []).filter((d) => d.direction === "i_owe" && d.status === "open").reduce((s, d) => s + d.outstanding_minor, 0)
   const owedToMe = (debts ?? []).filter((d) => d.direction === "owed_to_me" && d.status === "open").reduce((s, d) => s + d.outstanding_minor, 0)
@@ -165,9 +173,9 @@ export default function DebtsPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Money owed" description="Utang, loans and split bills. Only real money movements change your balances." actions={<Button onClick={() => setCreating(true)}><Plus /> Add record</Button>} />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="card-surface p-5"><p className="text-sm text-muted-foreground">You owe</p><Money minor={iOwe} className="text-2xl font-semibold tracking-[-0.025em]" /></div>
-        <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Owed to you</p><Money minor={owedToMe} className="text-2xl font-semibold tracking-[-0.025em] text-income" /></div>
+      <div className="card-surface grid grid-cols-2 divide-x divide-border/60 py-4 [&>div]:min-w-0 [&>div]:px-4 sm:[&>div]:px-5">
+        <div><p className="text-xs text-muted-foreground sm:text-sm">You owe</p><Money minor={iOwe} className="block text-[1.375rem] font-semibold tracking-[-0.025em] sm:text-2xl" /></div>
+        <div><p className="text-xs text-muted-foreground sm:text-sm">Owed to you</p><Money minor={owedToMe} className="block text-[1.375rem] font-semibold tracking-[-0.025em] text-income sm:text-2xl" /></div>
       </div>
       <Tabs value={tab} onValueChange={setTab}><TabsList><TabsTrigger value="open">Open</TabsTrigger><TabsTrigger value="closed">Settled</TabsTrigger></TabsList></Tabs>
       {isLoading ? <Skeleton className="h-64 rounded-xl" /> : list.length === 0 ? (

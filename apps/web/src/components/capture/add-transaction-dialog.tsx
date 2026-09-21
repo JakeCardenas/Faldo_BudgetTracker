@@ -40,9 +40,9 @@ function draftToInput(draft: CaptureDraft): TransactionInput {
   }
 }
 
-function DescribeTab({ onDone }: { onDone: () => void }) {
+function DescribeTab({ onDone, initialText }: { onDone: () => void; initialText?: string }) {
   const qc = useQueryClient()
-  const [text, setText] = useState("")
+  const [text, setText] = useState(initialText ?? "")
   const [result, setResult] = useState<CaptureResult | null>(null)
   const [drafts, setDrafts] = useState<CaptureDraft[]>([])
   const [editing, setEditing] = useState<number | null>(null)
@@ -78,6 +78,15 @@ function DescribeTab({ onDone }: { onDone: () => void }) {
       setBusy(false)
     }
   }
+
+  const started = useRef(false)
+  useEffect(() => {
+    if (started.current || !initialText?.trim()) return
+    started.current = true
+    void parse(initialText)
+    // Read what was typed in the + menu once, on open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialText])
 
   if (editing !== null) {
     const draft = drafts[editing]
@@ -303,13 +312,14 @@ export function showLoggedToast(transactions: Transaction[], message: string, on
   ), { duration: 6000 })
 }
 
-export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, receipt, preset }: {
+export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, receipt, preset, text }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: AddMode
   onModeChange: (mode: AddMode) => void
   receipt?: Receipt | null
   preset?: EntryPreset
+  text?: string
 }) {
   const qc = useQueryClient()
   const save = useSaveTransaction()
@@ -366,7 +376,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
             onMoreDetails={(values) => { setLastEntry(values.type); setManualInitial(values); onModeChange("manual") }} />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6">
-            {mode === "describe" && <DescribeTab onDone={close} />}
+            {mode === "describe" && <DescribeTab key={text ?? ""} onDone={close} initialText={text} />}
             {mode === "receipt" && <ReceiptTab key={receipt?.id ?? "new"} onDone={close} initialReceipt={receipt} />}
             {mode === "manual" && (
               <TransactionForm initial={manualInitial ? {

@@ -19,7 +19,7 @@ export function CategoryIcon({ icon, color, size = "md", className }: { icon?: s
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-full",
         size === "sm" && "size-7 [&_svg]:size-3.5",
-        size === "md" && "size-9 [&_svg]:size-4",
+        size === "md" && "size-10 [&_svg]:size-[1.05rem]",
         size === "lg" && "size-11 [&_svg]:size-5",
         className,
       )}

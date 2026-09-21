@@ -331,7 +331,7 @@ function ImportFlow() {
 export default function ImportPage() {
   return (
     <div className="space-y-5">
-      <LargeTitle title="Import statement" subtitle="Bring in transactions from a bank or e-wallet CSV" back={{ href: "/accounts", label: "Wallet" }} />
+      <LargeTitle title="Import statement" subtitle="Bring in transactions from a bank or e-wallet CSV" back={{ href: "/accounts", label: "Accounts" }} />
       <Suspense fallback={<Skeleton className="h-48 rounded-xl" />}>
         <ImportFlow />
       </Suspense>

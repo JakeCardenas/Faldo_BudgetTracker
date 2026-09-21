@@ -31,6 +31,7 @@ class Account(UUIDPk, UserOwned, Timestamps, Base):
     __table_args__ = (
         UniqueConstraint("user_id", "name"),
         CheckConstraint("currency ~ '^[A-Z]{3}$'", name="currency_code"),
+        CheckConstraint("card_last4 ~ '^[0-9]{4}$'", name="card_last4_digits"),
     )
 
     name: Mapped[str] = mapped_column(String(60))
@@ -41,6 +42,8 @@ class Account(UUIDPk, UserOwned, Timestamps, Base):
     opening_balance_minor: Mapped[int] = mapped_column(BigInteger, default=0)
     is_spendable: Mapped[bool] = mapped_column(Boolean, default=True)
     credit_limit_minor: Mapped[int | None] = mapped_column(BigInteger)
+    # Only ever the last four digits, and only if the person chooses to add them. Never a full card number.
+    card_last4: Mapped[str | None] = mapped_column(String(4))
     color: Mapped[str | None] = mapped_column(String(16))
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -3,7 +3,7 @@
 import { format, parseISO } from "date-fns"
 import { useId, useMemo } from "react"
 import {
-  Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts"
 import { formatMoney } from "@/lib/format"
 import type { CategoryRow, ForecastPoint } from "@/lib/types"
@@ -12,7 +12,7 @@ const AXIS = { fontSize: 11, fill: "var(--muted-foreground)" }
 
 function TooltipCard({ title, rows }: { title: string; rows: { label: string; value: string; color?: string }[] }) {
   return (
-    <div className="min-w-40 rounded-lg border bg-popover px-3 py-2.5 text-xs shadow-(--shadow-float)">
+    <div className="min-w-40 rounded-xl bg-popover px-3 py-2.5 text-xs shadow-(--shadow-float) ring-1 ring-foreground/[0.06]">
       <p className="mb-1.5 font-medium">{title}</p>
       {rows.map((r) => (
         <div key={r.label} className="flex items-center justify-between gap-4 py-0.5">
@@ -27,6 +27,38 @@ function TooltipCard({ title, rows }: { title: string; rows: { label: string; va
 }
 
 const compact = (v: number) => formatMoney(v, "PHP", { compact: true })
+
+/**
+ * Answers one question: how has my balance moved? A single line, no grid, a dot where today is.
+ */
+export function BalanceLine({ data, height = 168 }: { data: { date: string; value: number }[]; height?: number }) {
+  const gradientId = `line-${useId().replace(/:/g, "")}`
+  const min = Math.min(...data.map((d) => d.value))
+  const max = Math.max(...data.map((d) => d.value))
+  const pad = Math.max(1, (max - min) * 0.18)
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data} margin={{ top: 12, right: 10, left: 10, bottom: 4 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.16} />
+            <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <YAxis hide domain={[min - pad, max + pad]} />
+        <XAxis dataKey="date" hide />
+        <Tooltip cursor={{ stroke: "var(--border)", strokeWidth: 1 }} content={({ payload }) => payload?.length ? (
+          <TooltipCard title={format(parseISO(payload[0].payload.date), "EEE, MMM d")} rows={[{ label: "Balance", value: formatMoney(payload[0].payload.value) }]} />
+        ) : null} />
+        <Area type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2.25} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
+          dot={(props: { cx?: number; cy?: number; index?: number }) => props.index === data.length - 1 && props.cx !== undefined && props.cy !== undefined
+            ? <g key="end"><circle cx={props.cx} cy={props.cy} r={9} fill="var(--primary)" opacity={0.16} /><circle cx={props.cx} cy={props.cy} r={4} fill="var(--primary)" stroke="var(--card)" strokeWidth={2} /></g>
+            : <g key={`d-${props.index}`} />}
+          activeDot={{ r: 4, fill: "var(--primary)", stroke: "var(--card)", strokeWidth: 2 }} />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
 
 export function SpendingDonut({ rows, total, label = "Spent" }: { rows: CategoryRow[]; total: number; label?: string }) {
   const top = rows.slice(0, 6)
@@ -56,7 +88,7 @@ export function IncomeExpenseBars({ data, height = 240 }: { data: { label: strin
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} barGap={4} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
-        <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.7} />
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tick={AXIS} />
         <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={56} />
         <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload, label }) => payload?.length ? (
@@ -66,8 +98,8 @@ export function IncomeExpenseBars({ data, height = 240 }: { data: { label: strin
             { label: "Net", value: formatMoney(payload[0].payload.income_minor - payload[0].payload.expense_minor, "PHP", { signed: true }) },
           ]} />
         ) : null} />
-        <Bar dataKey="income_minor" fill="var(--chart-3)" radius={[4, 4, 1, 1]} maxBarSize={22} />
-        <Bar dataKey="expense_minor" fill="var(--chart-1)" radius={[4, 4, 1, 1]} maxBarSize={22} />
+        <Bar dataKey="income_minor" fill="var(--chart-3)" radius={[6, 6, 2, 2]} maxBarSize={18} />
+        <Bar dataKey="expense_minor" fill="var(--chart-1)" radius={[6, 6, 2, 2]} maxBarSize={18} />
       </BarChart>
     </ResponsiveContainer>
   )

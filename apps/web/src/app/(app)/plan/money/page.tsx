@@ -17,16 +17,10 @@ import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, minorToInput, toMinor } from "@/lib/format"
 import { invalidateFinancialData, useMoneyPlan } from "@/lib/queries"
 import type { MoneyPlan, MoneyPlanBucket } from "@/lib/types"
+import { BUCKET_COLORS } from "@/lib/money-plan"
 import { cn } from "@/lib/utils"
 
-const COLORS: Record<MoneyPlanBucket["key"] | "unassigned", string> = {
-  commitments: "var(--muted-foreground)",
-  needs: "var(--primary)",
-  joy: "var(--chart-4)",
-  savings: "var(--chart-2)",
-  buffer: "var(--chart-3)",
-  unassigned: "var(--border)",
-}
+const COLORS = BUCKET_COLORS
 
 const HINTS: Record<MoneyPlanBucket["key"], string> = {
   commitments: "From your bills and subscriptions, per payday on average",
@@ -318,7 +312,7 @@ export default function MoneyPlanPage() {
   const { data: plan, isLoading, error } = useMoneyPlan()
   return (
     <div className="space-y-5">
-      <LargeTitle title="Money plan" subtitle="Give every payday a job" back={{ href: "/plan", label: "Plan" }} />
+      <LargeTitle title="Money plan" subtitle="Give every payday a job" back={{ href: "/plan", label: "Plans" }} />
       {error ? <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">Couldn&apos;t load your plan. {error.message}</p>
         : isLoading || !plan ? <div className="space-y-4"><Skeleton className="h-36 rounded-xl" /><Skeleton className="h-96 rounded-xl" /></div> : (
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">

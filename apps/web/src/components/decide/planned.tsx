@@ -6,6 +6,7 @@ import { ExternalLink, Hourglass, Loader2, MoreHorizontal, Plus, ShoppingBag } f
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { Money } from "@/components/finance/money"
+import { Section } from "@/components/ios/panel"
 import { IosSheet } from "@/components/ios/sheet"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -27,7 +28,7 @@ export async function savePlanned(body: { name: string; amount_minor: number; ca
 function status(p: PlannedPurchase) {
   if (p.verdict === "fits") return { text: "Fits now", tone: "text-income" }
   if (p.verdict === "stretch") return { text: "Fits, but more than this week's share", tone: "text-warning" }
-  if (p.affordable_on) return { text: `Maybe around ${formatDate(p.affordable_on, "MMM d")}`, tone: "text-muted-foreground", estimate: true }
+  if (p.affordable_on) return { text: `Estimated to fit around ${formatDate(p.affordable_on, "MMM d, yyyy")}`, tone: "text-muted-foreground", estimate: true }
   return { text: `${formatMoney(p.over_by_minor ?? 0)} more than your Safe to Spend`, tone: "text-muted-foreground" }
 }
 
@@ -138,55 +139,50 @@ export function PlannedPurchases({ className }: { className?: string }) {
   }
 
   return (
-    <section className={cn("card-surface", className)}>
-      <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 sm:px-5">
-        <div className="min-w-0">
-          <h2 className="section-title">Planned purchases</h2>
-          <p className="truncate text-[0.8125rem] text-muted-foreground">Things you want, checked against your money every day</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setAdding(true)}><Plus /> Add</Button>
-      </div>
-      <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-        {isLoading ? <Skeleton className="h-20" /> : planned.length === 0 ? (
-          <p className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-5 text-[0.8125rem] text-muted-foreground">
-            <ShoppingBag className="size-4 shrink-0" /> Save something you&apos;re thinking of buying. Faldo tells you when it fits.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border/60">
-            {planned.map((p) => {
-              const s = status(p)
-              return (
-                <li key={p.id} className="flex items-start gap-3 py-3 first:pt-1 last:pb-0">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="truncate text-[0.9375rem] font-medium">{p.name}</p>
-                      {p.url && (
-                        <a href={p.url} target="_blank" rel="noopener noreferrer nofollow" aria-label={`Open ${p.name} link`} className="text-muted-foreground hover:text-foreground">
-                          <ExternalLink className="size-3.5" />
-                        </a>
-                      )}
-                    </div>
-                    {p.target_date && <p className="text-xs text-muted-foreground">Want it by {formatDate(p.target_date, "MMM d")}</p>}
-                    <p className={cn("text-[0.8125rem]", s.tone)}>{s.text}{"estimate" in s && s.estimate && <span className="text-muted-foreground"> · estimate</span>}</p>
-                    {p.is_paused && p.pause_until && <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><Hourglass className="size-3" /> {pauseLabel(p.pause_until)}</p>}
+    <Section title="Planned purchases" className={className}
+      action={<Button variant="secondary" size="sm" onClick={() => setAdding(true)}><Plus /> Add</Button>}>
+      {isLoading ? <Skeleton className="h-20 rounded-2xl" /> : planned.length === 0 ? (
+        <button type="button" onClick={() => setAdding(true)}
+          className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-foreground/15 px-4 py-4 text-left text-[0.875rem] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted"><ShoppingBag className="size-4.5" /></span>
+          Save something you&apos;re thinking of buying. Faldo tells you when it fits.
+        </button>
+      ) : (
+        <ul className="ios-group divide-y divide-border/60">
+          {planned.map((p) => {
+            const s = status(p)
+            return (
+              <li key={p.id} className="flex items-start gap-3 px-4 py-3">
+                <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><ShoppingBag className="size-[1.05rem]" strokeWidth={1.85} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-[0.9375rem] font-medium">{p.name}</p>
+                    {p.url && (
+                      <a href={p.url} target="_blank" rel="noopener noreferrer nofollow" aria-label={`Open ${p.name} link`} className="text-muted-foreground hover:text-foreground">
+                        <ExternalLink className="size-3.5" />
+                      </a>
+                    )}
                   </div>
-                  <Money minor={p.amount_minor} className="text-[0.9375rem] font-medium" />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="-mt-1 -mr-2 size-8" aria-label={`Options for ${p.name}`}><MoreHorizontal /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => setBuying(p)}>I bought it</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => change(p, { status: "dropped" })}>Don&apos;t need it anymore</DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onSelect={() => change(p, null)}>Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
+                  <p className={cn("text-[0.8125rem]", s.tone)}>{s.text}</p>
+                  {p.target_date && <p className="text-xs text-muted-foreground">Want it by {formatDate(p.target_date, "MMM d")}</p>}
+                  {p.is_paused && p.pause_until && <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><Hourglass className="size-3" /> {pauseLabel(p.pause_until)}</p>}
+                </div>
+                <Money minor={p.amount_minor} className="pt-0.5 text-[0.9375rem] font-semibold" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="-mr-2 size-8" aria-label={`Options for ${p.name}`}><MoreHorizontal /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setBuying(p)}>I bought it</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => change(p, { status: "dropped" })}>Don&apos;t need it anymore</DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onSelect={() => change(p, null)}>Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </li>
+            )
+          })}
+        </ul>
+      )}
       <AddPlannedSheet open={adding} onOpenChange={setAdding} />
       {buying && <BuySheet item={buying} onOpenChange={(open) => { if (!open) setBuying(null) }} />}
-    </section>
+    </Section>
   )
 }

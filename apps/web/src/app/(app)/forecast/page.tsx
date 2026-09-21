@@ -3,13 +3,15 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
-import { AlertTriangle, CalendarDays, FlaskConical, Info, LineChart, Minus, Plus, Sparkles } from "lucide-react"
+import { AlertTriangle, ChevronDown, FlaskConical, LineChart, Minus, Plus, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { ForecastChart } from "@/components/charts/charts"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CalculationCard, RiskBadge } from "@/components/finance/calculation-card"
 import { EmptyState } from "@/components/finance/empty-state"
+import { DateTile } from "@/components/home/sections"
 import { untilPhrase } from "@/components/home/safe-to-spend"
+import { Segmented } from "@/components/ios/segmented"
 import { Money } from "@/components/finance/money"
 import { PageHeader, SectionCard } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
@@ -17,7 +19,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
 import { useCategories, useForecast } from "@/lib/queries"
@@ -69,18 +70,18 @@ function Simulator() {
   const update = (i: number, patch: Partial<Draft>) => setDrafts(drafts.map((d, idx) => (idx === i ? { ...d, ...patch } : d)))
 
   return (
-    <SectionCard title={<span className="flex items-center gap-2"><FlaskConical className="size-4 text-primary" /> What-if simulator</span>}
+    <SectionCard title={<span id="what-if" className="flex scroll-mt-24 items-center gap-2"><FlaskConical className="size-4 text-primary" /> What if</span>}
       description="Test a decision against your real balance, bills, savings plan and spending pattern.">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <div className="space-y-4">
           <div className="flex flex-wrap gap-1.5">
             {PRESETS.map((p) => (
               <button key={p.label} type="button" onClick={() => { setDrafts([{ ...EMPTY, ...p.draft }]); setHorizon(p.horizon); run.reset() }}
-                className="rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/30 hover:text-foreground">{p.label}</button>
+                className="pressable rounded-full bg-muted px-3.5 py-1.5 text-[0.8125rem] text-foreground/80 hover:bg-accent hover:text-foreground">{p.label}</button>
             ))}
           </div>
           {drafts.map((d, i) => (
-            <div key={i} className="space-y-3 rounded-xl border bg-surface p-3">
+            <div key={i} className="space-y-3 rounded-2xl bg-muted/50 p-3">
               <div className="flex gap-2">
                 <Select value={d.kind} onValueChange={(v) => update(i, { kind: v as AdjustmentKind })}>
                   <SelectTrigger className="w-36 bg-card"><SelectValue /></SelectTrigger>
@@ -119,7 +120,7 @@ function Simulator() {
 
         <div className="min-w-0 space-y-4">
           {!result ? (
-            <div className="flex h-full min-h-72 flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center">
+            <div className="flex h-full min-h-72 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-foreground/15 px-6 text-center">
               <FlaskConical className="size-6 text-muted-foreground" />
               <p className="text-sm font-medium">Run a scenario to see its impact</p>
               <p className="max-w-xs text-xs text-muted-foreground">Faldo recalculates your projected balance, budget impact and savings risk. Repeating changes add up over the period you pick.</p>
@@ -139,17 +140,17 @@ function Simulator() {
                 <CalculationCard title="How Faldo calculated this" lines={result.lines} resultLabel="Projected balance" resultMinor={result.projected_minor} />
                 <div className="space-y-3">
                   {result.reasons.length > 0 && (
-                    <div className="space-y-2 rounded-xl border p-4">
+                    <div className="space-y-2 rounded-2xl bg-warning-soft/60 p-4">
                       <p className="text-sm font-medium">Why this risk level</p>
                       <ul className="space-y-1.5">{result.reasons.map((r) => <li key={r.code} className="flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" />{REASONS[r.code] ?? r.code}</li>)}</ul>
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border p-4"><p className="text-xs text-muted-foreground">Savings at risk</p><Money minor={result.savings_at_risk_minor} className="text-lg font-semibold" /></div>
-                    <div className="rounded-xl border p-4"><p className="text-xs text-muted-foreground">Goal delay</p><p className="text-lg font-semibold">{result.goal_delay_days ? `~${result.goal_delay_days} days` : "None"}</p></div>
+                    <div className="rounded-2xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Savings at risk</p><Money minor={result.savings_at_risk_minor} className="text-lg font-semibold" /></div>
+                    <div className="rounded-2xl bg-muted/50 p-4"><p className="text-xs text-muted-foreground">Goal completion</p><p className={cn("tabular text-lg font-semibold", result.goal_delay_days && "text-warning")}>{result.goal_delay_days ? `+${result.goal_delay_days} days` : "No change"}</p></div>
                   </div>
                   {result.budget_impacts.map((b) => (
-                    <div key={b.category} className={cn("rounded-xl border p-4 text-sm", b.remaining_after_minor < 0 && "border-destructive/30 bg-danger-soft/50")}>
+                    <div key={b.category} className={cn("rounded-2xl bg-muted/50 p-4 text-sm", b.remaining_after_minor < 0 && "bg-danger-soft/70")}>
                       <p className="font-medium">{b.category} budget</p>
                       <p className="text-muted-foreground">{formatMoney(b.remaining_before_minor)} left now → {b.remaining_after_minor < 0 ? <span className="text-destructive">{formatMoney(-b.remaining_after_minor)} over</span> : `${formatMoney(b.remaining_after_minor)} left`}</p>
                     </div>
@@ -165,32 +166,77 @@ function Simulator() {
   )
 }
 
+function Timeline({ data }: { data: NonNullable<ReturnType<typeof useForecast>["data"]> }) {
+  const [all, setAll] = useState(false)
+  const events = all ? data.events : data.events.slice(0, 6)
+  return (
+    <SectionCard title="What's scheduled" description="Bills, income, savings and planned purchases in this window" bodyClassName="px-0 pt-3 pb-2">
+      <ul className="divide-y divide-border/60">
+        <li className="flex items-center gap-3 px-5 py-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-[0.6875rem] font-semibold text-secondary-foreground">Now</span>
+          <span className="min-w-0 flex-1 text-[0.9375rem] font-medium">Spendable today</span>
+          <Money minor={data.start_balance_minor} className="text-[0.9375rem] font-semibold" />
+        </li>
+        {events.map((e, i) => (
+          <li key={i} className="flex items-center gap-3 px-5 py-3">
+            <DateTile date={e.date} tone="normal" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[0.9375rem]">{e.label}</span>
+              {(e.kind === "expected_income" || e.kind === "planned") && (
+                <span className="block text-xs text-muted-foreground">{e.kind === "planned" ? "Planned purchase" : "Expected once, may not arrive"}</span>
+              )}
+            </span>
+            <Money minor={e.amount_minor} signed className={cn("text-[0.9375rem] font-semibold", e.amount_minor > 0 && "text-income")} />
+          </li>
+        ))}
+        {data.events.length === 0 && <li className="px-5 py-3 text-sm text-muted-foreground">Nothing scheduled in this window.</li>}
+        <li className="flex items-center gap-3 px-5 py-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"><LineChart className="size-4" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.9375rem]">Everyday spending</span>
+            <span className="block text-xs text-muted-foreground">Estimated from your recent days</span>
+          </span>
+          <Money minor={-data.projected_discretionary_minor} signed className="text-[0.9375rem] font-semibold" />
+        </li>
+      </ul>
+      {data.events.length > 6 && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="mx-5 mt-1 mb-2 inline-flex items-center gap-1 text-sm font-medium text-primary">
+          {all ? "Show fewer" : `Show all ${data.events.length}`} <ChevronDown className={cn("size-3.5 transition-transform", all && "rotate-180")} />
+        </button>
+      )}
+    </SectionCard>
+  )
+}
+
+/** Future money as an estimate: where the spendable balance is heading, and what moves it. */
 export default function ForecastPage() {
   const [horizon, setHorizon] = useState("end_of_month")
   const { data, isLoading } = useForecast(horizon)
+  const belowBuffer = data ? data.lowest_point.p50_minor < data.buffer_minor : false
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Forecast" description="Where your spendable balance is likely headed, based on scheduled bills, income and your spending pattern."
-        actions={<Tabs value={horizon} onValueChange={setHorizon}><TabsList>
-          <TabsTrigger value="end_of_month">Month end</TabsTrigger><TabsTrigger value="30_days">30d</TabsTrigger><TabsTrigger value="60_days">60d</TabsTrigger><TabsTrigger value="90_days">90d</TabsTrigger>
-        </TabsList></Tabs>} />
-      <div className="flex items-start gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
-        <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-        <span>Projections are <span className="font-medium text-foreground">estimates</span>. The shaded band shows the likely range from simulating your recent daily spending.</span>
-      </div>
-      {isLoading || !data ? <Skeleton className="h-96 rounded-xl" /> : data.sufficiency === "insufficient" ? (
+    <div className="space-y-6">
+      <PageHeader title="Forecast" description="Where your spendable balance is likely heading. Every figure here is an estimate." />
+      <Segmented label="Look ahead" size="sm" className="w-full sm:w-auto" value={horizon} onChange={setHorizon}
+        options={[{ value: "end_of_month", label: "Month end" }, { value: "30_days", label: "30 days" }, { value: "60_days", label: "60 days" }, { value: "90_days", label: "90 days" }]} />
+      {isLoading || !data ? <Skeleton className="h-96 rounded-2xl" /> : data.sufficiency === "insufficient" ? (
         <div className="card-surface"><EmptyState icon={LineChart} title="Forecast unlocks soon" description={`Faldo needs at least a week of transactions to project your balance. You have ${data.history_days} day${data.history_days === 1 ? "" : "s"} so far.`} /></div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Spendable now</p><Money minor={data.start_balance_minor} className="text-2xl font-semibold tracking-[-0.025em]" /></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Projected {formatDate(data.horizon_end, "MMM d")}</p><Money minor={data.end_balance.p50} className="block text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">Likely {formatMoney(data.end_balance.p10)} to {formatMoney(data.end_balance.p90)}</p></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Lowest point</p><Money minor={data.lowest_point.p50_minor} className={cn("text-2xl font-semibold tracking-[-0.025em]", data.lowest_point.p50_minor < data.buffer_minor && "text-warning")} /><p className="text-xs text-muted-foreground">around {formatDate(data.lowest_point.date, "MMM d")}</p></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Safe to spend</p><Money minor={data.safe_to_spend.amount_minor} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">≈{formatMoney(data.safe_to_spend.per_day_minor)}/day {untilPhrase(data.safe_to_spend)}</p></div>
-          </div>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_22rem]">
-            <SectionCard title="Projected spendable balance" description={data.sufficiency === "low" ? "Limited history. Treat this range with caution." : `Based on ${data.history_days} days of history`}>
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+          <div className="space-y-6">
+            <section aria-label="Projected balance" className="px-1">
+              <p className="flex items-center gap-2 text-[0.9375rem] text-muted-foreground">
+                Projected on {formatDate(data.horizon_end, "MMM d")}
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">Estimate</span>
+              </p>
+              <Money minor={data.end_balance.p50} className={cn("display-xl mt-1.5 block", data.end_balance.p50 < 0 && "text-expense")} />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Likely between <span className="tabular">{formatMoney(data.end_balance.p10)}</span> and <span className="tabular">{formatMoney(data.end_balance.p90)}</span>.
+                {" "}Lowest around {formatDate(data.lowest_point.date, "MMM d")} at <span className={cn("tabular", belowBuffer && "font-medium text-warning")}>{formatMoney(data.lowest_point.p50_minor)}</span>
+                {belowBuffer ? ", below your safety buffer." : "."}
+              </p>
+            </section>
+            <div className="card-surface p-4 sm:p-5">
               <ForecastChart series={data.days} actual={data.actual} bufferMinor={data.buffer_minor} />
               <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-chart-1" /> Actual</span>
@@ -198,35 +244,31 @@ export default function ForecastPage() {
                 <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-sm bg-chart-2/20" /> Likely range</span>
                 <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 border-t-2 border-dashed border-warning/60" /> Safety buffer</span>
               </div>
-            </SectionCard>
-            <div className="space-y-4">
-              <CalculationCard title={`Safe to spend ${untilPhrase(data.safe_to_spend)}`} lines={data.safe_to_spend.lines} resultLabel="Safe to spend" resultMinor={data.safe_to_spend.raw_minor} note={data.safe_to_spend.note} />
-              <SectionCard title="Scheduled" description="Bills, income and savings in the window" bodyClassName="pt-2">
-                <ul className="max-h-72 space-y-2 overflow-y-auto">
-                  {data.events.length === 0 && <li className="text-sm text-muted-foreground">Nothing scheduled.</li>}
-                  {data.events.map((e, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm">
-                      <CalendarDays className="size-3.5 text-muted-foreground" />
-                      <span className="w-14 text-xs text-muted-foreground">{formatDate(e.date, "MMM d")}</span>
-                      <span className="min-w-0 flex-1 truncate">{e.label}
-                        {e.kind === "expected_income" && <span className="ml-1.5 text-xs text-muted-foreground">expected, may not arrive</span>}
-                        {e.kind === "planned" && <span className="ml-1.5 text-xs text-muted-foreground">planned purchase</span>}
-                      </span>
-                      <Money minor={e.amount_minor} signed className={cn("text-sm", e.amount_minor > 0 && "text-income")} />
-                    </li>
-                  ))}
-                </ul>
-              </SectionCard>
+              <p className="mt-2 text-xs text-muted-foreground">{data.sufficiency === "low" ? "Limited history, so treat this range with caution." : `Based on ${data.history_days} days of your spending.`}</p>
             </div>
           </div>
-          <SectionCard title="Assumptions" bodyClassName="pt-2">
-            <ul className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">{data.assumptions.map((a) => <li key={a} className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-primary" />{a}</li>)}</ul>
-          </SectionCard>
-        </>
+          <div className="space-y-6">
+            <Timeline data={data} />
+            <details className="group card-surface overflow-hidden">
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1"><span className="block text-[0.9375rem] font-semibold">How Safe to Spend is worked out</span><span className="block text-[0.8125rem] text-muted-foreground">{formatMoney(data.safe_to_spend.amount_minor)} {untilPhrase(data.safe_to_spend)}</span></span>
+                <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t p-4"><CalculationCard title={`Safe to spend ${untilPhrase(data.safe_to_spend)}`} lines={data.safe_to_spend.lines} resultLabel="Safe to spend" resultMinor={data.safe_to_spend.raw_minor} note={data.safe_to_spend.note} /></div>
+            </details>
+            <details className="group card-surface overflow-hidden">
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1 text-[0.9375rem] font-semibold">Assumptions</span>
+                <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <ul className="space-y-2 border-t px-5 py-4 text-sm text-muted-foreground">{data.assumptions.map((a) => <li key={a} className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-primary" />{a}</li>)}</ul>
+            </details>
+          </div>
+        </div>
       )}
       <Simulator />
       <div className="flex justify-center">
-        <Button asChild variant="ghost"><Link href="/assistant?q=What%20happens%20if%20I%20spend%20%E2%82%B15%2C000%20this%20weekend%3F"><Sparkles /> Ask the assistant a what-if question</Link></Button>
+        <Button asChild variant="ghost"><Link href="/assistant?q=What%20happens%20if%20I%20spend%20%E2%82%B15%2C000%20this%20weekend%3F"><Sparkles /> Ask Faldo a what-if question</Link></Button>
       </div>
     </div>
   )

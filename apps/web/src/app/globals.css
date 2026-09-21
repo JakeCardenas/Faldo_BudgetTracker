@@ -66,107 +66,129 @@
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Radius rule: controls 10px (lg), containers 14px (xl), sheets and dialogs 18px (2xl). Nested radius = parent minus padding. */
+/*
+  Faldo design system
+  Radius: buttons and chips are full pills; inputs 12px (lg); inner tiles 17px (xl); surfaces 22px (2xl); hero cards and sheets 26px (3xl).
+  Surfaces: the page is the canvas. White surfaces group lists; colour is reserved for Safe to Spend and account cards.
+  Glass: only floating controls (tab bar, desktop nav, compact headers). Never on financial information.
+  Type: Geist throughout. Money uses tabular figures. Sentence case, no uppercase labels.
+*/
 
 :root {
-  --background: #f6f7f5;
+  --background: #f3f4f1;
   --surface: #fafbf9;
-  --foreground: #141a16;
+  --foreground: #101411;
   --card: #ffffff;
-  --card-foreground: #141a16;
+  --card-foreground: #101411;
   --popover: #ffffff;
-  --popover-foreground: #141a16;
-  --primary: #4a7f52;
+  --popover-foreground: #101411;
+  --primary: #2c7549;
   --primary-foreground: #ffffff;
-  --secondary: #ecf3e9;
-  --secondary-foreground: #2f5d37;
-  --muted: #eff1ed;
-  --muted-foreground: #667068;
-  --accent: #f0f2ee;
-  --accent-foreground: #141a16;
-  --mint: #e3efdf;
-  --mint-foreground: #2d5a35;
-  --emerald: #2f7d45;
-  --leaf: #8cc084;
-  --hero: #5b8c5f;
-  --hero-deep: #44734b;
-  --expense: #c8433a;
+  --secondary: #e6f1e8;
+  --secondary-foreground: #1d5634;
+  --muted: #ecefea;
+  --muted-foreground: #646c66;
+  --accent: #eef0ec;
+  --accent-foreground: #101411;
+  --mint: #e1efe4;
+  --mint-foreground: #1d5634;
+  --emerald: #23804c;
+  --leaf: #8fd3a0;
+  --hero: #2a6e46;
+  --hero-deep: #143a25;
+  --expense: #c43d36;
   --expense-soft: #fbeceb;
-  --income: #2f7d45;
-  --income-soft: #e6f2e8;
-  --warning: #9a5a00;
-  --warning-soft: #fbf1e1;
-  --destructive: #c8433a;
+  --income: #1f7a47;
+  --income-soft: #e3f1e7;
+  --warning: #955700;
+  --warning-soft: #fbf0df;
+  --destructive: #c43d36;
   --danger-soft: #fbeceb;
-  --border: #e4e7e2;
-  --input: #dadfd8;
-  --ring: #5b9a66;
-  --chart-1: #4a7f52;
-  --chart-2: #8fbf84;
-  --chart-3: #c7dcbf;
-  --chart-4: #d49a52;
-  --chart-5: #7890b5;
-  --radius: 0.625rem;
-  --sidebar: #f6f7f5;
-  --sidebar-foreground: #141a16;
-  --sidebar-primary: #4a7f52;
+  --border: #e3e6e1;
+  --input: #d9ddd7;
+  --ring: #3c8d5c;
+  --chart-1: #2c7549;
+  --chart-2: #7fbf8f;
+  --chart-3: #c3dfc9;
+  --chart-4: #d69a4e;
+  --chart-5: #7a91b8;
+  --radius: 0.75rem;
+  --sidebar: #f3f4f1;
+  --sidebar-foreground: #101411;
+  --sidebar-primary: #2c7549;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eceee9;
-  --sidebar-accent-foreground: #141a16;
-  --sidebar-border: #e4e7e2;
-  --sidebar-ring: #5b9a66;
-  --elevation-card: 0 1px 2px rgb(20 30 22 / 0.03);
-  --elevation-float: 0 16px 40px -12px rgb(20 30 22 / 0.18), 0 2px 8px -2px rgb(20 30 22 / 0.06);
+  --sidebar-accent: #e9ece7;
+  --sidebar-accent-foreground: #101411;
+  --sidebar-border: #e3e6e1;
+  --sidebar-ring: #3c8d5c;
+  --elevation-card: 0 1px 2px rgb(16 36 24 / 0.04), 0 8px 24px -14px rgb(16 36 24 / 0.12);
+  --elevation-float: 0 22px 48px -18px rgb(16 36 24 / 0.3), 0 4px 14px -6px rgb(16 36 24 / 0.1);
+  --surface-ring: 0 0 #0000;
+  --glass-bg: rgb(255 255 255 / 0.66);
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-edge: rgb(16 36 24 / 0.07);
+  --glass-highlight: rgb(255 255 255 / 0.9);
+  --glass-shadow: 0 18px 40px -16px rgb(16 36 24 / 0.28), 0 2px 8px -2px rgb(16 36 24 / 0.08);
+  --glass-solid: #fbfbfa;
+  --tab-indicator: rgb(16 36 24 / 0.07);
 }
 
 .dark {
-  --background: #0e100f;
-  --surface: #121513;
+  --background: #0b0d0c;
+  --surface: #101311;
   --foreground: #eceeec;
-  --card: #161917;
+  --card: #151917;
   --card-foreground: #eceeec;
-  --popover: #1b1e1c;
+  --popover: #1a1e1b;
   --popover-foreground: #eceeec;
-  --primary: #86c08e;
-  --primary-foreground: #0c150e;
-  --secondary: #1c2a20;
-  --secondary-foreground: #b8dcbd;
-  --muted: #202422;
-  --muted-foreground: #9ba29c;
-  --accent: #222624;
+  --primary: #7ccb93;
+  --primary-foreground: #06150c;
+  --secondary: #1a2c20;
+  --secondary-foreground: #b6e0c0;
+  --muted: #1e2320;
+  --muted-foreground: #9aa39c;
+  --accent: #212622;
   --accent-foreground: #eceeec;
-  --mint: #1f3326;
-  --mint-foreground: #b9e2c0;
+  --mint: #1c3224;
+  --mint-foreground: #b6e0c0;
   --emerald: #74c48b;
-  --leaf: #6fa76a;
-  --hero: #2f5337;
-  --hero-deep: #1d3823;
+  --leaf: #5fa874;
+  --hero: #1f5838;
+  --hero-deep: #0c2517;
   --expense: #ff8a80;
-  --expense-soft: #35201e;
+  --expense-soft: #33201e;
   --income: #74c48b;
-  --income-soft: #19291e;
+  --income-soft: #172a1d;
   --warning: #e9ae5b;
-  --warning-soft: #332718;
+  --warning-soft: #322617;
   --destructive: #ff7a70;
-  --danger-soft: #35201e;
-  --border: #262a27;
-  --input: #303531;
-  --ring: #86c08e;
-  --chart-1: #86c08e;
-  --chart-2: #5f9a58;
-  --chart-3: #37523a;
+  --danger-soft: #33201e;
+  --border: #242926;
+  --input: #2e3430;
+  --ring: #7ccb93;
+  --chart-1: #7ccb93;
+  --chart-2: #4f9565;
+  --chart-3: #2e4c37;
   --chart-4: #e0a860;
   --chart-5: #8aa3cc;
-  --sidebar: #0e100f;
+  --sidebar: #0b0d0c;
   --sidebar-foreground: #eceeec;
-  --sidebar-primary: #86c08e;
-  --sidebar-primary-foreground: #0c150e;
-  --sidebar-accent: #1c201d;
+  --sidebar-primary: #7ccb93;
+  --sidebar-primary-foreground: #06150c;
+  --sidebar-accent: #1b1f1c;
   --sidebar-accent-foreground: #eceeec;
-  --sidebar-border: #232724;
-  --sidebar-ring: #86c08e;
+  --sidebar-border: #202522;
+  --sidebar-ring: #7ccb93;
   --elevation-card: 0 0 #0000;
-  --elevation-float: 0 18px 44px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --elevation-float: 0 22px 48px -14px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05);
+  --surface-ring: inset 0 0 0 1px rgb(255 255 255 / 0.055);
+  --glass-bg: rgb(30 34 31 / 0.62);
+  --glass-border: rgb(255 255 255 / 0.1);
+  --glass-edge: rgb(0 0 0 / 0.4);
+  --glass-highlight: rgb(255 255 255 / 0.12);
+  --glass-shadow: 0 18px 44px -14px rgb(0 0 0 / 0.75), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  --glass-solid: #1a1e1b;
+  --tab-indicator: rgb(255 255 255 / 0.1);
 }
 
 @layer base {
@@ -219,34 +241,75 @@
   }
 }
 
+/* Component classes sit below utilities so a utility on the same element always wins. */
+@layer components {
+  /* A grouped surface for lists and content. Light: white on the canvas with a soft tinted shadow. Dark: a hairline instead. */
+  .card-surface {
+    @apply rounded-2xl bg-card;
+    box-shadow: var(--shadow-card), var(--surface-ring);
+  }
+  .ios-group {
+    @apply overflow-hidden rounded-2xl bg-card;
+    box-shadow: var(--shadow-card), var(--surface-ring);
+  }
+  /* Horizontal rails (account cards) that bleed to the screen edge on phones. */
+  .rail {
+    @apply -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 sm:-mx-6 sm:scroll-px-6 sm:px-6;
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+  .rail > * {
+    @apply snap-start;
+  }
+}
+
 @layer utilities {
   .tabular {
     font-variant-numeric: tabular-nums;
   }
-  .card-surface {
-    @apply rounded-xl border bg-card shadow-(--shadow-card);
-  }
-  .ios-group {
-    @apply overflow-hidden rounded-xl border bg-card shadow-(--shadow-card);
-  }
+  /* Translucent bar for sticky headers. */
   .glass {
-    @apply bg-background/85 backdrop-blur-xl backdrop-saturate-150;
+    @apply bg-background/80 backdrop-blur-xl backdrop-saturate-150;
+  }
+  /*
+    Floating glass material for the tab bar and desktop nav. A web approximation of a liquid-glass look
+    (backdrop blur, layered edge and top highlight), not Apple's native material. Solid fallback below.
+  */
+  .glass-float {
+    position: relative;
+    isolation: isolate;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 60%),
+      var(--glass-bg);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      inset 0 0 0 1px var(--glass-border),
+      0 0 0 1px var(--glass-edge),
+      var(--glass-shadow);
   }
   .pressable {
     transition: scale 160ms var(--ease-out-quint), background-color 160ms ease-out, color 160ms ease-out, opacity 160ms ease-out, border-color 160ms ease-out;
-    @apply active:scale-[0.98];
+    @apply active:scale-[0.97];
   }
   .eyebrow {
     @apply text-[0.8125rem] font-medium text-muted-foreground;
   }
   .page-title {
-    @apply text-[1.75rem] leading-[1.15] font-semibold tracking-[-0.025em];
+    @apply text-[1.875rem] leading-[1.1] font-semibold tracking-[-0.03em];
   }
   .section-title {
-    @apply text-[0.9375rem] leading-6 font-semibold tracking-[-0.01em];
+    @apply text-[1.0625rem] leading-6 font-semibold tracking-[-0.015em];
   }
   .display-number {
-    @apply text-[2.5rem] leading-none font-semibold tracking-[-0.035em];
+    @apply text-[2.5rem] leading-none font-semibold tracking-[-0.04em];
+    font-variant-numeric: tabular-nums;
+  }
+  .display-xl {
+    @apply text-[2.75rem] leading-none font-semibold tracking-[-0.045em];
     font-variant-numeric: tabular-nums;
   }
   .text-balance-safe {
@@ -267,6 +330,15 @@
   .select-none-touch {
     -webkit-user-select: none;
     user-select: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-float,
+  .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--glass-solid);
   }
 }
 

@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useTheme } from "next-themes"
-import { ChevronRight, Download, Flame, LayoutGrid, Monitor, Moon, Pencil, Plus, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
+import { ChevronRight, Download, Flame, Monitor, Moon, Pencil, Plus, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
 import { Mascot } from "@/components/brand/mascot"
 import { Scene } from "@/components/brand/scene"
 import { Segmented } from "@/components/ios/segmented"
-import { resolveQuickActions } from "@/components/layout/actions-catalog"
 import { BACKGROUND_INFO, OUTFIT_INFO } from "@/lib/catalog"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
@@ -38,7 +37,6 @@ function Appearance({ me }: { me: Me }) {
   const [sounds, setSounds] = useState(soundsEnabled)
   const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Classic"
   const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Leafy green"
-  const actions = resolveQuickActions(me.settings.quick_actions)
   return (
     <SectionCard title="Appearance and companion" description="Make Faldo feel like yours.">
       <div className="space-y-5">
@@ -53,8 +51,8 @@ function Appearance({ me }: { me: Me }) {
             { value: "dark", label: <span className="inline-flex items-center gap-1.5"><Moon className="size-3.5" /> Dark</span> },
           ]} />
         </div>
-        <label className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/75"><Volume2 className="size-4" strokeWidth={1.75} /></span>
+        <label className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3 shadow-[inset_0_0_0_1px_var(--border)]">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><Volume2 className="size-4" strokeWidth={1.75} /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-[0.9375rem]">Sounds</span>
             <span className="block text-xs text-muted-foreground">Soft taps and chimes for navigation, logging and rewards. Saved on this device.</span>
@@ -63,22 +61,17 @@ function Appearance({ me }: { me: Me }) {
         </label>
         <div className="ios-group divide-y divide-border/60">
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-            <span className="flex size-8 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-secondary"><Mascot outfit={me.settings.mascot_outfit} coin={false} className="-mb-0.5 w-8" /></span>
+            <span className="flex size-8 shrink-0 items-end justify-center overflow-hidden rounded-full bg-secondary"><Mascot outfit={me.settings.mascot_outfit} coin={false} className="-mb-0.5 w-8" /></span>
             <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Mascot outfit</span><span className="block text-xs text-muted-foreground">{outfit}</span></span>
             <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-            <span className="size-8 shrink-0 overflow-hidden rounded-lg"><Scene id={me.settings.home_background} /></span>
+            <span className="size-8 shrink-0 overflow-hidden rounded-full"><Scene id={me.settings.home_background} /></span>
             <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Home background</span><span className="block text-xs text-muted-foreground">{background}</span></span>
             <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
-          <Link href="/" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/75"><LayoutGrid className="size-4" strokeWidth={1.75} /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Shortcuts</span><span className="block truncate text-xs text-muted-foreground">{actions.map((a) => a.label).join(", ")} · edit with the pencil on Home</span></span>
-            <ChevronRight className="size-4 text-muted-foreground/50" />
-          </Link>
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/75"><Flame className="size-4" strokeWidth={1.75} /></span>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><Flame className="size-4" strokeWidth={1.75} /></span>
             <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Streaks & badges</span><span className="block text-xs text-muted-foreground">Rewards unlock as you keep logging</span></span>
             <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
