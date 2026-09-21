@@ -12,7 +12,7 @@ export function SplashContent({ animated = false, className }: { animated?: bool
       <div className={cn("flex flex-col items-center gap-6 sm:flex-row sm:gap-10", animated && "splash-stage")}>
         <div className={cn(animated && "splash-icon-slide")}>
           <div className={cn(animated && "splash-icon-in")}>
-            <Image src="/brand/icon-512.png" alt="" width={180} height={180} priority unoptimized
+            <Image src="/brand/faldo-panda-512.png" alt="" width={180} height={180} priority unoptimized
               className="size-28 drop-shadow-[0_18px_30px_rgb(30_58_36/0.22)] sm:size-44" />
           </div>
         </div>

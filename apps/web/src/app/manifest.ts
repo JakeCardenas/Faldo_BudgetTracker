@@ -12,9 +12,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#5d8a5e",
     categories: ["finance", "productivity"],
     icons: [
-      { src: "/brand/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/brand/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/brand/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/brand/faldo-panda-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/brand/faldo-panda-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/brand/faldo-panda-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
       { name: "Add expense", url: "/?add=expense" },

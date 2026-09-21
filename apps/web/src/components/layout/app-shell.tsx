@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <>
           <SplashContent className="boot-full min-h-dvh" />
           <div className="boot-quiet flex min-h-dvh items-center justify-center">
-            <Image src="/brand/icon-512.png" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
+            <Image src="/brand/faldo-panda-512.png" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
           </div>
         </>
       ) : (
