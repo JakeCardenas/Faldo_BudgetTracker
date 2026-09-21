@@ -1,4 +1,5 @@
 import { format, formatDistanceToNowStrict, isToday, isYesterday, parseISO } from "date-fns"
+import { amountsHidden } from "@/lib/privacy"
 
 const SYMBOLS: Record<string, string> = { PHP: "₱", USD: "$", EUR: "€", SGD: "S$", JPY: "¥", GBP: "£" }
 
@@ -9,8 +10,9 @@ export function currencySymbol(currency = "PHP") {
 export function formatMoney(
   minor: number,
   currency = "PHP",
-  options: { signed?: boolean; cents?: boolean; compact?: boolean } = {},
+  options: { signed?: boolean; cents?: boolean; compact?: boolean; reveal?: boolean } = {},
 ) {
+  if (amountsHidden() && !options.reveal) return `${currencySymbol(currency)}••••`
   const negative = minor < 0
   const absolute = Math.abs(minor) / (currency === "JPY" ? 1 : 100)
   const showCents = options.cents ?? !Number.isInteger(absolute)

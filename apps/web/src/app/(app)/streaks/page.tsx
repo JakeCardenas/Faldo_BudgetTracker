@@ -3,11 +3,11 @@
 import { format, parseISO } from "date-fns"
 import { Award, Check, Flame, Lock } from "lucide-react"
 import { toast } from "sonner"
-import { Mascot } from "@/components/brand/mascot"
-import { Scene } from "@/components/brand/scene"
+import { BambooDecor, environmentStyle } from "@/components/brand/environment"
+import { Panda } from "@/components/brand/panda"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BACKGROUND_INFO, BADGE_ART, OUTFIT_INFO } from "@/lib/catalog"
+import { BACKGROUND_INFO, BADGE_ART, OUTFIT_INFO, poseFor } from "@/lib/catalog"
 import { useEngagement, useMe, useUpdateSettings } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Badge } from "@/lib/types"
@@ -32,13 +32,13 @@ export default function StreaksPage() {
   function wear(kind: "mascot_outfit" | "home_background", id: string, unlocked: boolean, hint: string) {
     if (!unlocked) { play("disabled"); toast(`Locked. ${hint}`); return }
     update.mutate({ [kind]: id }, {
-      onSuccess: () => { play("celebrate"); toast(kind === "mascot_outfit" ? "New look equipped" : "Background updated") },
+      onSuccess: () => { play("celebrate"); toast(kind === "mascot_outfit" ? "Faldo's pose updated on Home" : "Home environment updated") },
       onError: (e) => toast.error(e.message),
     })
   }
 
   if (isLoading || !data) {
-    return <div className="space-y-4"><LargeTitle title="Streaks" back={{ href: "/", label: "Home" }} /><Skeleton className="h-64 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
+    return <div className="space-y-4"><LargeTitle title="Streaks" back={{ href: "/you", label: "You" }} /><Skeleton className="h-64 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
   }
 
   const next = data.next_badge
@@ -47,7 +47,7 @@ export default function StreaksPage() {
 
   return (
     <div className="space-y-5">
-      <LargeTitle title="Streaks" subtitle="Log a little every day to build the habit and earn rewards" back={{ href: "/", label: "Home" }} />
+      <LargeTitle title="Streaks" subtitle="Log a little every day to build the habit and earn rewards" back={{ href: "/you", label: "You" }} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.1fr_1fr] lg:gap-5">
         <section className="card-surface px-5 py-7 text-center sm:py-8">
@@ -106,12 +106,10 @@ export default function StreaksPage() {
           <section className="card-surface flex items-center gap-4 p-4 sm:p-5">
             <div className="min-w-0 flex-1">
               <h2 className="section-title">Rewards</h2>
-              <p className="text-[0.8125rem] text-muted-foreground">Unlock new outfits and backgrounds with your badges.</p>
+              <p className="text-[0.8125rem] text-muted-foreground">Unlock new Faldo poses and Home environments with your badges.</p>
               <p className="tabular mt-2 text-sm font-medium">{data.outfits.filter((o) => o.unlocked).length + data.backgrounds.filter((b) => b.unlocked).length} of {data.outfits.length + data.backgrounds.length} unlocked</p>
             </div>
-            <span className="flex size-16 shrink-0 items-end justify-center overflow-hidden rounded-xl bg-secondary" aria-hidden>
-              <Mascot outfit={me?.settings.mascot_outfit} mood="proud" coin={false} className="-mb-1 w-15" />
-            </span>
+            <Panda pose={poseFor(me?.settings.mascot_outfit)} sizes="80px" className="w-18 shrink-0" />
           </section>
         </div>
       </div>
@@ -138,22 +136,22 @@ export default function StreaksPage() {
       </section>
 
       <section className="card-surface p-4 sm:p-5">
-        <h2 className="section-title">Wardrobe</h2>
-        <p className="text-[0.8125rem] text-muted-foreground">Keep your streak going to unlock more looks for Faldo.</p>
+        <h2 className="section-title">Faldo poses</h2>
+        <p className="text-[0.8125rem] text-muted-foreground">The pose you pick greets you on Home. Keep your streak going to unlock more.</p>
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {data.outfits.map((outfit) => {
-            const info = OUTFIT_INFO[outfit.id] ?? { name: outfit.id, hint: "" }
+            const info = OUTFIT_INFO[outfit.id] ?? { name: outfit.id, hint: "", pose: "bamboo" as const }
             const selected = me?.settings.mascot_outfit === outfit.id
             return (
               <li key={outfit.id}>
                 <button type="button" onClick={() => wear("mascot_outfit", outfit.id, outfit.unlocked, info.hint)} aria-pressed={selected}
-                  className={cn("pressable relative flex w-full flex-col items-center rounded-lg border p-3 text-center hover:bg-accent/50",
-                    selected && "border-primary/50 bg-secondary/60 hover:bg-secondary/60")}>
+                  className={cn("pressable relative flex w-full flex-col items-center rounded-2xl bg-muted/50 p-3 text-center hover:bg-accent/70",
+                    selected && "bg-secondary/70 shadow-[inset_0_0_0_1.5px_var(--primary)] hover:bg-secondary/70")}>
                   {selected && <span className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3" strokeWidth={3} /></span>}
                   {!outfit.unlocked && <span className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-muted"><Lock className="size-3 text-muted-foreground" /></span>}
-                  <Mascot outfit={outfit.id} coin={false} mood={outfit.unlocked ? "happy" : "sleepy"} className={cn("w-20", !outfit.unlocked && "opacity-40 grayscale")} />
+                  <span className="flex h-24 items-end justify-center"><Panda pose={info.pose} sizes="96px" className={cn("max-h-24 w-auto max-w-24", !outfit.unlocked && "opacity-35 grayscale")} /></span>
                   <p className="mt-1 text-sm font-medium">{info.name}</p>
-                  <p className="text-[0.6875rem] text-muted-foreground">{outfit.unlocked ? (selected ? "Wearing" : "Tap to wear") : info.hint}</p>
+                  <p className="text-[0.6875rem] text-muted-foreground">{outfit.unlocked ? (selected ? "On Home" : "Tap to use") : info.hint}</p>
                 </button>
               </li>
             )
@@ -162,18 +160,18 @@ export default function StreaksPage() {
       </section>
 
       <section className="card-surface p-4 sm:p-5">
-        <h2 className="section-title">Backgrounds</h2>
-        <p className="text-[0.8125rem] text-muted-foreground">Change the scene behind Faldo on your Home screen.</p>
+        <h2 className="section-title">Home environments</h2>
+        <p className="text-[0.8125rem] text-muted-foreground">Change the light in Faldo&apos;s green corner of your Home screen.</p>
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {data.backgrounds.map((bg) => {
-            const info = BACKGROUND_INFO[bg.id] ?? { name: bg.id, hint: "" }
+            const info = BACKGROUND_INFO[bg.id] ?? BACKGROUND_INFO.meadow
             const selected = me?.settings.home_background === bg.id
             return (
               <li key={bg.id}>
                 <button type="button" onClick={() => wear("home_background", bg.id, bg.unlocked, info.hint)} aria-pressed={selected}
-                  className={cn("pressable w-full overflow-hidden rounded-lg border text-left", selected && "border-primary/50 ring-2 ring-primary/40")}>
-                  <div className={cn("relative h-20", !bg.unlocked && "opacity-40 grayscale")}>
-                    <Scene id={bg.id} />
+                  className={cn("pressable w-full overflow-hidden rounded-2xl text-left shadow-[inset_0_0_0_1px_var(--border)]", selected && "ring-2 ring-primary/60")}>
+                  <div className={cn("relative isolate h-20 overflow-hidden", !bg.unlocked && "opacity-40 grayscale")} style={environmentStyle(bg.id)}>
+                    <BambooDecor className="absolute -right-4 -bottom-6 -z-10 h-32" />
                     {!bg.unlocked && <span className="absolute inset-0 flex items-center justify-center"><Lock className="size-5 text-white drop-shadow" /></span>}
                   </div>
                   <div className="bg-card px-3 py-2">

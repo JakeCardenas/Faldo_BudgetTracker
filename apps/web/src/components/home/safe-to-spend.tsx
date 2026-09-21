@@ -2,11 +2,12 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Calculator, Scale } from "lucide-react"
+import { AlertTriangle, Calculator, CircleDashed, Scale, ShieldCheck } from "lucide-react"
 import { CalculationCard } from "@/components/finance/calculation-card"
 import { AnimatedMoney } from "@/components/finance/money"
 import { IosSheet } from "@/components/ios/sheet"
 import { useAppActions } from "@/components/layout/app-context"
+import { Button } from "@/components/ui/button"
 import { formatDate, formatMoney } from "@/lib/format"
 import type { SafeToSpend } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -37,73 +38,59 @@ export function SafeToSpendWhy({ sts, open, onOpenChange }: { sts: SafeToSpend; 
 }
 
 /**
- * Faldo's signature number. Deep green when there's room, deep red when money is short.
- * Every figure comes from the backend engine; this component only lays it out.
+ * Safe to Spend as a calm status: a light surface with the number, one sentence and this week's share.
+ * Amber when this week's share is used, red only when money is genuinely short. Figures come from the engine.
  */
 export function SafeToSpendCard({ sts, className }: { sts: SafeToSpend; className?: string }) {
   const { openCheck } = useAppActions()
   const [why, setWhy] = useState(false)
   const week = sts.week
   const short = sts.status === "short"
+  const tight = sts.status === "tight"
   const used = week.allowance_minor > 0 ? Math.min(100, (week.spent_minor / week.allowance_minor) * 100) : week.spent_minor > 0 ? 100 : 0
+  const Icon = short ? AlertTriangle : tight ? CircleDashed : ShieldCheck
 
   return (
-    <section aria-labelledby="sts-title"
-      className={cn("relative isolate overflow-hidden rounded-3xl p-5 text-white sm:p-6", className)}
-      style={{
-        backgroundImage: [
-          "radial-gradient(110% 90% at 100% 0%, rgb(255 255 255 / 0.13), transparent 50%)",
-          "radial-gradient(70% 60% at 0% 110%, rgb(0 0 0 / 0.22), transparent 70%)",
-          short ? "linear-gradient(150deg, #8a3129, #3f1612)" : "linear-gradient(150deg, var(--hero), var(--hero-deep))",
-        ].join(","),
-        boxShadow: short
-          ? "0 24px 44px -26px rgb(90 24 18 / 0.75), inset 0 1px 0 rgb(255 255 255 / 0.14)"
-          : "0 24px 44px -26px color-mix(in oklab, var(--hero) 85%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.14)",
-      }}>
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,17rem)] md:items-end md:gap-8">
-        <div className="min-w-0">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="sts-title" className="text-[0.9375rem] font-medium text-white/90">Safe to spend</h2>
+    <section aria-labelledby="sts-title" className={cn("card-surface p-4 sm:p-5", short && "bg-danger-soft shadow-none", className)}>
+      <div className="flex items-start gap-3.5">
+        <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-full",
+          short ? "bg-card text-expense" : tight ? "bg-warning-soft text-warning" : "bg-secondary text-secondary-foreground")}>
+          <Icon className="size-5" strokeWidth={2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="sts-title" className="text-[0.9375rem] font-medium text-muted-foreground">Safe to spend</h2>
             <button type="button" onClick={() => setWhy(true)}
-              className="-mr-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.8125rem] font-medium text-white/90 transition-colors hover:bg-white/12 md:hidden">
-              <Calculator className="size-3.5" /> Why this number?
+              className="-mr-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.8125rem] font-medium text-primary hover:bg-accent">
+              <Calculator className="size-3.5" /> Why?
             </button>
           </div>
-          <AnimatedMoney minor={sts.amount_minor} className="display-xl mt-2 block text-white sm:text-[3.25rem]" symbolClassName="text-white/70" />
-          <p className="mt-2.5 max-w-[34ch] text-[0.9375rem] leading-snug text-white/90">{statusSentence(sts)}</p>
-        </div>
-
-        <div className="min-w-0 border-t border-white/15 pt-4 md:border-t-0 md:border-l md:pt-0 md:pl-8">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="text-[0.875rem] text-white/85">This week</p>
-            <p className="text-[0.9375rem]"><span className="tabular font-semibold">{formatMoney(week.left_minor)}</span> <span className="text-white/85">left</span></p>
-          </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label="This week's share used"
-            aria-valuenow={Math.round(used)} aria-valuemin={0} aria-valuemax={100}>
-            <div className={cn("h-full rounded-full transition-[width] duration-700 ease-[var(--ease-out-quint)]", used >= 100 ? "bg-[#ffc98f]" : "bg-white")} style={{ width: `${used}%` }} />
-          </div>
-          <p className="tabular mt-2 text-[0.8125rem] text-white/80">
-            {week.plan ? (
-              <Link href="/plan/money" className="hover:text-white">
-                Joy Money {formatMoney(week.plan.joy_left_minor)}, needs {formatMoney(week.plan.needs_left_minor)}
-              </Link>
-            ) : (
-              <>{formatMoney(week.spent_minor)} of {formatMoney(week.allowance_minor)} used, {formatDate(week.start, "EEE")} to {formatDate(week.end, "EEE")}</>
-            )}
+          <AnimatedMoney minor={sts.amount_minor} className={cn("mt-0.5 block text-[2rem] leading-tight font-semibold tracking-[-0.035em]", short && "text-expense")} />
+          <p className={cn("mt-1 text-sm leading-snug", tight ? "text-warning" : "text-muted-foreground")}>
+            {short ? statusSentence(sts) : <>After upcoming bills and planned savings. {statusSentence(sts)}</>}
           </p>
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => openCheck()}
-          className="pressable inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-[#143a25] shadow-[0_6px_16px_-8px_rgb(0_0_0/0.45)] hover:bg-white/92">
-          <Scale className="size-4" /> Can I afford it?
-        </button>
-        <button type="button" onClick={() => setWhy(true)}
-          className="hidden h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-white/90 transition-colors hover:bg-white/12 md:inline-flex">
-          <Calculator className="size-4" /> Why this number?
-        </button>
+      <div className="mt-4 border-t border-border/60 pt-3.5">
+        <div className="flex items-baseline justify-between gap-3 text-sm">
+          <span className="text-muted-foreground">This week</span>
+          <span><span className="tabular font-semibold">{formatMoney(week.left_minor)}</span> <span className="text-muted-foreground">left</span></span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="This week's share used"
+          aria-valuenow={Math.round(used)} aria-valuemin={0} aria-valuemax={100}>
+          <div className={cn("h-full rounded-full transition-[width] duration-700 ease-[var(--ease-out-quint)]", used >= 100 ? "bg-warning" : "bg-primary")} style={{ width: `${used}%` }} />
+        </div>
+        {week.plan && (
+          <p className="tabular mt-2 text-[0.8125rem] text-muted-foreground">
+            <Link href="/plan/money" className="hover:text-foreground">Joy Money {formatMoney(week.plan.joy_left_minor)}, needs {formatMoney(week.plan.needs_left_minor)}</Link>
+          </p>
+        )}
       </div>
+
+      <Button size="sm" variant={short ? "default" : "secondary"} className="mt-4" onClick={() => openCheck()}>
+        <Scale /> Can I afford it?
+      </Button>
       <SafeToSpendWhy sts={sts} open={why} onOpenChange={setWhy} />
     </section>
   )

@@ -1,5 +1,6 @@
 import { Calculator, ShieldCheck, Wallet } from "lucide-react"
-import { Logo, MascotArt } from "@/components/brand/logo"
+import { Logo } from "@/components/brand/logo"
+import { Panda } from "@/components/brand/panda"
 
 const HERO = {
   backgroundImage: [
@@ -34,7 +35,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               A calm money companion for the Philippines. It works from your real transactions and shows its math.
             </p>
           </div>
-          <MascotArt className="w-20 shrink-0 drop-shadow-[0_12px_24px_rgb(0_0_0/0.25)] lg:order-first lg:w-36" priority />
+          <Panda pose="wave" priority sizes="(min-width: 1024px) 176px, 96px" className="w-24 shrink-0 drop-shadow-[0_14px_24px_rgb(0_0_0/0.3)] lg:order-first lg:w-44" />
         </div>
         <ul className="mt-10 hidden space-y-3 lg:block">
           {POINTS.map(({ icon: Icon, text }) => (

@@ -8,13 +8,6 @@ export function LogoMark({ className }: { className?: string }) {
   )
 }
 
-export function MascotArt({ className, priority }: { className?: string; priority?: boolean }) {
-  return (
-    <Image src="/brand/faldo-mascot.png" alt="Faldo mascot" width={625} height={640} priority={priority}
-      className={cn("h-auto w-28 select-none", className)} draggable={false} />
-  )
-}
-
 export function Logo({ className, tone = "default" }: { className?: string; tone?: "default" | "light" }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>

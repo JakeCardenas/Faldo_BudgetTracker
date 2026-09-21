@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { BalanceLine } from "@/components/charts/charts"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { EmptyState } from "@/components/finance/empty-state"
+import { HideAmountsButton } from "@/components/finance/hide-amounts"
 import { AnimatedMoney } from "@/components/finance/money"
 import { Chip, Segmented } from "@/components/ios/segmented"
 import { HeaderButton, LargeTitle } from "@/components/ios/nav-header"
@@ -191,7 +192,10 @@ export default function AccountsPage() {
             <div>
               <Segmented label="Balance view" size="sm" value={view} onChange={setView}
                 options={[{ value: "all", label: "Net worth" }, { value: "assets", label: "Assets" }, { value: "liabilities", label: "Liabilities" }]} />
-              <AnimatedMoney minor={headline.value} className="display-xl mt-5 block lg:text-[3.25rem]" />
+              <div className="mt-5 flex items-center gap-1.5">
+                <AnimatedMoney minor={headline.value} className="display-xl block lg:text-[3.25rem]" />
+                <HideAmountsButton className="self-start" />
+              </div>
               <p className="mt-1.5 text-sm text-muted-foreground">{headline.caption}</p>
             </div>
             <BalanceTrend view={view} current={headline.value} />

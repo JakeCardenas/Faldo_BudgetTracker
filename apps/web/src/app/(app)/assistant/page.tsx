@@ -8,7 +8,8 @@ import {
   ArrowUp, BookText, Check, ChevronDown, ChevronLeft, CircleAlert, History, Loader2, Mic, MicOff, PenSquare, ShieldCheck, Square, Trash2, Wrench,
 } from "lucide-react"
 import { toast } from "sonner"
-import { Mascot } from "@/components/brand/mascot"
+import { LogoMark } from "@/components/brand/logo"
+import { Panda } from "@/components/brand/panda"
 import { BlockView } from "@/components/assistant/blocks"
 import { LoggedCard, ReviewCard, draftToInput, looksLikeLogging } from "@/components/assistant/logged-card"
 import { useAppActions } from "@/components/layout/app-context"
@@ -119,19 +120,16 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
   )
 }
 
-function AssistantMessage({ message, onFollowUp, onOpenTransaction, onDraftsLogged, outfit }: {
+function AssistantMessage({ message, onFollowUp, onOpenTransaction, onDraftsLogged }: {
   message: LiveMessage
   onFollowUp: (q: string) => void
   onOpenTransaction: (id: string) => void
   onDraftsLogged: (transactions: Transaction[]) => void
-  outfit?: string
 }) {
   const runningStep = message.steps?.find((s) => s.state === "running")
   return (
     <div className="flex gap-3">
-      <span className="flex size-8 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-secondary" aria-hidden>
-        <Mascot outfit={outfit} coin={false} className="-mb-0.5 w-8" />
-      </span>
+      <LogoMark className="size-8 drop-shadow-none" />
       <div className="min-w-0 flex-1 space-y-3 pt-1">
         {message.logged && <LoggedCard transactions={message.logged} onOpen={onOpenTransaction} />}
         {message.drafts && <ReviewCard drafts={message.drafts} onLogged={onDraftsLogged} />}
@@ -362,7 +360,6 @@ function AssistantView() {
     setHistoryOpen(false)
   }
 
-  const outfit = me?.settings.mascot_outfit
 
   return (
     <div className="flex h-dvh">
@@ -390,9 +387,7 @@ function AssistantView() {
             {messages.length === 0 ? (
               <div className="animate-rise space-y-6">
                 <div className="flex flex-col items-center pt-4 text-center sm:pt-10">
-                  <span className="flex size-16 items-end justify-center overflow-hidden rounded-xl bg-secondary" aria-hidden>
-                    <Mascot outfit={outfit} coin={false} className="-mb-1 w-15" />
-                  </span>
+                  <Panda pose="wave" priority sizes="112px" className="w-24 drop-shadow-[0_10px_18px_rgb(16_36_24/0.18)]" />
                   <h2 className="mt-4 text-xl font-semibold tracking-[-0.02em]">Hi {me?.display_name?.split(" ")[0] ?? "there"}, how can I help?</h2>
                   <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">Ask about your balances, spending or goals. You can also log money the way you&apos;d text it, like &ldquo;Spent 250 on food&rdquo;.</p>
                 </div>
@@ -416,7 +411,7 @@ function AssistantView() {
                   <p className="rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground">{m.content}</p>
                 </div>
               ) : (
-                <AssistantMessage key={m.id} message={m} onFollowUp={ask} onOpenTransaction={openTransaction} outfit={outfit}
+                <AssistantMessage key={m.id} message={m} onFollowUp={ask} onOpenTransaction={openTransaction}
                   onDraftsLogged={(logged) => setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, drafts: undefined, logged } : x)))} />
               ))
             )}

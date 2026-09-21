@@ -3,23 +3,25 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { CalendarCheck, MoreHorizontal, Plus, Sparkles, Target, TrendingUp } from "lucide-react"
+import { MessageCircle, MoreHorizontal, Plus } from "lucide-react"
 import { toast } from "sonner"
+import { Panda } from "@/components/brand/panda"
 import { AmountInput } from "@/components/finance/amount-input"
-import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
 import { ProgressBar } from "@/components/finance/progress-bar"
+import { Segmented } from "@/components/ios/segmented"
+import { IosSheet } from "@/components/ios/sheet"
 import { PageHeader } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
-import { formatDate, formatMoney, formatPct, minorToInput, toMinor, todayISO } from "@/lib/format"
+import { formatDate, formatMoney, minorToInput, toMinor, todayISO } from "@/lib/format"
 import { GOAL_ICONS, GoalIcon, goalIconId } from "@/lib/goal-icons"
+import { goalStatusLine } from "@/lib/goals"
 import { invalidateFinancialData, useAccounts, useGoals } from "@/lib/queries"
 import { useUrlIntent } from "@/lib/use-url-intent"
 import type { Goal } from "@/lib/types"
@@ -60,16 +62,16 @@ function GoalDialog({ goal, open, onOpenChange }: { goal?: Goal; open: boolean; 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>{goal ? "Edit goal" : "New savings goal"}</DialogTitle><DialogDescription>Faldo calculates the monthly amount and projected date for you.</DialogDescription></DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
+    <IosSheet open={open} onOpenChange={onOpenChange} title={goal ? "Edit goal" : "New savings goal"} size="sm"
+      description="Faldo works out the monthly amount and when you'll get there."
+      footer={<Button type="submit" form="goal-form" size="lg" className="w-full" disabled={busy || !name.trim() || !toMinor(target)}>{busy ? "Saving…" : goal ? "Save changes" : "Create goal"}</Button>}>
+        <form id="goal-form" onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label>Icon</Label>
             <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Goal icon">
               {GOAL_ICONS.map(({ id, label, icon: Icon }) => (
                 <button key={id} type="button" role="radio" aria-checked={emoji === id} onClick={() => setEmoji(id)} aria-label={label} title={label}
-                  className={cn("pressable flex size-9 items-center justify-center rounded-lg border transition-colors", emoji === id ? "border-primary/50 bg-secondary text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
+                  className={cn("pressable flex size-10 items-center justify-center rounded-full transition-colors", emoji === id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground")}>
                   <Icon className="size-4" strokeWidth={1.85} />
                 </button>
               ))}
@@ -95,10 +97,8 @@ function GoalDialog({ goal, open, onOpenChange }: { goal?: Goal; open: boolean; 
             </Select>
             <p className="text-xs text-muted-foreground">Linked goals use that account's real balance as progress.</p>
           </div>
-          <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? "Saving…" : goal ? "Save" : "Create goal"}</Button></div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </IosSheet>
   )
 }
 
@@ -129,15 +129,13 @@ function ContributeDialog({ goal, onOpenChange }: { goal: Goal; onOpenChange: (o
   }
 
   return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle>{goal.emoji} {goal.name}</DialogTitle><DialogDescription>{goal.linked_account_id ? `This records a transfer into ${goal.linked_account_name}.` : "Record money you've set aside for this goal."}</DialogDescription></DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
+    <IosSheet open onOpenChange={onOpenChange} title={`Add to ${goal.name}`} size="sm"
+      description={goal.linked_account_id ? `This records a transfer into ${goal.linked_account_name}.` : "Record money you've set aside for this goal."}
+      footer={<Button type="submit" form="contribute-form" size="lg" className="w-full" disabled={busy || !toMinor(amount)}>{busy ? "Saving…" : withdraw ? "Record withdrawal" : "Add money"}</Button>}>
+        <form id="contribute-form" onSubmit={submit} className="space-y-4">
           {!goal.linked_account_id && (
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
-              <button type="button" onClick={() => setWithdraw(false)} className={cn("rounded-md py-1.5", !withdraw && "bg-card shadow-sm")}>Add</button>
-              <button type="button" onClick={() => setWithdraw(true)} className={cn("rounded-md py-1.5", withdraw && "bg-card shadow-sm")}>Withdraw</button>
-            </div>
+            <Segmented label="Add or withdraw" className="w-full" value={withdraw ? "withdraw" : "add"} onChange={(v) => setWithdraw(v === "withdraw")}
+              options={[{ value: "add", label: "Add money" }, { value: "withdraw", label: "Withdraw" }]} />
           )}
           <AmountInput size="lg" value={amount} onValueChange={setAmount} autoFocus aria-label="Amount" placeholder="0" />
           <div className="grid grid-cols-2 gap-3">
@@ -149,61 +147,66 @@ function ContributeDialog({ goal, onOpenChange }: { goal: Goal; onOpenChange: (o
               </div>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
         </form>
-      </DialogContent>
-    </Dialog>
+    </IosSheet>
   )
 }
 
 function GoalCard({ goal, onEdit, onContribute }: { goal: Goal; onEdit: () => void; onContribute: () => void }) {
   const qc = useQueryClient()
-  const tone = goal.status === "completed" ? "Completed" : goal.on_track === true ? "On track" : goal.on_track === false ? "Behind schedule" : "No target date"
+  const done = goal.status === "completed" || goal.pct_complete >= 100
   async function remove() {
     await api.delete(`/goals/${goal.id}`)
     await invalidateFinancialData(qc)
     toast.success("Goal deleted")
   }
   return (
-    <div className="card-surface flex flex-col gap-4 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-foreground/75" aria-hidden><GoalIcon value={goal.emoji} className="size-5" /></span>
-          <div>
-            <p className="font-semibold">{goal.name}</p>
-            <p className={cn("text-xs", goal.on_track === false ? "text-warning" : "text-muted-foreground")}>{tone}{goal.linked_account_name && `, ${goal.linked_account_name}`}</p>
-          </div>
+    <article className="card-surface flex flex-col p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground" aria-hidden><GoalIcon value={goal.emoji} className="size-5" /></span>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-[1.0625rem] font-semibold tracking-[-0.015em]">{goal.name}</h2>
+          <p className={cn("text-[0.8125rem]", goal.on_track === false && !done ? "text-warning" : "text-muted-foreground")}>
+            {done ? "Goal reached" : goalStatusLine(goal)}
+          </p>
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Goal options"><MoreHorizontal /></Button></DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" className="-mt-1 -mr-2" aria-label={`${goal.name} options`}><MoreHorizontal /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={onEdit}>Edit goal</DropdownMenuItem>
-            <DropdownMenuItem asChild><Link href={`/assistant?q=${encodeURIComponent(`When can I afford my ${goal.name}?`)}`}>Ask Faldo about this</Link></DropdownMenuItem>
+            <DropdownMenuItem asChild><Link href={`/assistant?q=${encodeURIComponent(`When can I afford my ${goal.name}?`)}`}>Ask Faldo about it</Link></DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={remove}>Delete</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="space-y-2">
-        <div className="flex items-baseline justify-between gap-2">
-          <p><Money minor={goal.saved_minor} className="text-2xl font-semibold tracking-[-0.025em]" /> <span className="text-sm text-muted-foreground">of {formatMoney(goal.target_minor)}</span></p>
-          <span className="tabular text-sm font-medium">{formatPct(goal.pct_complete)}</span>
+
+      <div className="mt-5 flex items-end justify-between gap-3">
+        <p className="min-w-0">
+          <Money minor={goal.saved_minor} className="text-[1.75rem] leading-none font-semibold tracking-[-0.035em]" />
+          <span className="tabular ml-1.5 text-sm text-muted-foreground">of {formatMoney(goal.target_minor)}</span>
+        </p>
+        <span className="tabular text-[0.9375rem] font-semibold">{Math.round(goal.pct_complete)}%</span>
+      </div>
+      <ProgressBar value={goal.pct_complete} status={goal.on_track === false && !done ? "behind" : "on_track"} className="mt-3 h-2.5" label={`${goal.name} ${Math.round(goal.pct_complete)}% saved`} />
+
+      {done ? (
+        <div className="mt-5 flex items-center gap-3 rounded-2xl bg-secondary/70 p-3">
+          <Panda pose="happy" sizes="72px" className="w-16 shrink-0" />
+          <p className="text-sm font-medium">You did it. {formatMoney(goal.target_minor)} saved for {goal.name}.</p>
         </div>
-        <ProgressBar value={goal.pct_complete} status={goal.on_track === false ? "behind" : "on_track"} className="h-1.5" label={`${goal.name} ${goal.pct_complete}% complete`} />
-      </div>
-      <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/50 p-3 text-xs">
-        <div><dt className="text-muted-foreground">Target date</dt><dd className="font-medium">{goal.target_date ? formatDate(goal.target_date, "MMM d, yyyy") : "Not set"}</dd></div>
-        <div><dt className="text-muted-foreground">Remaining</dt><dd className="tabular font-medium">{formatMoney(goal.remaining_minor)}</dd></div>
-        <div><dt className="text-muted-foreground">Required monthly</dt><dd className="tabular font-medium">{goal.required_monthly_minor ? formatMoney(goal.required_monthly_minor) : "Not set"}</dd></div>
-        <div><dt className="text-muted-foreground">{goal.monthly_contribution_minor ? "Planned monthly" : "Avg. monthly"}</dt><dd className="tabular font-medium">{formatMoney(goal.monthly_contribution_minor ?? goal.average_monthly_minor)}</dd></div>
-      </dl>
-      <div className="flex items-center gap-2 text-sm">
-        {goal.projected_completion_on ? <CalendarCheck className="size-4 text-primary" /> : <TrendingUp className="size-4 text-muted-foreground" />}
-        <span className="text-muted-foreground">
-          {goal.status === "completed" ? "Goal reached" : goal.projected_completion_on ? <>Estimated completion <span className="font-medium text-foreground">{formatDate(goal.projected_completion_on, "MMMM yyyy")}</span></> : "Add a contribution to see a projection"}
-        </span>
-      </div>
-      <Button variant="outline" onClick={onContribute} className="mt-auto" disabled={goal.status === "completed"}><Plus /> {goal.linked_account_id ? "Transfer to savings" : "Add contribution"}</Button>
-    </div>
+      ) : (
+        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <div><dt className="text-xs text-muted-foreground">Target</dt><dd className="font-medium">{goal.target_date ? formatDate(goal.target_date, "MMMM yyyy") : "No date"}</dd></div>
+          <div><dt className="text-xs text-muted-foreground">Still needed</dt><dd className="tabular font-medium">{formatMoney(goal.remaining_minor)}</dd></div>
+          <div><dt className="text-xs text-muted-foreground">{goal.monthly_contribution_minor ? "You plan each month" : "Average a month"}</dt><dd className="tabular font-medium">{formatMoney(goal.monthly_contribution_minor ?? goal.average_monthly_minor)}</dd></div>
+          <div><dt className="text-xs text-muted-foreground">Needed each month</dt><dd className="tabular font-medium">{goal.required_monthly_minor ? formatMoney(goal.required_monthly_minor) : "No date set"}</dd></div>
+        </dl>
+      )}
+
+      {!done && (
+        <Button variant="secondary" onClick={onContribute} className="mt-5 self-start"><Plus /> {goal.linked_account_id ? "Transfer to savings" : "Add money"}</Button>
+      )}
+    </article>
   )
 }
 
@@ -228,23 +231,37 @@ export default function GoalsPage() {
     return () => clearTimeout(timer)
   }, [contributeTo, goals])
 
-  const totalSaved = goals?.reduce((s, g) => s + g.saved_minor, 0) ?? 0
-  const totalTarget = goals?.reduce((s, g) => s + g.target_minor, 0) ?? 0
-  const monthly = goals?.reduce((s, g) => s + (g.monthly_contribution_minor ?? 0), 0) ?? 0
+  const active = goals?.filter((g) => g.status === "active") ?? []
+  const totalSaved = active.reduce((s, g) => s + g.saved_minor, 0)
+  const totalTarget = active.reduce((s, g) => s + g.target_minor, 0)
+  const monthly = active.reduce((s, g) => s + (g.monthly_contribution_minor ?? 0), 0)
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Goals" description="Targets, monthly savings and projected dates from your data"
-        actions={<><Button variant="outline" asChild className="hidden sm:inline-flex"><Link href="/assistant?q=When%20can%20I%20afford%20my%20MacBook%3F"><Sparkles className="text-muted-foreground" /> Ask about goals</Link></Button><Button onClick={() => setCreating(true)}><Plus /> New goal</Button></>} />
-      {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-96 rounded-xl" />)}</div> : !goals?.length ? (
-        <div className="card-surface"><EmptyState icon={Target} title="What are you saving for?" description="A MacBook, an emergency fund, a trip to Japan. Faldo tells you how much to set aside and when you'll get there." action={<Button onClick={() => setCreating(true)}><Plus /> Create your first goal</Button>} /></div>
+    <div className="space-y-6">
+      <PageHeader title="Goals" description="What you're saving toward."
+        actions={<>
+          <Button variant="secondary" asChild className="hidden sm:inline-flex"><Link href="/assistant?q=When%20can%20I%20reach%20my%20goals%3F"><MessageCircle /> Ask Faldo</Link></Button>
+          <Button onClick={() => setCreating(true)}><Plus /> New goal</Button>
+        </>} />
+      {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-80 rounded-2xl" />)}</div> : !goals?.length ? (
+        <section className="card-surface flex flex-col items-center px-6 py-10 text-center">
+          <Panda pose="backpack" sizes="136px" className="w-32" />
+          <h2 className="mt-4 text-lg font-semibold tracking-[-0.02em]">What are you saving for?</h2>
+          <p className="mt-1 max-w-sm text-sm leading-relaxed text-muted-foreground">A laptop, an emergency fund, a trip home. Faldo tells you how much to set aside each month and when you&apos;ll get there.</p>
+          <Button size="lg" className="mt-5" onClick={() => setCreating(true)}><Plus /> Create your first goal</Button>
+        </section>
       ) : (
         <>
-          <div className="card-surface grid grid-cols-3 divide-x divide-border/60 py-4 [&>div]:min-w-0 [&>div]:px-3 sm:[&>div]:px-5">
-            <div><p className="truncate text-xs text-muted-foreground sm:text-sm">Saved</p><Money minor={totalSaved} className="block text-[1.0625rem] font-semibold tracking-[-0.02em] sm:text-2xl" /></div>
-            <div><p className="truncate text-xs text-muted-foreground sm:text-sm">Of targets</p><Money minor={totalTarget} className="block text-[1.0625rem] font-semibold tracking-[-0.02em] sm:text-2xl" /></div>
-            <div><p className="truncate text-xs text-muted-foreground sm:text-sm">Planned a month</p><Money minor={monthly} className="block text-[1.0625rem] font-semibold tracking-[-0.02em] sm:text-2xl" /></div>
-          </div>
+          {active.length > 1 && (
+            <section aria-label="All goals" className="px-1">
+              <p className="text-[0.9375rem] text-muted-foreground">Saved toward {active.length} goals</p>
+              <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
+                <Money minor={totalSaved} className="display-xl" />
+                <span className="tabular text-lg text-muted-foreground">of {formatMoney(totalTarget)}</span>
+              </p>
+              {monthly > 0 && <p className="mt-2 text-sm text-muted-foreground">You plan to add <span className="tabular font-medium text-foreground">{formatMoney(monthly)}</span> a month.</p>}
+            </section>
+          )}
           <div className="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {goals.map((g) => <GoalCard key={g.id} goal={g} onEdit={() => setEditing(g)} onContribute={() => setContributing(g)} />)}
           </div>

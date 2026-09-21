@@ -28,33 +28,51 @@ function TooltipCard({ title, rows }: { title: string; rows: { label: string; va
 
 const compact = (v: number) => formatMoney(v, "PHP", { compact: true })
 
+export interface BalancePointValue { date: string; value: number }
+
 /**
  * Answers one question: how has my balance moved? A single line, no grid, a dot where today is.
+ * `tone="light"` draws it in white for the green Home environment. `onHover` reports the point under
+ * the finger or cursor so the headline can show that day's balance.
  */
-export function BalanceLine({ data, height = 168 }: { data: { date: string; value: number }[]; height?: number }) {
+export function BalanceLine({ data, height = 168, tone = "default", onHover }: {
+  data: BalancePointValue[]
+  /** Pixels, or "100%" to fill the parent. */
+  height?: number | "100%"
+  tone?: "default" | "light"
+  onHover?: (point: BalancePointValue | null) => void
+}) {
   const gradientId = `line-${useId().replace(/:/g, "")}`
   const min = Math.min(...data.map((d) => d.value))
   const max = Math.max(...data.map((d) => d.value))
   const pad = Math.max(1, (max - min) * 0.18)
+  const stroke = tone === "light" ? "#ffffff" : "var(--primary)"
+  const ring = tone === "light" ? "var(--hero-deep)" : "var(--card)"
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 12, right: 10, left: 10, bottom: 4 }}>
+      <AreaChart data={data} margin={{ top: 12, right: 10, left: 10, bottom: 4 }}
+        onMouseMove={(state) => {
+          const index = typeof state?.activeTooltipIndex === "number" ? state.activeTooltipIndex : Number(state?.activeTooltipIndex)
+          onHover?.(Number.isFinite(index) && data[index] ? data[index] : null)
+        }}
+        onMouseLeave={() => onHover?.(null)}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.16} />
-            <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+            <stop offset="0%" stopColor={stroke} stopOpacity={tone === "light" ? 0.28 : 0.16} />
+            <stop offset="100%" stopColor={stroke} stopOpacity={0} />
           </linearGradient>
         </defs>
         <YAxis hide domain={[min - pad, max + pad]} />
         <XAxis dataKey="date" hide />
-        <Tooltip cursor={{ stroke: "var(--border)", strokeWidth: 1 }} content={({ payload }) => payload?.length ? (
-          <TooltipCard title={format(parseISO(payload[0].payload.date), "EEE, MMM d")} rows={[{ label: "Balance", value: formatMoney(payload[0].payload.value) }]} />
-        ) : null} />
-        <Area type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2.25} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
+        <Tooltip cursor={{ stroke: tone === "light" ? "rgb(255 255 255 / 0.45)" : "var(--border)", strokeWidth: 1 }}
+          content={onHover ? () => null : ({ payload }) => payload?.length ? (
+            <TooltipCard title={format(parseISO(payload[0].payload.date), "EEE, MMM d")} rows={[{ label: "Balance", value: formatMoney(payload[0].payload.value) }]} />
+          ) : null} />
+        <Area type="monotone" dataKey="value" stroke={stroke} strokeWidth={2.5} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
           dot={(props: { cx?: number; cy?: number; index?: number }) => props.index === data.length - 1 && props.cx !== undefined && props.cy !== undefined
-            ? <g key="end"><circle cx={props.cx} cy={props.cy} r={9} fill="var(--primary)" opacity={0.16} /><circle cx={props.cx} cy={props.cy} r={4} fill="var(--primary)" stroke="var(--card)" strokeWidth={2} /></g>
+            ? <g key="end"><circle cx={props.cx} cy={props.cy} r={10} fill={stroke} opacity={0.22} /><circle cx={props.cx} cy={props.cy} r={4.5} fill={stroke} stroke={ring} strokeWidth={2} /></g>
             : <g key={`d-${props.index}`} />}
-          activeDot={{ r: 4, fill: "var(--primary)", stroke: "var(--card)", strokeWidth: 2 }} />
+          activeDot={{ r: 5, fill: stroke, stroke: ring, strokeWidth: 2 }} />
       </AreaChart>
     </ResponsiveContainer>
   )

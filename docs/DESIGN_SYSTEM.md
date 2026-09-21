@@ -13,7 +13,38 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 
 The **+** (phone tab bar, desktop "Add") opens one menu: type it like a text, Expense, Income, Transfer, then receipt, goal, money owed, planned purchase, Faldo Check and import.
 
-Home has a hard limit: total balance, Safe to Spend, account cards, one note, coming up, recent activity, one goal. Add to Home only by removing something.
+Home has a hard limit: the green hero (total balance, the balance line with 1W to 1Y, Faldo), Safe to Spend, spending this month, account cards, coming up, one Faldo note and recent activity. Add to Home only by removing something.
+
+## Faldo, the panda
+
+The panda artworks in `apps/web/public/brand/panda/` are the canonical mascot. They were only cut out of their white backgrounds (Apple Vision subject lift, with enclosed light areas such as inner ears restored from the original pixels and the white page un-mixed from the outline). Never redraw, recolour, restyle or generate a new panda. Use `<Panda pose="…" />` from `components/brand/panda.tsx`.
+
+| Pose | Use it for |
+|---|---|
+| `bamboo` | Default Home companion, onboarding finish |
+| `wave` | Greetings: sign-in, onboarding welcome, Talk to Faldo, empty Home |
+| `happy` | Success: a logged transaction, a goal reached |
+| `backpack` | Goals empty state |
+| `munch` | Budgets empty state |
+| `boba` | Learn |
+| `sleep` | Not found |
+| `resting`, `cozy`, `ramen`, `box` | Unlockable poses and future empty states |
+
+One panda per view. It never sits inside transaction rows, cards or charts. The app icon (`faldo-panda-*.png`) is the same character and stays as the logo mark.
+
+Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts`) and its background ids unlock green environment themes (`BACKGROUND_INFO`). The chosen pose and theme appear in the Home hero.
+
+## Green environment
+
+The Home hero, sign-in and the empty Home use `environmentStyle()` from `components/brand/environment.tsx`: a deep green gradient with soft light behind Faldo, plus a quiet `BambooDecor` at about 10% white. Bamboo never sits behind text and never appears on financial surfaces.
+
+## Hide amounts
+
+The eye button (`HideAmountsButton`) and the Settings switch set a per-device preference. While it's on, `formatMoney` returns ₱•••• everywhere and `maskAmounts()` masks amounts inside Faldo's notes. Labels stay visible.
+
+## Provider logos
+
+`lib/providers.ts` lists Philippine banks and e-wallets with brand colours. Faldo ships no provider logos. To show one, add the official or licensed file to `public/brand/providers/<id>.svg` and set `logo` for that provider. Without a file, a generic account icon in the brand colour is shown. Never draw or generate a logo.
 
 ## Tokens
 
@@ -22,7 +53,7 @@ All colours are CSS variables in `apps/web/src/app/globals.css`, with light and 
 - **Canvas:** `--background` (a soft neutral). Content groups sit on white `card-surface` / `ios-group` surfaces.
 - **Accent:** one green (`--primary`). Use it for primary actions, active navigation, positive money and Safe to Spend.
 - **Semantics:** green for income and good states, `--expense` red for problems and overspending, `--warning` amber for attention. Expenses in lists use the normal text colour, not red.
-- **Signature surfaces:** only Safe to Spend (`--hero` to `--hero-deep` gradient, deep red when money is short) and account cards (the account's own colour) carry strong colour.
+- **Signature surfaces:** only the Home green environment and account cards (the account's own colour) carry strong colour. Safe to Spend is a calm light surface: green when healthy, amber when this week's share is used, red only when money is genuinely short.
 
 ## Shape
 
@@ -58,7 +89,7 @@ Transactions, bills, goals and budgets are rows in one grouped surface with inse
 
 Every chart answers one question, written as its section title.
 
-- **Balance line** (`BalanceLine`): no grid or axes, a dot for today, range chips (1W to 1Y).
+- **Balance line** (`BalanceLine`): no grid or axes, a dot for today, range chips (1W to 1Y). On Home it's white on green, and touching it shows that day's balance in the headline. There is no 1D range because balances are tracked per day.
 - **Where it went:** a ranked list with bars sized to the largest category, not a pie.
 - **Money in and out:** restrained 12-month bars.
 - **Forecast:** actual versus projected with a likely range, always labelled as an estimate.

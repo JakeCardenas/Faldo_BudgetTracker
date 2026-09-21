@@ -15,6 +15,7 @@ import { AddMenu } from "@/components/layout/add-menu"
 import { CommandSearch } from "@/components/layout/command-search"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { TopNav } from "@/components/layout/top-nav"
+import { useAmountsHidden } from "@/lib/privacy"
 import { useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Receipt } from "@/lib/types"
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { data: me, isLoading } = useMe()
+  const hideAmounts = useAmountsHidden()
   const { setTheme } = useTheme()
   const [addOpen, setAddOpen] = useState(false)
   const [addMode, setAddMode] = useState<AddMode>("expense")
@@ -93,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
           <div className="flex min-h-dvh flex-col">
             {!fullBleed && <TopNav />}
-            <main id="main" key={pathname} className={fullBleed
+            <main id="main" key={`${pathname}:${hideAmounts ? "hidden" : "shown"}`} className={fullBleed
               ? "w-full flex-1"
               : "animate-rise mx-auto w-full max-w-[1240px] flex-1 px-4 pb-[calc(6.75rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-20"}>
               {children}

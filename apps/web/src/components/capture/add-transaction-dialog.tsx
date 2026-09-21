@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { DraftCard } from "@/components/capture/draft-card"
 import { TransactionForm, type TransactionFormValues } from "@/components/finance/transaction-form"
 import { KeypadEntry, type EntryPreset, type EntryType } from "@/components/capture/keypad-entry"
-import { Mascot } from "@/components/brand/mascot"
+import { Panda } from "@/components/brand/panda"
 import { SHEET_CLASSES } from "@/components/ios/sheet"
 import { Segmented } from "@/components/ios/segmented"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { api, ApiError } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
 import { play } from "@/lib/sound"
-import { invalidateFinancialData, useMe, useSaveTransaction } from "@/lib/queries"
+import { invalidateFinancialData, useSaveTransaction } from "@/lib/queries"
 import type { CaptureDraft, CaptureResult, Receipt, Transaction, TransactionInput } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -289,13 +289,11 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
   )
 }
 
-export function showLoggedToast(transactions: Transaction[], message: string, onUndone?: () => void, outfit?: string) {
+export function showLoggedToast(transactions: Transaction[], message: string, onUndone?: () => void) {
   play("success")
   toast.custom((id) => (
     <div className="flex w-[min(24rem,calc(100vw-2rem))] items-center gap-3 rounded-xl border bg-popover p-2.5 pr-2 text-popover-foreground shadow-(--shadow-float)">
-      <span className="relative flex size-10 shrink-0 items-end justify-center overflow-hidden rounded-lg bg-secondary" aria-hidden>
-        <Mascot mood="proud" outfit={outfit} coin={false} className="-mb-1 w-10" />
-      </span>
+      <Panda pose="happy" sizes="56px" className="w-12 shrink-0" />
       <p className="min-w-0 flex-1 text-sm leading-snug">{message}</p>
       <button type="button" onClick={async () => {
         play("undo")
@@ -323,7 +321,6 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
 }) {
   const qc = useQueryClient()
   const save = useSaveTransaction()
-  const { data: me } = useMe()
   const [manualInitial, setManualInitial] = useState<Partial<TransactionInput> | null>(null)
   const [lastEntry, setLastEntry] = useState<EntryType>("expense")
   const close = () => onOpenChange(false)
@@ -332,7 +329,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
 
   const saved = (transaction: Transaction, feedback: string) => {
     close()
-    showLoggedToast([transaction], feedback, () => void invalidateFinancialData(qc), me?.settings.mascot_outfit)
+    showLoggedToast([transaction], feedback, () => void invalidateFinancialData(qc))
   }
 
   const title = mode === "describe" ? "Type it out" : mode === "receipt" ? "Scan a receipt" : mode === "manual" ? "All details" : "New transaction"

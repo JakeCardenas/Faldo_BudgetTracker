@@ -1,10 +1,12 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeftRight, Banknote, ChevronLeft, ChevronRight, CreditCard, Eye, Landmark, MoreHorizontal, Pencil, PiggyBank, Plus, Smartphone, Wallet, type LucideIcon } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ACCOUNT_PALETTE } from "@/lib/account-templates"
 import { ACCOUNT_TYPE_LABELS, formatMoney } from "@/lib/format"
+import { providerFor, type Provider } from "@/lib/providers"
 import type { Account, AccountType } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -30,15 +32,34 @@ function luminance(hex: string) {
   return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
 }
 
-export function AccountBadge({ account, className }: { account: Account; className?: string }) {
-  const color = accountColor(account)
-  const Icon = ACCOUNT_ICONS[account.type] ?? Wallet
-  const dark = luminance(color) > 0.36
+/**
+ * A provider's official logo when one has been added (see lib/providers.ts), otherwise a generic
+ * icon in the provider's colour. Never a drawn or generated logo.
+ */
+export function ProviderMark({ provider, fallback: Fallback = Wallet, color, className }: {
+  provider?: Provider
+  fallback?: LucideIcon
+  color?: string
+  className?: string
+}) {
+  if (provider?.logo) {
+    return (
+      <span className={cn("flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white p-1.5 ring-1 ring-black/5", className)}>
+        <Image src={provider.logo} alt={`${provider.name} logo`} width={28} height={28} className="size-full object-contain" />
+      </span>
+    )
+  }
+  const tint = color ?? provider?.color ?? "#5b6b5e"
   return (
-    <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full", dark ? "text-[#101411]" : "text-white", className)} style={{ backgroundColor: color }}>
-      <Icon className="size-[1.1rem]" strokeWidth={1.9} />
+    <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", luminance(tint) > 0.36 ? "text-[#101411]" : "text-white", className)}
+      style={{ backgroundColor: tint }}>
+      <Fallback className="size-4" strokeWidth={1.9} />
     </span>
   )
+}
+
+export function AccountBadge({ account, className }: { account: Account; className?: string }) {
+  return <ProviderMark provider={providerFor(account)} fallback={ACCOUNT_ICONS[account.type] ?? Wallet} color={accountColor(account)} className={cn("size-10", className)} />
 }
 
 export interface AccountActions {
@@ -78,6 +99,7 @@ export function AccountCard({ account, index = 0, actions, jiggle, onMove, canMo
   const variant: CardSize = large ? "lg" : size
   const color = accountColor(account, index)
   const Icon = ACCOUNT_ICONS[account.type] ?? Wallet
+  const provider = providerFor(account)
   const isCredit = account.type === "credit_card"
   const setAside = isSetAside(account)
   const owed = isCredit ? Math.max(0, -account.balance_minor) : 0
@@ -115,11 +137,15 @@ export function AccountCard({ account, index = 0, actions, jiggle, onMove, canMo
         variant === "sm" ? "-right-4 -bottom-8 size-20" : variant === "md" ? "-right-3 -bottom-10 size-24" : "-right-4 -bottom-12 size-36",
         setAside ? "border-foreground/[0.06]" : darkText ? "border-black/[0.08]" : "border-white/[0.14]")} />
       <div className={cn("relative flex min-w-0 items-center gap-2.5", actions && "pr-8")}>
-        <span className={cn("flex shrink-0 items-center justify-center rounded-full", variant === "lg" ? "size-10" : "size-8",
-          setAside ? "text-white" : darkText ? "bg-black/10" : "bg-white/18")}
-          style={setAside ? { backgroundColor: color } : undefined}>
-          <Icon className={variant === "lg" ? "size-5" : "size-4"} strokeWidth={1.9} />
-        </span>
+        {provider?.logo ? (
+          <ProviderMark provider={provider} className={variant === "lg" ? "size-10" : "size-8 p-1"} />
+        ) : (
+          <span className={cn("flex shrink-0 items-center justify-center rounded-full", variant === "lg" ? "size-10" : "size-8",
+            setAside ? "text-white" : darkText ? "bg-black/10" : "bg-white/18")}
+            style={setAside ? { backgroundColor: color } : undefined}>
+            <Icon className={variant === "lg" ? "size-5" : "size-4"} strokeWidth={1.9} />
+          </span>
+        )}
         <div className="min-w-0">
           <p className={cn("truncate font-semibold tracking-[-0.01em]", variant === "lg" ? "text-lg" : "text-[0.9375rem]")}>{account.name}</p>
           <p className={cn("truncate text-xs", soft)}>{subtitle}{account.currency !== "PHP" && `, ${account.currency}`}</p>

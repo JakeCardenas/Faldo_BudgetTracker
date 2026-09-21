@@ -4,63 +4,23 @@ import Link from "next/link"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { parseISO } from "date-fns"
-import { ArrowRight, Loader2, Plus, Search } from "lucide-react"
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
-import { Mascot } from "@/components/brand/mascot"
-import { Scene } from "@/components/brand/scene"
+import { LogoMark } from "@/components/brand/logo"
 import { AccountDialog } from "@/components/finance/account-dialog"
-import { AnimatedMoney, Money } from "@/components/finance/money"
-import { ProgressBar } from "@/components/finance/progress-bar"
+import { CategoryIcon } from "@/components/finance/category-icon"
+import { Money } from "@/components/finance/money"
 import { TransactionRow } from "@/components/finance/transaction-row"
 import { Section } from "@/components/ios/panel"
 import { useAppActions } from "@/components/layout/app-context"
-import { Notifications } from "@/components/layout/notifications"
 import { AccountCard } from "@/components/wallet/account-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
-import { formatDate, formatMoney, greeting } from "@/lib/format"
-import { GoalIcon } from "@/lib/goal-icons"
-import { goalStatusLine } from "@/lib/goals"
-import { invalidateFinancialData, useMe, usePulse } from "@/lib/queries"
+import { formatDate, formatMoney } from "@/lib/format"
+import { maskAmounts } from "@/lib/privacy"
+import { invalidateFinancialData, usePulse } from "@/lib/queries"
 import type { AttentionItem, Dashboard, UpcomingItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
-
-export function HomeHeader() {
-  const { data: me } = useMe()
-  const { openSearch } = useAppActions()
-  const name = me?.display_name?.split(" ")[0]
-  return (
-    <header className="flex items-start justify-between gap-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:pt-9">
-      <div className="min-w-0">
-        <p className="text-[0.8125rem] text-muted-foreground">{formatDate(new Date().toISOString(), "EEEE, MMMM d")}</p>
-        <h1 className="mt-0.5 truncate text-[1.625rem] leading-tight font-semibold tracking-[-0.03em] lg:text-[2rem]">{greeting()}{name ? `, ${name}` : ""}</h1>
-      </div>
-      <div className="-mr-1.5 flex shrink-0 items-center lg:hidden">
-        <button type="button" onClick={openSearch} aria-label="Search"
-          className="pressable flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">
-          <Search className="size-[1.2rem]" strokeWidth={1.9} />
-        </button>
-        <Notifications />
-      </div>
-    </header>
-  )
-}
-
-/** Money you have, across every account, after what's owed on cards. */
-export function TotalBalance({ data }: { data: Dashboard }) {
-  const accounts = data.accounts.filter((a) => !a.archived)
-  const onCards = accounts.filter((a) => a.balance_minor < 0).reduce((s, a) => s - a.balance_minor, 0)
-  return (
-    <section aria-labelledby="balance-title" className="px-1">
-      <h2 id="balance-title" className="text-[0.9375rem] text-muted-foreground">Total balance</h2>
-      <AnimatedMoney minor={data.overview.total_balance_minor} className="display-xl mt-1.5 block lg:text-[3.25rem]" />
-      <p className="mt-2 text-sm text-muted-foreground">
-        Across {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
-        {onCards > 0 && <>, after <span className="tabular">{formatMoney(onCards)}</span> owed on cards</>}
-      </p>
-    </section>
-  )
-}
 
 export function AccountsRail({ data }: { data: Dashboard }) {
   const [adding, setAdding] = useState(false)
@@ -100,37 +60,80 @@ function noteFrom(item: AttentionItem): Note | null {
   }
 }
 
-/** One useful thing to know. An alert when something needs a decision, otherwise Faldo's short read of the month. */
-export function InsightNote({ data }: { data: Dashboard }) {
-  const { data: me } = useMe()
+/** One useful thing to know: an alert when something needs a decision, otherwise Faldo's short read of the month. */
+export function useFaldoNote(data: Dashboard) {
   const { data: pulse, isLoading } = usePulse()
   const alert = data.attention.map(noteFrom).find(Boolean) ?? null
   const note: Note | null = alert ?? (pulse ? { body: pulse.text, href: "/assistant", cta: "Ask Faldo", tone: "calm" } : null)
-  const mood = alert?.tone === "critical" ? "worried" : alert ? "worried" : "happy"
+  return { note, isLoading }
+}
+
+/** Faldo's note on phones, where the panda is up in the balance area. */
+export function FaldoNote({ data, className }: { data: Dashboard; className?: string }) {
+  const { note, isLoading } = useFaldoNote(data)
   return (
-    <section aria-label="Faldo's note"
-      className={cn("flex gap-3.5 rounded-2xl p-4",
-        note?.tone === "critical" ? "bg-danger-soft" : note?.tone === "warn" ? "bg-warning-soft" : "bg-secondary/70 dark:bg-secondary/60")}>
-      <span className="relative flex size-11 shrink-0 items-end justify-center overflow-hidden rounded-full bg-card/70" aria-hidden>
-        <Scene id={me?.settings.home_background ?? "meadow"} className="absolute inset-0" />
-        <Mascot mood={mood} outfit={me?.settings.mascot_outfit} coin={false} className="relative -mb-1 w-10" />
-      </span>
+    <section aria-label="Faldo's note" className={cn("flex gap-3 rounded-2xl p-4",
+      note?.tone === "critical" ? "bg-danger-soft" : note?.tone === "warn" ? "bg-warning-soft" : "bg-secondary/70 dark:bg-secondary/60", className)}>
+      <LogoMark className="size-10 shrink-0 drop-shadow-none" />
       <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-primary">Faldo</p>
         {isLoading && !note ? (
-          <div className="space-y-2 pt-1"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-2/3" /></div>
+          <div className="space-y-2 pt-1.5"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-2/3" /></div>
         ) : note ? (
           <>
-            {note.title && <p className="text-[0.9375rem] font-semibold tracking-[-0.01em]">{note.title}</p>}
-            <p className={cn("text-[0.9375rem] leading-snug", note.title ? "mt-0.5 text-foreground/80" : "line-clamp-4")}>{note.body}</p>
+            {note.title && <p className="mt-0.5 text-[0.9375rem] font-semibold tracking-[-0.01em]">{maskAmounts(note.title)}</p>}
+            <p className={cn("mt-0.5 text-[0.9375rem] leading-snug", note.title ? "text-foreground/80" : "line-clamp-4")}>{maskAmounts(note.body)}</p>
             <Link href={note.href} className="mt-2 inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
               {note.cta} <ArrowRight className="size-3.5" />
             </Link>
           </>
         ) : (
-          <p className="text-[0.9375rem] text-foreground/80">You&apos;re all set. Log what you spend and Faldo keeps an eye on the rest.</p>
+          <p className="mt-0.5 text-[0.9375rem] text-foreground/80">You&apos;re all set. Log what you spend and I&apos;ll keep an eye on the rest.</p>
         )}
       </div>
     </section>
+  )
+}
+
+/** Where this month's money went, as a short ranked list rather than a chart. */
+export function SpendingSummary({ data, className }: { data: Dashboard; className?: string }) {
+  const rows = data.spending_by_category.slice(0, 4)
+  const top = rows[0]?.amount_minor ?? 1
+  const change = data.overview.expense_change_pct
+  return (
+    <Section title="Spending" description={`${formatDate(data.period.start, "MMMM")} so far`} href="/reports" linkLabel="Details" className={className}>
+      <div className="card-surface p-4 sm:p-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <Money minor={data.overview.expense_minor} className="text-[1.625rem] leading-none font-semibold tracking-[-0.03em]" />
+          {change !== null && change !== undefined && Number.isFinite(change) && change !== 0 && (
+            <span className={cn("tabular inline-flex items-center gap-0.5 text-[0.8125rem] font-medium", change > 0 ? "text-warning" : "text-income")}>
+              {change > 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
+              {change >= 100 ? "More than double last month" : `${Math.abs(Math.round(change))}% ${change > 0 ? "more" : "less"} than last month`}
+            </span>
+          )}
+        </div>
+        {rows.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">No spending logged this month yet.</p>
+        ) : (
+          <ul className="mt-4 space-y-3.5">
+            {rows.map((r) => (
+              <li key={r.label}>
+                <Link href={r.category_id ? `/transactions?category=${r.category_id}` : "/transactions"} className="group flex items-center gap-3">
+                  <CategoryIcon icon={r.icon} color={r.color} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-[0.9375rem] group-hover:underline">{r.label}</span>
+                      <Money minor={r.amount_minor} className="text-[0.9375rem] font-semibold" />
+                    </span>
+                    <span className="mt-1.5 block h-1.5 rounded-full" style={{ width: `${Math.max(4, (r.amount_minor / top) * 100)}%`, backgroundColor: r.color }} aria-hidden />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Section>
   )
 }
 
@@ -250,28 +253,6 @@ export function RecentActivity({ data }: { data: Dashboard }) {
           {items.map((t) => <TransactionRow key={t.id} transaction={t} showDate onClick={() => openTransaction(t.id)} />)}
         </div>
       )}
-    </Section>
-  )
-}
-
-/** The goal closest to done, if there is one. */
-export function GoalGlance({ data }: { data: Dashboard }) {
-  const goal = [...data.goals].filter((g) => g.pct_complete < 100).sort((a, b) => b.pct_complete - a.pct_complete)[0]
-  if (!goal) return null
-  return (
-    <Section title="Saving for" href="/goals" linkLabel={data.goals.length > 1 ? `All ${data.goals.length}` : "Goals"}>
-      <Link href="/goals" className="card-surface pressable block p-4 transition-colors hover:bg-accent/40">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground"><GoalIcon value={goal.emoji} className="size-[1.05rem]" /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[0.9375rem] font-medium">{goal.name}</span>
-            <span className="tabular block text-[0.8125rem] text-muted-foreground">{formatMoney(goal.saved_minor)} of {formatMoney(goal.target_minor)}</span>
-          </span>
-          <span className="tabular text-[0.9375rem] font-semibold">{Math.round(goal.pct_complete)}%</span>
-        </div>
-        <ProgressBar className="mt-3" value={goal.pct_complete} status={goal.on_track === false ? "behind" : "on_track"} label={`${goal.name} progress`} />
-        <p className={cn("mt-2 text-[0.8125rem]", goal.on_track === false ? "text-warning" : "text-muted-foreground")}>{goalStatusLine(goal)}</p>
-      </Link>
     </Section>
   )
 }

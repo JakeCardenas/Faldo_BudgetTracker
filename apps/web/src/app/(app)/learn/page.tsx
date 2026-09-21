@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { ChevronRight, CircleCheck } from "lucide-react"
-import { Mascot } from "@/components/brand/mascot"
+import { Panda } from "@/components/brand/panda"
 import { ProgressBar } from "@/components/finance/progress-bar"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { LESSONS } from "@/lib/lessons"
@@ -19,13 +19,11 @@ export default function LearnPage() {
 
   return (
     <div className="space-y-6">
-      <LargeTitle title="Learn" subtitle="Short lessons on everyday money in the Philippines" back={{ href: "/", label: "Home" }} />
+      <LargeTitle title="Learn" subtitle="Short lessons on everyday money in the Philippines" back={{ href: "/you", label: "You" }} />
 
       <section className="card-surface overflow-hidden">
         <div className="flex items-center gap-4 p-4 sm:p-5">
-          <span className="flex size-16 shrink-0 items-end justify-center overflow-hidden rounded-xl bg-secondary" aria-hidden>
-            <Mascot outfit="grad_cap" mood="proud" coin={false} className="-mb-1 w-15" />
-          </span>
+          <Panda pose="boba" sizes="72px" className="w-16 shrink-0" />
           <div className="min-w-0 flex-1">
             <h2 className="section-title">Faldo Coach</h2>
             <p className="tabular text-[0.8125rem] text-muted-foreground">{completed} of {LESSONS.length} lessons completed</p>

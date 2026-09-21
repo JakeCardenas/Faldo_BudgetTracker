@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useTheme } from "next-themes"
-import { ChevronRight, Download, Flame, Monitor, Moon, Pencil, Plus, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
-import { Mascot } from "@/components/brand/mascot"
-import { Scene } from "@/components/brand/scene"
+import { ChevronRight, Download, EyeOff, Flame, Monitor, Moon, Pencil, Plus, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
+import { environmentStyle } from "@/components/brand/environment"
+import { Panda } from "@/components/brand/panda"
 import { Segmented } from "@/components/ios/segmented"
-import { BACKGROUND_INFO, OUTFIT_INFO } from "@/lib/catalog"
+import { BACKGROUND_INFO, OUTFIT_INFO, poseFor } from "@/lib/catalog"
+import { setAmountsHidden, useAmountsHidden } from "@/lib/privacy"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
@@ -35,8 +36,9 @@ function Appearance({ me }: { me: Me }) {
   const update = useUpdateSettings()
   const { setTheme } = useTheme()
   const [sounds, setSounds] = useState(soundsEnabled)
-  const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Classic"
-  const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Leafy green"
+  const hideAmounts = useAmountsHidden()
+  const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Bamboo buddy"
+  const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Bamboo grove"
   return (
     <SectionCard title="Appearance and companion" description="Make Faldo feel like yours.">
       <div className="space-y-5">
@@ -52,6 +54,14 @@ function Appearance({ me }: { me: Me }) {
           ]} />
         </div>
         <label className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3 shadow-[inset_0_0_0_1px_var(--border)]">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><EyeOff className="size-4" strokeWidth={1.75} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.9375rem]">Hide amounts</span>
+            <span className="block text-xs text-muted-foreground">Show balances and totals as ₱•••• on this device. Tap the eye on Home to switch.</span>
+          </span>
+          <Switch checked={hideAmounts} onCheckedChange={setAmountsHidden} aria-label="Hide amounts" />
+        </label>
+        <label className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3 shadow-[inset_0_0_0_1px_var(--border)]">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><Volume2 className="size-4" strokeWidth={1.75} /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-[0.9375rem]">Sounds</span>
@@ -61,13 +71,13 @@ function Appearance({ me }: { me: Me }) {
         </label>
         <div className="ios-group divide-y divide-border/60">
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-            <span className="flex size-8 shrink-0 items-end justify-center overflow-hidden rounded-full bg-secondary"><Mascot outfit={me.settings.mascot_outfit} coin={false} className="-mb-0.5 w-8" /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Mascot outfit</span><span className="block text-xs text-muted-foreground">{outfit}</span></span>
+            <span className="flex size-9 shrink-0 items-center justify-center"><Panda pose={poseFor(me.settings.mascot_outfit)} sizes="40px" className="max-h-9 w-auto max-w-9" /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Faldo&apos;s pose</span><span className="block text-xs text-muted-foreground">{outfit}</span></span>
             <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
-            <span className="size-8 shrink-0 overflow-hidden rounded-full"><Scene id={me.settings.home_background} /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Home background</span><span className="block text-xs text-muted-foreground">{background}</span></span>
+            <span className="size-8 shrink-0 overflow-hidden rounded-full" style={environmentStyle(me.settings.home_background)} />
+            <span className="min-w-0 flex-1"><span className="block text-[0.9375rem]">Home environment</span><span className="block text-xs text-muted-foreground">{background}</span></span>
             <ChevronRight className="size-4 text-muted-foreground/50" />
           </Link>
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
