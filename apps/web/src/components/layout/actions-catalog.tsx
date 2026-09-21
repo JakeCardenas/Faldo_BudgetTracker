@@ -1,7 +1,7 @@
 import {
   ArrowLeftRight, BarChart3, BookOpen, CalendarClock, Calculator, CircleDollarSign, CreditCard, Flag, Flame, HandCoins,
   Landmark, Lightbulb, LineChart, MessageCircle, Minus, NotebookPen, PiggyBank, Plus, ReceiptText, ScanLine, Scale, Settings,
-  Split, Wallet, Wrench, type LucideIcon,
+  FileUp, Split, Wallet, Wrench, type LucideIcon,
 } from "lucide-react"
 
 export type QuickActionKind = "expense" | "income" | "transfer" | "receipt"
@@ -22,6 +22,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
   { id: "transfer", label: "Transfer", icon: ArrowLeftRight, add: "transfer", group: "Log" },
   { id: "scan_receipt", label: "Scan receipt", icon: ScanLine, add: "receipt", group: "Log" },
   { id: "talk", label: "Talk to Faldo", icon: MessageCircle, href: "/assistant", group: "Log" },
+  { id: "import", label: "Import statement", icon: FileUp, href: "/import", group: "Log" },
   { id: "check", label: "Faldo Check", icon: Scale, check: true, group: "Plan" },
   { id: "budgets", label: "Budgets", icon: PiggyBank, href: "/budgets", group: "Plan" },
   { id: "goals", label: "Goals", icon: Flag, href: "/goals", group: "Plan" },

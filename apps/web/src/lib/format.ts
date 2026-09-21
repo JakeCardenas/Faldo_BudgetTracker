@@ -94,6 +94,7 @@ export const FREQUENCY_LABELS: Record<string, string> = {
   monthly: "Monthly",
   quarterly: "Quarterly",
   yearly: "Yearly",
+  once: "One time",
 }
 
 export function greeting(date = new Date()) {

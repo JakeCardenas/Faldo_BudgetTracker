@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 import { ChevronDown, Minus, Scale } from "lucide-react"
 import { CalculationCard } from "@/components/finance/calculation-card"
@@ -51,9 +52,20 @@ export function SafeToSpendHero({ sts, className }: { sts: SafeToSpend; classNam
         </div>
         <ProgressBar className="mt-2" value={weekUsed} status={weekUsed >= 100 ? "over" : weekUsed >= 85 ? "near_limit" : "on_track"}
           label="This week's spending used" />
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          {formatDate(week.start, "EEE MMM d")} to {formatDate(week.end, "EEE MMM d")}
-        </p>
+        {week.plan ? (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            <Link href="/plan/money" className="hover:text-foreground">
+              Joy Money <span className="tabular font-medium text-foreground">{formatMoney(week.plan.joy_left_minor)}</span> · Needs{" "}
+              <span className="tabular font-medium text-foreground">{formatMoney(week.plan.needs_left_minor)}</span>
+              {week.plan.limited_by === "money" ? " · capped by what you have" : ""}
+            </Link>
+            <span> · {formatDate(week.start, "EEE")} to {formatDate(week.end, "EEE")}</span>
+          </p>
+        ) : (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {formatDate(week.start, "EEE MMM d")} to {formatDate(week.end, "EEE MMM d")}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3 sm:px-6">

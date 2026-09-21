@@ -74,6 +74,11 @@ export function CheckResultView({ result }: { result: CheckResult }) {
         <BeforeAfter label="Safe to spend" hint={until} before={result.safe_before_minor} after={result.raw_after_minor} />
         <BeforeAfter label="Left this week" before={result.week_left_before_minor} after={weekAfter}
           hint={weekAfter < 0 ? `${formatMoney(-weekAfter)} past this week's share` : undefined} />
+        {result.plan_impact && (
+          <BeforeAfter label={result.plan_impact.bucket === "joy" ? "Joy Money this week" : "Needs this week"}
+            before={result.plan_impact.left_before_minor} after={result.plan_impact.left_after_minor}
+            hint={result.plan_impact.left_after_minor < 0 ? "Past your money plan for this week" : "From your money plan"} />
+        )}
         {result.budget_impact && (
           <BeforeAfter label={`${result.budget_impact.category} budget`} before={result.budget_impact.remaining_before_minor}
             after={result.budget_impact.remaining_after_minor} hint={result.budget_impact.would_exceed ? "Would go over budget" : "Left this month"} />

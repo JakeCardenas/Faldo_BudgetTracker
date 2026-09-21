@@ -208,7 +208,10 @@ export default function ForecastPage() {
                     <li key={i} className="flex items-center gap-2 text-sm">
                       <CalendarDays className="size-3.5 text-muted-foreground" />
                       <span className="w-14 text-xs text-muted-foreground">{formatDate(e.date, "MMM d")}</span>
-                      <span className="min-w-0 flex-1 truncate">{e.label}</span>
+                      <span className="min-w-0 flex-1 truncate">{e.label}
+                        {e.kind === "expected_income" && <span className="ml-1.5 text-xs text-muted-foreground">expected, may not arrive</span>}
+                        {e.kind === "planned" && <span className="ml-1.5 text-xs text-muted-foreground">planned purchase</span>}
+                      </span>
                       <Money minor={e.amount_minor} signed className={cn("text-sm", e.amount_minor > 0 && "text-income")} />
                     </li>
                   ))}

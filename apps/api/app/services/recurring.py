@@ -9,7 +9,7 @@ from app.core.errors import AppError
 from app.engine.planning import advance_due_date, monthly_equivalent, occurrences_between
 from app.jobs.queue import enqueue_index, enqueue_unindex
 from app.models import Account, Category, Merchant, RecurringPayment
-from app.models.enums import RecurringKind, TransactionSource, TransactionType
+from app.models.enums import Frequency, RecurringKind, TransactionSource, TransactionType
 from app.schemas.ledger import TransactionIn
 from app.schemas.planning import MarkPaidIn, RecurringIn, RecurringOut, RecurringUpdate
 from app.services.common import apply_updates, get_owned
@@ -106,9 +106,12 @@ async def mark_paid(db: AsyncSession, user_id: uuid.UUID, rid: uuid.UUID, data: 
         ),
         TransactionSource.recurring,
     )
-    item.next_due_on = advance_due_date(item.next_due_on, item.frequency.value, item.interval_count, item.anchor_day)
-    if item.end_on and item.next_due_on > item.end_on:
-        item.is_active = False
+    if item.frequency == Frequency.once:
+        item.is_active = False  # it arrived (or was paid); a one-time item doesn't come back
+    else:
+        item.next_due_on = advance_due_date(item.next_due_on, item.frequency.value, item.interval_count, item.anchor_day)
+        if item.end_on and item.next_due_on > item.end_on:
+            item.is_active = False
     await db.flush()
     await enqueue_index(db, user_id, "recurring_payment", item.id)
     return txn
@@ -116,7 +119,10 @@ async def mark_paid(db: AsyncSession, user_id: uuid.UUID, rid: uuid.UUID, data: 
 
 async def skip_occurrence(db: AsyncSession, user_id: uuid.UUID, rid: uuid.UUID) -> RecurringPayment:
     item = await get_owned(db, RecurringPayment, rid, user_id, "Recurring payment")
-    item.next_due_on = advance_due_date(item.next_due_on, item.frequency.value, item.interval_count, item.anchor_day)
+    if item.frequency == Frequency.once:
+        item.is_active = False
+    else:
+        item.next_due_on = advance_due_date(item.next_due_on, item.frequency.value, item.interval_count, item.anchor_day)
     await db.flush()
     return item
 
@@ -142,6 +148,7 @@ async def upcoming(db: AsyncSession, user_id: uuid.UUID, today: date, end: date,
                 "days_until_due": (due - today).days,
                 "is_overdue": due < today,
                 "is_income": r.kind == RecurringKind.income,
+                "is_one_time": r.frequency == Frequency.once,
                 "category_id": str(r.category_id) if r.category_id else None,
                 "account_id": str(r.account_id) if r.account_id else None,
             })

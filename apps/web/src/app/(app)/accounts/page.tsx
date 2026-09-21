@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { format, parseISO } from "date-fns"
-import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, LayoutGrid, List, Lightbulb, Plus, Wallet } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, ChevronDown, ChevronRight, FileUp, LayoutGrid, List, Lightbulb, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { EmptyState } from "@/components/finance/empty-state"
@@ -91,6 +92,7 @@ function InsightRow({ assets }: { assets: number }) {
 }
 
 export default function AccountsPage() {
+  const router = useRouter()
   const qc = useQueryClient()
   const { openAddTransaction } = useAppActions()
   const { data: accounts, isLoading } = useAccounts()
@@ -167,7 +169,10 @@ export default function AccountsPage() {
       <LargeTitle title="Wallet" subtitle="Your accounts and balances"
         actions={arranging
           ? <Button size="sm" onClick={finishArranging}>Done</Button>
-          : <HeaderButton onClick={() => setDialog({ open: true })}><Plus /> Add account</HeaderButton>} />
+          : <div className="flex gap-2">
+              <HeaderButton onClick={() => router.push("/import")}><FileUp /> Import</HeaderButton>
+              <HeaderButton onClick={() => setDialog({ open: true })}><Plus /> Add account</HeaderButton>
+            </div>} />
 
       {isLoading ? (
         <div className="space-y-4"><Skeleton className="h-52 rounded-xl" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-34 rounded-xl" />)}</div></div>

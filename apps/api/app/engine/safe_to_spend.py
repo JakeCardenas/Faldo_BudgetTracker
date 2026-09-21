@@ -5,6 +5,7 @@ Only received money counts. Expected income is never added; it only decides how 
 """
 from dataclasses import dataclass
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import Any, Literal
 
 from app.engine.forecast import KnownEvent
@@ -33,6 +34,17 @@ def week_window(today: date, cycle_last_day: date, last_income_on: date | None) 
 
 
 @dataclass(frozen=True)
+class PlanWeek:
+    """What the Money Plan sets aside per pay period for needs and Joy Money, and what was spent this week."""
+
+    joy_per_period_minor: int
+    needs_per_period_minor: int
+    period_days: Decimal
+    joy_spent_minor: int
+    needs_spent_minor: int
+
+
+@dataclass(frozen=True)
 class SafeToSpendInputs:
     today: date
     currency: str
@@ -45,6 +57,7 @@ class SafeToSpendInputs:
     week_start: date
     week_end: date
     spent_this_week_minor: int
+    plan: PlanWeek | None = None
 
 
 @dataclass
@@ -134,8 +147,23 @@ def compute_safe_to_spend(inputs: SafeToSpendInputs, cycle_last_day: date, perio
     base = max(0, raw + spent)
     allowance = _floor_to_unit(base * week_days // cycle_days_from_week_start, inputs.currency)
     week_left = max(0, allowance - spent)
-    week = {"start": week_start.isoformat(), "end": week_end.isoformat(), "allowance_minor": allowance,
-            "spent_minor": spent, "left_minor": week_left, "days_left": (week_end - today).days + 1}
+    week: dict[str, Any] = {"start": week_start.isoformat(), "end": week_end.isoformat(), "allowance_minor": allowance,
+                            "spent_minor": spent, "left_minor": week_left, "days_left": (week_end - today).days + 1,
+                            "plan": None}
+    if inputs.plan is not None:
+        # The Money Plan can only make the week stricter: it never lets you spend money you don't have.
+        plan = inputs.plan
+        joy = _floor_to_unit(int(Decimal(plan.joy_per_period_minor) * week_days / plan.period_days), inputs.currency)
+        needs = _floor_to_unit(int(Decimal(plan.needs_per_period_minor) * week_days / plan.period_days), inputs.currency)
+        joy_left, needs_left = max(0, joy - plan.joy_spent_minor), max(0, needs - plan.needs_spent_minor)
+        week["plan"] = {"joy_allowance_minor": joy, "joy_spent_minor": plan.joy_spent_minor, "joy_left_minor": joy_left,
+                        "needs_allowance_minor": needs, "needs_spent_minor": plan.needs_spent_minor,
+                        "needs_left_minor": needs_left, "limited_by": "plan" if joy_left + needs_left < week_left else "money"}
+        if joy_left + needs_left < week_left:
+            # The plan is the tighter limit, so the bar shows the plan's week.
+            week.update(allowance_minor=joy + needs, spent_minor=plan.joy_spent_minor + plan.needs_spent_minor)
+        week_left = min(week_left, joy_left + needs_left)
+        week["left_minor"] = week_left
 
     status: Status = "short" if raw < 0 else ("tight" if week_left == 0 else "good")
     note = ("Only money you've already received counts. Bills, savings and money you owe due "

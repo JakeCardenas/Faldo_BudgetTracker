@@ -33,23 +33,25 @@ Faldo is designed like a native iOS app on phones (large collapsing titles, a fl
 - **Home:** leads with **Safe to Spend** (the amount, what's left for this week, a per-day pace and a "Why this number?" breakdown), then only what needs attention (overdue bills, income that hasn't been recorded, money owed that's due, budgets at risk, a shortfall), upcoming commitments, recent activity, your money (spendable, net worth, money owed, next income), one insight, goals and shortcuts.
 - **Logging sheet:** a calculator keypad (+ − × ÷ %), expense / income / transfer, notes, recent-expense templates, category chips that show budget progress, date shortcuts, account picker, keyboard support on desktop, and feedback with Undo after saving. "Type it out" and receipt scanning live in the same sheet.
 - **Wallet:** net worth / assets / liabilities, insight and daily balance cards, accounts grouped by type with totals, colorful account cards with quick actions, press-and-hold to rearrange, grid and list views, and ready-made templates for common PH banks and e-wallets.
-- **Plan:** Faldo Check, planned purchases, budgets, goals, bills and subscriptions, installments and loans (with payments left), money owed, income schedule and the cashflow forecast.
+- **Plan:** Money Plan, Faldo Check, planned purchases, budgets, goals, bills and subscriptions, installments and loans (with payments left), money owed, income schedule and the cashflow forecast.
 - **Faldo Check:** enter a price (and optionally what it is and its category) from Home, Plan or a shortcut. Faldo shows Safe to Spend before and after, this week's share before and after, the per-day pace left, budget impact, what's already set aside before your next income, and, when it goes past Safe to Spend, an estimated goal delay. It is pure arithmetic on your data; the decision stays yours. Save it for later or log it if you buy it.
-- **Planned purchases:** things you intend to buy (price, link, category, priority, notes, target date) re-checked against Safe to Spend every time you look: fits now, fits but more than this week's share, or an estimated date based on your usual monthly surplus. An optional 24-hour pause is there if you want it. "I bought it" records the expense.
+- **Money Plan:** gives each payday's income a job: bills and commitments (from your bills, subscriptions and loans), needs, Joy Money (wants), savings and a buffer. Needs and wants follow your essential / non-essential categories, which you can switch from the same page. 60/20/20 is an optional starting point (20% savings, 20% Joy Money, needs are whatever of the 60% your bills leave). A live bar shows what's left unassigned, and warnings appear when bills are more than your income, you've assigned more than you earn, or savings are below what your goals need. Joy Money feeds the weekly figure on Home: "left for this week" is the smaller of Safe to Spend's weekly share and what's left of this week's Joy Money and needs. Faldo Check shows which bucket a purchase comes out of.
+- **Planned purchases:** things you intend to buy (price, link, category, priority, notes, "want it by" date) re-checked against Safe to Spend every time you look: fits now, fits but more than this week's share, or an estimated date based on your usual monthly surplus. With a date, the purchase also appears on the cashflow forecast. An optional 24-hour pause is there if you want it. "I bought it" records the expense.
 - **Streaks & rewards:** daily logging streak with monthly restores, streak and milestone badges, and unlockable mascot outfits and home backgrounds.
 - **Learn:** ten short money lessons written for the Philippines, each with takeaways and a quick check; progress is saved to your account.
-- **Tools:** split a bill (creates "owed to you" entries), loan and installment calculator with true yearly cost and one-tap tracking, PH income tax calculator, currency converter, emergency fund planner, 50/30/20 planner against real spending, and quick notes.
+- **Tools:** split a bill (creates "owed to you" entries), loan and installment calculator with true yearly cost and one-tap tracking, PH income tax calculator, currency converter, emergency fund planner, a shortcut to the Money Plan, and quick notes.
 - **Talk to Faldo:** chat that logs plain-language entries straight away ("Paid 70 on the bus from Cash") with a Cancel button, answers questions with tools and calculations, and supports voice dictation where the browser allows it.
 - **Auth:** email/password (argon2id), server-side sessions in an httpOnly SameSite=Lax cookie, CSRF header + Origin checks, login throttling, password reset by email, password change, and active-session management.
 - **Transactions:** full CRUD, income/expense/transfer, merchant, category + subcategory, account, payment method, notes, tags, **item-level purchases**, search (merchant, items, notes, tags, categories), filters (type, account, category, tag, dates), sorting, infinite loading, detail sheet, and a queue for receipts awaiting review.
+- **Statement import:** upload a CSV exported from a bank or e-wallet into one of your accounts. Faldo finds the header row, the date, description and amount columns (or debit and credit, or a DR/CR column), the date order and the sign convention, then shows a review list before anything is saved. Rows already imported are skipped, rows that look like something you already logged are left unticked as possible duplicates, cash-ins and transfers that name another of your accounts become transfers instead of income or spending, and categories come from your learned merchants and the built-in rules. Each import can be undone as a whole from Recent imports. PDF statements need to be saved as CSV first.
 - **Natural-language entry:** "Bought Nike shoes for ₱4,500 yesterday", Taglish ("nag-grab 180 kanina"), multiple transactions per message. Drafts show a confirmation card; unclear accounts, categories, dates and possible duplicates are highlighted with one-tap fixes. Merchant categories are learned from history. When the built-in rules already understand every entry (amount, category, date, accounts), no paid AI call is made.
 - **Receipt scanning:** upload/camera → EXIF-stripped re-encoded image → vision extraction (merchant, date, items, total) → validation (totals, dates, currency) → review form → transaction → RAG indexing. Without a vision provider the upload is stored and the UI honestly asks for manual entry.
 - **Accounts:** cash, bank, e-wallet, credit card, savings, custom; computed balances, balance history, archive.
 - **Budgets:** monthly category budgets, pacing vs month elapsed, projection, warnings, previous month and 3-month averages, 6-month history, copy previous month, "Explain with AI".
-- **Goals:** target, current, target date, planned monthly contribution, required monthly savings, estimated completion; linked savings accounts use real balances.
-- **Bills & recurring:** subscriptions, bills, rent, loans, income; mark paid (creates a transaction), skip, pause.
+- **Goals:** target, current, target date, planned monthly contribution, required monthly savings, estimated completion; linked savings accounts use real balances. A starting amount counts toward progress but not as money saved this month, so it doesn't make it look like you're ahead on this month's savings.
+- **Bills & recurring:** subscriptions, bills, rent, loans, income; mark paid (creates a transaction), skip, pause. **One-time expected income** (a client payment, a bonus) is listed separately as expected, not received: it never counts toward Safe to Spend or sets its window, appears on the forecast as "may not arrive", and "Received" records it and closes it.
 - **Money owed:** I owe / owed to me, partial repayments, due dates, status. When money actually moves (you lend from GCash, a friend pays you back into BPI) the movement is recorded against that account as its own type, so balances stay right without counting as income or spending. **Split a purchase** from its transaction: your share stays as spending and the other person's share becomes money owed, linked to the original purchase (deleting the record undoes the split). Paying back your share of something can optionally count as spending in a category.
-- **Forecast:** Monte Carlo projection from scheduled events and weekday spending patterns, P10–P90 range, lowest point, safe-to-spend breakdown, assumptions.
+- **Forecast:** Monte Carlo projection from scheduled events (including one-time expected income and planned purchases with a date) and weekday spending patterns, P10–P90 range, lowest point, safe-to-spend breakdown, assumptions.
 - **What-if simulator:** one-off or repeating changes (every day, week or month): extra spending, extra income, earning less, saving more or less. Horizons from month end to 12 months, calculated breakdown with how many times each change happens, risk level with reasons, budget impact, savings at risk, goal delay, baseline vs scenario chart, and presets such as "₱200 a day on food" or "Save ₱2,000 every month".
 - **Insights:** budget exceeded/at risk, category spending spikes, overall spending changes, unusual transactions (robust z-score), bill reminders, cash-flow warnings, goal progress, savings rate. Every insight stores the facts it came from.
 - **Statistics:** spent / income / net flow / transaction tiles, expense distribution, net worth trend over 30 days to a year, cashflow forecast summary, printable income statement, monthly overview, income vs expenses (12 months), category breakdown and biggest changes, daily spending, top merchants, top purchase items, AI summary written from the page's figures, and a transparent financial health score.
@@ -71,9 +73,9 @@ Safe to Spend = spendable balance (cash, e-wallets, banks marked spendable)
               − safety buffer
 ```
 
-- **Expected income is never added.** It only sets how long the money has to last: the window ends the day before the next scheduled repeating income. Income that's overdue but not yet recorded isn't money yet.
+- **Expected income is never added.** It only sets how long the money has to last: the window ends the day before the next scheduled repeating income. Income that's overdue but not yet recorded isn't money yet. One-time expected income never sets the window.
 - **No regular income** (students between allowances, freelancers, people between jobs): the window is a rolling 30 days.
-- **This week:** the week runs Monday to Sunday, or starts again on the day money comes in, and is cut at the end of the window. Its share is the money at the start of the week spread across the days left, so spending this week lowers "left for this week" one for one.
+- **This week:** the week runs Monday to Sunday, or starts again on the day money comes in, and is cut at the end of the window. Its share is the money at the start of the week spread across the days left, so spending this week lowers "left for this week" one for one. With a Money Plan, "left for this week" is capped by what's left of this week's Joy Money and needs, and the card says which limit applies.
 - The breakdown lists every bill, debt and savings item behind the number, so you can see why it changed.
 
 ## Database
@@ -86,10 +88,12 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 | `accounts` | manual accounts with opening balance and a user-defined sort order; balances are computed from transactions |
 | `categories` | expense/income categories with subcategories (`parent_id`) |
 | `merchants` | normalized merchants with learned default category |
-| `transactions`, `transaction_items`, `tags`, `transaction_tags` | ledger with item-level detail |
+| `transactions`, `transaction_items`, `tags`, `transaction_tags` | ledger with item-level detail; imported rows keep `external_ref` (unique per account) and `import_batch_id` |
+| `import_batches` | one per statement import, for the history and Undo (RLS protected) |
 | `budgets`, `budget_categories` | monthly budgets and category limits |
-| `savings_goals`, `goal_contributions` | goals and contributions |
-| `recurring_payments` | bills, subscriptions and expected income (with an anchor day so month-end dates don't drift) |
+| `savings_goals`, `goal_contributions` | goals and contributions (`is_initial` marks the starting amount) |
+| `money_plans` | one per user: income per period, savings, Joy Money, buffer, optional fixed needs and the template used (RLS protected) |
+| `recurring_payments` | bills, subscriptions and expected income, repeating or one-time (with an anchor day so month-end dates don't drift) |
 | `debts`, `debt_payments` | money owed; `debts.source_transaction_id` links a split to its purchase and `debt_payments.transaction_id` links a repayment to its account movement |
 | `planned_purchases` | things the user plans to buy, with an optional pause (RLS protected) |
 | `financial_notes` | user-authored context for the AI |
@@ -116,7 +120,7 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 
 ## AI tools
 
-`get_current_balance` (includes Safe to Spend and what's left this week), `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `get_upcoming_payments`, `get_recurring_payments`, `calculate_affordability` (Faldo Check plus a projected balance), `calculate_forecast`, `simulate_scenario` (one-off or repeating changes), `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
+`get_current_balance` (includes Safe to Spend and what's left this week), `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `get_upcoming_payments`, `get_recurring_payments`, `get_money_plan`, `calculate_affordability` (Faldo Check plus a projected balance), `calculate_forecast`, `simulate_scenario` (one-off or repeating changes), `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
 
 - Pydantic argument models are converted to strict JSON schemas (all fields required, nullable where optional, no `$ref`).
 - `user_id` comes from the session, never from the model. Periods are resolved server-side in the user's timezone.
@@ -210,7 +214,7 @@ Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the
 ## Quality checks
 
 ```bash
-make test        # 101 backend tests
+make test        # 135 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build
@@ -218,7 +222,7 @@ make build       # Next.js production build
 
 GitHub Actions (`.github/workflows/ci.yml`) runs migrations, ruff, mypy and pytest against pgvector Postgres, plus lint, type check and build for the web app.
 
-The backend suite covers the finance engine (exact money math, periods, pacing, goals, recurring dates, deterministic forecasts, scenario arithmetic including repeating changes, Safe to Spend windows and the weekly share, Faldo Check verdicts, affordability estimates, safe calculator, health score), money owed movements and splits (balances, income and spending totals, locked movements, undoing a split), planned purchases, API behaviour (auth, CSRF, CRUD, balances across transfers and credit cards, validation, pagination), tenant isolation at the API and RLS layers, RAG indexing and cross-user retrieval isolation, natural-language parsing, every example assistant question, numeric repair and fallback, prompt-injection output handling, receipt handling without vision, OpenAI response mapping, password reset and session revocation, category deletion, the database rate limiter and storage, inline job processing, the cron secret, database URL normalization, streaks with restores, badge and reward unlocking, account ordering and balance history.
+The backend suite covers the finance engine (exact money math, periods, pacing, goals, recurring dates, deterministic forecasts, scenario arithmetic including repeating changes, Safe to Spend windows and the weekly share, Faldo Check verdicts, affordability estimates, safe calculator, health score, Money Plan allocation and the 60/20/20 template, one-time income, planned purchases on the forecast, goal starting amounts), statement parsing (amount and date formats, e-wallet and bank layouts, stable row fingerprints) and import (duplicates, transfers, re-import, undo, isolation), money owed movements and splits (balances, income and spending totals, locked movements, undoing a split), planned purchases, API behaviour (auth, CSRF, CRUD, balances across transfers and credit cards, validation, pagination), tenant isolation at the API and RLS layers, RAG indexing and cross-user retrieval isolation, natural-language parsing, every example assistant question, numeric repair and fallback, prompt-injection output handling, receipt handling without vision, OpenAI response mapping, password reset and session revocation, category deletion, the database rate limiter and storage, inline job processing, the cron secret, database URL normalization, streaks with restores, badge and reward unlocking, account ordering and balance history.
 
 ## Known limitations
 
@@ -230,7 +234,9 @@ The backend suite covers the finance engine (exact money math, periods, pacing, 
 - Docker files are provided but were not run in the original development environment.
 - On Vercel, queued work (embeddings, receipt reading) runs inline after writes; a failed job is retried by the daily cron or the next write.
 - Receipt images are stored in Postgres on serverless deployments (8 MB cap per image).
-- Single currency per user. No bank or e-wallet syncing, by design for this version.
+- Single currency per user. No live bank or e-wallet syncing yet; statements come in by CSV import.
+- Statement import reads CSV only. When every date in a file works in both day-first and month-first order, month-first is assumed and the review screen offers to switch. When a file has only positive amounts and no debit/credit column, they're treated as spending, with a toggle to flip them.
+- Money Plan follows your main repeating income. Without an income schedule (freelancers, students between allowances) it plans by calendar month from a typical monthly amount you enter.
 - No email verification or MFA yet.
 - Health score weights are a transparent heuristic, not a professional assessment.
 
@@ -239,7 +245,7 @@ The backend suite covers the finance engine (exact money math, periods, pacing, 
 1. Run the OpenAI provider against a live key and build an evaluation set (capture accuracy, retrieval recall, numeric faithfulness).
 2. Email verification and passkeys.
 3. Object storage for receipts, observability for tool traces and AI cost.
-4. CSV import from bank and e-wallet statements.
-5. Subscription detection from transaction history and payday-aware budgeting.
+4. Bank connections, building on statement import: remembered column layouts per bank, PDF statements, then direct feeds where providers allow it.
+5. Subscription detection from transaction history.
 6. Reranking for memory search and user feedback on answers.
 7. Playwright end-to-end and accessibility test suites.

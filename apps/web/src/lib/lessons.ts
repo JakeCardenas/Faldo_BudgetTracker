@@ -53,7 +53,7 @@ export const LESSONS: Lesson[] = [
       answer: 2,
       explanation: "Milk tea is nice to have but can be cut back. The others keep you housed and working.",
     },
-    tryIt: { label: "Set up your budgets", href: "/budgets" },
+    tryIt: { label: "Make your money plan", href: "/plan/money" },
   },
   {
     slug: "emergency-fund",

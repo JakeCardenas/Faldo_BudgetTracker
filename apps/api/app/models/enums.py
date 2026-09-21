@@ -27,6 +27,7 @@ class TransactionSource(StrEnum):
     receipt = "receipt"
     recurring = "recurring"
     seed = "seed"
+    import_ = "import"  # a line from an imported bank or e-wallet statement
 
 
 class CategoryKind(StrEnum):
@@ -58,6 +59,7 @@ class Frequency(StrEnum):
     monthly = "monthly"
     quarterly = "quarterly"
     yearly = "yearly"
+    once = "once"  # one-time expected money (a client payment, a bonus); never repeats
 
 
 class DebtDirection(StrEnum):

@@ -1,7 +1,16 @@
 from app.models.ai import AIConversation, AIInsight, AIMessage, Job, MemoryDocument, RateLimitHit, Receipt, StoredFile
 from app.models.base import Base
 from app.models.identity import AuthToken, Session, User, UserSettings
-from app.models.ledger import Account, Category, Merchant, Tag, Transaction, TransactionItem, transaction_tags
+from app.models.ledger import (
+    Account,
+    Category,
+    ImportBatch,
+    Merchant,
+    Tag,
+    Transaction,
+    TransactionItem,
+    transaction_tags,
+)
 from app.models.planning import (
     Budget,
     BudgetCategory,
@@ -9,6 +18,7 @@ from app.models.planning import (
     DebtPayment,
     FinancialNote,
     GoalContribution,
+    MoneyPlan,
     PlannedPurchase,
     RecurringPayment,
     SavingsGoal,
@@ -30,9 +40,11 @@ __all__ = [
     "DebtPayment",
     "FinancialNote",
     "GoalContribution",
+    "ImportBatch",
     "Job",
     "MemoryDocument",
     "Merchant",
+    "MoneyPlan",
     "PlannedPurchase",
     "Receipt",
     "RecurringPayment",
@@ -69,4 +81,6 @@ USER_SCOPED_TABLES = [
     "ai_messages",
     "stored_files",
     "planned_purchases",
+    "money_plans",
+    "import_batches",
 ]

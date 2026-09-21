@@ -131,6 +131,8 @@ def goal_delay_days(purchase_minor: int, monthly_pace_minor: int) -> int | None:
 
 
 def advance_due_date(current: date, frequency: str, interval: int = 1, anchor_day: int | None = None) -> date:
+    if frequency == "once":
+        return current
     if frequency == "weekly":
         return current + timedelta(weeks=interval)
     if frequency == "biweekly":
@@ -162,6 +164,9 @@ def occurrences_between(
     end_on: date | None = None,
     anchor_day: int | None = None,
 ) -> list[date]:
+    if frequency == "once":
+        in_range = start <= next_due_on <= end and (end_on is None or next_due_on <= end_on)
+        return [next_due_on] if in_range else []
     dates: list[date] = []
     current = next_due_on
     guard = 0
@@ -182,6 +187,7 @@ MONTHLY_FACTORS = {
     "monthly": Decimal(1),
     "quarterly": Decimal(1) / 3,
     "yearly": Decimal(1) / 12,
+    "once": Decimal(0),
 }
 
 

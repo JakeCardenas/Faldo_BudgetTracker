@@ -85,6 +85,7 @@ class ContributionOut(OutModel):
     occurred_on: date
     note: str | None
     transaction_id: uuid.UUID | None
+    is_initial: bool = False
 
 
 class GoalOut(OutModel):
@@ -273,3 +274,16 @@ class PlannedOut(OutModel):
     affordable_is_estimate: bool
     bought_transaction_id: uuid.UUID | None
     created_at: datetime
+
+
+PlanMoney = Annotated[int, Field(ge=0, le=10_000_000_000_00)]
+
+
+class MoneyPlanIn(ApiModel):
+    income_minor: Annotated[int, Field(gt=0, le=10_000_000_000_00)] | None = Field(
+        None, description="Income per pay period to plan with. Empty uses your income schedule.")
+    savings_minor: PlanMoney = 0
+    joy_minor: PlanMoney = 0
+    buffer_minor: PlanMoney = 0
+    needs_minor: PlanMoney | None = Field(None, description="Empty means needs get whatever is left.")
+    template: Literal["custom", "60_20_20"] = "custom"

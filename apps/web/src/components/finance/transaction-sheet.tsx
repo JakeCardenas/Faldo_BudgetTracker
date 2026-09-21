@@ -84,7 +84,7 @@ function SplitForm({ t, onDone }: { t: Transaction; onDone: () => void }) {
 
 const SOURCE_LABELS: Record<string, string> = {
   manual: "Entered manually", natural_language: "Added by describing it", receipt: "Scanned from a receipt",
-  recurring: "Recurring payment", seed: "Imported sample data",
+  recurring: "Recurring payment", seed: "Imported sample data", import: "Imported from a statement",
 }
 
 export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOpenChange: (open: boolean) => void }) {

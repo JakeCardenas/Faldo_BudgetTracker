@@ -20,7 +20,7 @@ import { invalidateFinancialData, useAccounts, usePlanned } from "@/lib/queries"
 import type { PlannedPurchase } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-export async function savePlanned(body: { name: string; amount_minor: number; category_id?: string | null; url?: string | null; pause_hours?: number }) {
+export async function savePlanned(body: { name: string; amount_minor: number; category_id?: string | null; url?: string | null; pause_hours?: number; target_date?: string | null }) {
   return api.post<PlannedPurchase>("/planned-purchases", body)
 }
 
@@ -40,6 +40,7 @@ export function AddPlannedSheet({ open, onOpenChange }: { open: boolean; onOpenC
   const [name, setName] = useState("")
   const [amount, setAmount] = useState("")
   const [url, setUrl] = useState("")
+  const [target, setTarget] = useState("")
   const [pause, setPause] = useState(false)
   const [busy, setBusy] = useState(false)
   const minor = toMinor(amount)
@@ -48,10 +49,10 @@ export function AddPlannedSheet({ open, onOpenChange }: { open: boolean; onOpenC
     if (!minor) return
     setBusy(true)
     try {
-      await savePlanned({ name: name.trim(), amount_minor: minor, url: url.trim() || null, pause_hours: pause ? 24 : 0 })
-      await qc.invalidateQueries({ queryKey: ["planned"] })
+      await savePlanned({ name: name.trim(), amount_minor: minor, url: url.trim() || null, pause_hours: pause ? 24 : 0, target_date: target || null })
+      await invalidateFinancialData(qc)
       toast.success("Saved to planned purchases")
-      setName(""); setAmount(""); setUrl(""); setPause(false)
+      setName(""); setAmount(""); setUrl(""); setTarget(""); setPause(false)
       onOpenChange(false)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't save.")
@@ -66,6 +67,9 @@ export function AddPlannedSheet({ open, onOpenChange }: { open: boolean; onOpenC
           <Input id="pp-name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="Running shoes" /></div>
         <div className="space-y-1.5"><Label htmlFor="pp-amount">Price</Label>
           <AmountInput id="pp-amount" required value={amount} onValueChange={setAmount} placeholder="0" /></div>
+        <div className="space-y-1.5"><Label htmlFor="pp-target">Want it by <span className="font-normal text-muted-foreground">Optional</span></Label>
+          <Input id="pp-target" type="date" min={todayISO()} value={target} onChange={(e) => setTarget(e.target.value)} />
+          <p className="text-xs text-muted-foreground">With a date, your forecast includes it. Safe to Spend doesn&apos;t, until you buy it.</p></div>
         <div className="space-y-1.5"><Label htmlFor="pp-url">Link <span className="font-normal text-muted-foreground">Optional</span></Label>
           <Input id="pp-url" type="url" inputMode="url" maxLength={500} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" /></div>
         <label className="flex items-start gap-3 rounded-xl border p-3 text-sm">
@@ -127,7 +131,7 @@ export function PlannedPurchases({ className }: { className?: string }) {
     try {
       if (body) await api.patch(`/planned-purchases/${item.id}`, body)
       else await api.delete(`/planned-purchases/${item.id}`)
-      await qc.invalidateQueries({ queryKey: ["planned"] })
+      await invalidateFinancialData(qc)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't update.")
     }
@@ -162,6 +166,7 @@ export function PlannedPurchases({ className }: { className?: string }) {
                         </a>
                       )}
                     </div>
+                    {p.target_date && <p className="text-xs text-muted-foreground">Want it by {formatDate(p.target_date, "MMM d")}</p>}
                     <p className={cn("text-[0.8125rem]", s.tone)}>{s.text}{"estimate" in s && s.estimate && <span className="text-muted-foreground"> · estimate</span>}</p>
                     {p.is_paused && p.pause_until && <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><Hourglass className="size-3" /> {pauseLabel(p.pause_until)}</p>}
                   </div>

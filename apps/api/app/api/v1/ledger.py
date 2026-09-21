@@ -1,8 +1,8 @@
 import uuid
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, File, Form, Query, Response, UploadFile
 from sqlalchemy import select
 
 from app.api.deps import CtxDep
@@ -17,6 +17,7 @@ from app.schemas.ledger import (
     CategoryIn,
     CategoryOut,
     CategoryUpdate,
+    ImportCommitIn,
     MerchantOut,
     NoteIn,
     NoteOut,
@@ -29,6 +30,7 @@ from app.schemas.planning import DebtOut
 from app.services import accounts as account_service
 from app.services import categories as category_service
 from app.services import debts as debt_service
+from app.services import imports as import_service
 from app.services import transactions as txn_service
 from app.services.common import get_owned
 
@@ -182,6 +184,32 @@ async def update_transaction(transaction_id: uuid.UUID, data: TransactionIn, ctx
 async def delete_transaction(transaction_id: uuid.UUID, ctx: CtxDep) -> Response:
     await txn_service.delete_transaction(ctx.db, ctx.user_id, transaction_id)
     return Response(status_code=204)
+
+
+@router.post("/imports/preview", tags=["imports"])
+async def preview_import(
+    ctx: CtxDep, file: Annotated[UploadFile, File()], account_id: Annotated[uuid.UUID, Form()],
+    date_order: Annotated[Literal["mdy", "dmy", "ymd"] | None, Form()] = None,
+    invert: Annotated[bool | None, Form()] = None,
+) -> dict[str, Any]:
+    """Read a bank or e-wallet CSV and show what would be imported. Nothing is saved."""
+    data = await file.read(import_service.MAX_BYTES + 1)
+    return await import_service.preview_import(ctx.db, ctx.user_id, ctx.today, account_id, data, date_order, invert)
+
+
+@router.post("/imports", status_code=201, tags=["imports"])
+async def commit_import(data: ImportCommitIn, ctx: CtxDep) -> dict[str, Any]:
+    return await import_service.commit_import(ctx.db, ctx.user_id, ctx.today, data)
+
+
+@router.get("/imports", tags=["imports"])
+async def list_imports(ctx: CtxDep) -> list[dict[str, Any]]:
+    return await import_service.list_imports(ctx.db, ctx.user_id)
+
+
+@router.delete("/imports/{batch_id}", tags=["imports"])
+async def undo_import(batch_id: uuid.UUID, ctx: CtxDep) -> dict[str, int]:
+    return {"removed": await import_service.undo_import(ctx.db, ctx.user_id, batch_id)}
 
 
 @router.post("/transactions/{transaction_id}/split", response_model=DebtOut, status_code=201, tags=["transactions"])

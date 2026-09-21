@@ -50,7 +50,7 @@ function UpcomingRow({ item }: { item: UpcomingItem }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[0.9375rem]">{item.name}</span>
           <span className={cn("block text-[0.8125rem]", urgent ? "font-medium text-expense" : "text-muted-foreground")}>
-            {item.is_income && "Expected · "}{dueLabel(item)}, {formatDate(item.due_on, "MMM d")}
+            {item.is_income && (item.is_one_time ? "Expected once · " : "Expected · ")}{dueLabel(item)}, {formatDate(item.due_on, "MMM d")}
           </span>
         </span>
         <Money minor={item.amount_minor} signed={item.is_income} className={cn("text-[0.9375rem] font-medium", item.is_income && "text-income")} />

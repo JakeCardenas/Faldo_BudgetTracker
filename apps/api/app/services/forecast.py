@@ -14,8 +14,16 @@ from app.engine.periods import add_months, month_end, month_start
 from app.engine.planning import occurrences_between
 from app.engine.safe_to_spend import MAX_CYCLE_DAYS, SafeToSpendInputs, compute_safe_to_spend, cycle_end, week_window
 from app.engine.scenarios import Adjustment, run_scenario
-from app.models import Account, Debt, RecurringPayment, SavingsGoal, Transaction
-from app.models.enums import AccountType, DebtDirection, DebtStatus, GoalStatus, RecurringKind, TransactionType
+from app.models import Account, Debt, PlannedPurchase, RecurringPayment, SavingsGoal, Transaction
+from app.models.enums import (
+    AccountType,
+    DebtDirection,
+    DebtStatus,
+    Frequency,
+    GoalStatus,
+    RecurringKind,
+    TransactionType,
+)
 from app.models.identity import UserSettings
 from app.services.accounts import account_balances
 from app.services.analytics import history_days
@@ -52,8 +60,9 @@ async def scheduled_events(
         if occ["account_id"] and uuid.UUID(occ["account_id"]) not in spendable_ids:
             continue
         sign = 1 if occ["is_income"] else -1
-        events.append(KnownEvent(date.fromisoformat(occ["due_on"]), sign * occ["amount_minor"], occ["name"],
-                                 "income" if occ["is_income"] else "bill", occ["recurring_payment_id"]))
+        kind = ("expected_income" if occ["is_one_time"] else "income") if occ["is_income"] else "bill"
+        events.append(KnownEvent(date.fromisoformat(occ["due_on"]), sign * occ["amount_minor"], occ["name"], kind,
+                                 occ["recurring_payment_id"]))
 
     goals = (
         await db.execute(
@@ -104,6 +113,15 @@ async def scheduled_events(
     return events, planned_savings, top_pace
 
 
+async def planned_purchase_events(db: AsyncSession, user_id: uuid.UUID, today: date, horizon_end: date) -> list[KnownEvent]:
+    """Planned purchases with a target date in the window. Forecast only: they are wishes, so Safe to Spend ignores them."""
+    rows = (await db.execute(
+        select(PlannedPurchase).where(PlannedPurchase.user_id == user_id, PlannedPurchase.status == "planned",
+                                      PlannedPurchase.target_date.between(today, horizon_end))
+    )).scalars().all()
+    return [KnownEvent(p.target_date, -p.amount_minor, p.name, "planned", str(p.id)) for p in rows if p.target_date]
+
+
 async def gather_inputs(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, today: date, horizon_end: date) -> ForecastInputs:
     balances = await account_balances(db, user_id, include_archived=False)
     spendable_ids = {b.account.id for b in balances if b.account.is_spendable}
@@ -132,6 +150,7 @@ async def gather_inputs(db: AsyncSession, user_id: uuid.UUID, settings: UserSett
         daily[d] = daily.get(d, 0) + amount
 
     events, planned_savings, top_pace = await scheduled_events(db, user_id, today, horizon_end, spendable_ids)
+    events += await planned_purchase_events(db, user_id, today, horizon_end)
     return ForecastInputs(
         today=today, horizon_end=horizon_end, start_balance_minor=start_balance, daily_discretionary=daily,
         history_days=days, events=events, planned_savings_minor=planned_savings,
@@ -188,6 +207,10 @@ async def forecast(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings,
         events=inputs.events, seed=inputs.seed,
     )
     data = result.as_dict()
+    if any(e.kind == "expected_income" for e in result.events):
+        data["assumptions"].append("One-time expected income is included on its date, but it may not arrive.")
+    if any(e.kind == "planned" for e in result.events):
+        data["assumptions"].append("Planned purchases with a target date are included on that date.")
     data["actual"] = await spendable_history(db, user_id, month_start(today), today, inputs.start_balance_minor)
     data["planned_savings_minor"] = inputs.planned_savings_minor
     data["buffer_minor"] = inputs.buffer_minor
@@ -213,10 +236,14 @@ async def scenario(
 
 
 async def next_income(db: AsyncSession, user_id: uuid.UUID, today: date) -> tuple[date, str] | None:
-    """Next scheduled repeating income after today. Overdue, unreceived income is ignored: it isn't money yet."""
+    """Next scheduled repeating income after today. Overdue, unreceived income is ignored: it isn't money yet.
+
+    One-time expected income (frequency "once") never sets the window: it may not come, so nothing is planned on it.
+    """
     rows = (await db.execute(
         select(RecurringPayment).where(RecurringPayment.user_id == user_id, RecurringPayment.is_active.is_(True),
-                                       RecurringPayment.kind == RecurringKind.income)
+                                       RecurringPayment.kind == RecurringKind.income,
+                                       RecurringPayment.frequency != Frequency.once)
     )).scalars().all()
     best: tuple[date, str] | None = None
     start, end = today + timedelta(days=1), today + timedelta(days=MAX_CYCLE_DAYS)
@@ -259,13 +286,16 @@ async def safe_to_spend(db: AsyncSession, user_id: uuid.UUID, settings: UserSett
     last_day, period = cycle_end(today, income[0] if income else None)
     events, _, _ = await scheduled_events(db, user_id, today, last_day, spendable_ids)
     week_start, week_end, spent = await week_spending(db, user_id, today, last_day, spendable_ids)
+    from app.services.money_plan import plan_week
+
+    plan = await plan_week(db, user_id, settings, today, week_start)
     result = compute_safe_to_spend(
         SafeToSpendInputs(
             today=today, currency=settings.currency, spendable_balance_minor=spendable,
             next_income_on=income[0] if income else None, next_income_label=income[1] if income else None,
-            commitments=[e for e in events if e.kind != "income"], card_owed_minor=card_owed,
+            commitments=[e for e in events if e.kind in {"bill", "debt", "savings"}], card_owed_minor=card_owed,
             buffer_minor=settings.safe_to_spend_buffer_minor, week_start=week_start, week_end=week_end,
-            spent_this_week_minor=spent,
+            spent_this_week_minor=spent, plan=plan,
         ),
         last_day, period,
     )

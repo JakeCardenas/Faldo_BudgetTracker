@@ -34,8 +34,11 @@ async def check_purchase(
     goal = await _focus_goal(db, user_id)
 
     budget_name = budget_remaining = None
+    essential = False
     if category_id:
         category = await get_owned(db, Category, category_id, user_id, "Category")
+        parent = await db.get(Category, category.parent_id) if category.parent_id else None
+        essential = (parent or category).is_essential
         status = await budget_status(db, user_id, today, today)
         line = next((ln for ln in status.lines if ln.category_id in {category.id, category.parent_id}), None)
         if line:
@@ -47,6 +50,13 @@ async def check_purchase(
         goal_name=goal.name if goal else None, goal_monthly_pace_minor=goal.monthly_contribution_minor if goal else None,
         budget_category=budget_name, budget_remaining_minor=budget_remaining,
     ))
+    plan = sts["week"].get("plan")
+    if plan:
+        bucket = "needs" if essential else "joy"
+        left = plan[f"{bucket}_left_minor"]
+        result["plan_impact"] = {"bucket": bucket, "left_before_minor": left, "left_after_minor": left - amount_minor}
+    else:
+        result["plan_impact"] = None
     commitments = [item for line in sts["lines"] if line["key"] in {"bills", "debts"} for item in line.get("items", [])]
     result.update({
         "label": label,

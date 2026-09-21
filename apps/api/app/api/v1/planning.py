@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Response
 
@@ -18,6 +18,7 @@ from app.schemas.planning import (
     GoalOut,
     GoalUpdate,
     MarkPaidIn,
+    MoneyPlanIn,
     PlannedBuyIn,
     PlannedIn,
     PlannedOut,
@@ -26,7 +27,7 @@ from app.schemas.planning import (
     RecurringOut,
     RecurringUpdate,
 )
-from app.services import budgets, debts, goals, planned, recurring
+from app.services import budgets, debts, goals, money_plan, planned, recurring
 from app.services.transactions import to_out as txn_out
 
 router = APIRouter()
@@ -187,3 +188,27 @@ async def delete_planned(pid: uuid.UUID, ctx: CtxDep) -> Response:
 async def buy_planned(pid: uuid.UUID, data: PlannedBuyIn, ctx: CtxDep) -> PlannedOut:
     await planned.buy_planned(ctx.db, ctx.user_id, pid, data, ctx.today)
     return await _planned_out(ctx, pid)
+
+
+
+@router.get("/money-plan", tags=["money plan"])
+async def get_money_plan(ctx: CtxDep) -> dict[str, Any]:
+    return await money_plan.get_money_plan(ctx.db, ctx.user_id, ctx.settings, ctx.today)
+
+
+@router.put("/money-plan", tags=["money plan"])
+async def save_money_plan(data: MoneyPlanIn, ctx: CtxDep) -> dict[str, Any]:
+    await money_plan.save_money_plan(ctx.db, ctx.user_id, ctx.today, data)
+    return await money_plan.get_money_plan(ctx.db, ctx.user_id, ctx.settings, ctx.today)
+
+
+@router.post("/money-plan/preview", tags=["money plan"])
+async def preview_money_plan(data: MoneyPlanIn, ctx: CtxDep) -> dict[str, Any]:
+    """The allocation for unsaved changes. Nothing is stored."""
+    return await money_plan.get_money_plan(ctx.db, ctx.user_id, ctx.settings, ctx.today, draft=data)
+
+
+@router.delete("/money-plan", status_code=204, tags=["money plan"])
+async def delete_money_plan(ctx: CtxDep) -> Response:
+    await money_plan.delete_money_plan(ctx.db, ctx.user_id)
+    return Response(status_code=204)

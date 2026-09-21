@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { differenceInCalendarMonths, parseISO } from "date-fns"
-import { ArrowRight, ChevronRight, LineChart, Loader2 } from "lucide-react"
+import { ArrowRight, ChevronRight, LineChart, Loader2, PieChart } from "lucide-react"
 import { CheckResultView, useFaldoCheck } from "@/components/decide/faldo-check"
 import { PlannedPurchases } from "@/components/decide/planned"
 import { LargeTitle } from "@/components/ios/nav-header"
@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ApiError } from "@/lib/api"
 import { FREQUENCY_LABELS, formatDate, formatMoney, formatPct, monthKey, toMinor } from "@/lib/format"
 import { GoalIcon } from "@/lib/goal-icons"
-import { useBudget, useDebts, useForecast, useGoals, useRecurring } from "@/lib/queries"
+import { useBudget, useDebts, useForecast, useGoals, useMoneyPlan, useRecurring } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 
 function PlanCard({ href, title, subtitle, children, id }: {
@@ -78,6 +78,28 @@ function PlanCheck() {
   )
 }
 
+function MoneyPlanCard() {
+  const { data: plan, isLoading } = useMoneyPlan()
+  const p = plan?.this_period
+  return (
+    <Link href="/plan/money" className="card-surface group flex items-center gap-4 p-4 transition-colors hover:border-input sm:p-5">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/70"><PieChart className="size-5" strokeWidth={1.75} /></span>
+      <div className="min-w-0 flex-1">
+        <p className="section-title">Money plan</p>
+        {isLoading ? <Skeleton className="mt-1 h-4 w-2/3" /> : plan?.configured && p ? (
+          <p className="text-[0.8125rem] text-muted-foreground">
+            Joy Money <span className="tabular font-medium text-foreground">{formatMoney(p.joy_left_minor)}</span> left this pay period,
+            needs <span className="tabular font-medium text-foreground">{formatMoney(p.needs_left_minor)}</span> left.
+          </p>
+        ) : (
+          <p className="text-[0.8125rem] text-muted-foreground">Give each payday a job: bills, needs, Joy Money, savings. Start from 60/20/20 or your own split.</p>
+        )}
+      </div>
+      <ChevronRight className="size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  )
+}
+
 function RowEmpty({ children }: { children: React.ReactNode }) {
   return <p className="rounded-lg border border-dashed px-3 py-5 text-center text-[0.8125rem] text-muted-foreground">{children}</p>
 }
@@ -106,6 +128,7 @@ export default function PlanPage() {
     <div className="space-y-5">
       <LargeTitle title="Plan" subtitle="Check purchases, and see budgets, goals, bills and money owed in one place" />
       <PlanCheck />
+      <MoneyPlanCard />
       <PlannedPurchases />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">

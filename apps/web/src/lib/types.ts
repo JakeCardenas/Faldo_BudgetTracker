@@ -1,6 +1,6 @@
 export type TransactionType = "income" | "expense" | "transfer" | "debt_in" | "debt_out"
 export type AccountType = "cash" | "bank" | "e_wallet" | "credit_card" | "savings" | "custom"
-export type Frequency = "weekly" | "biweekly" | "semi_monthly" | "monthly" | "quarterly" | "yearly"
+export type Frequency = "weekly" | "biweekly" | "semi_monthly" | "monthly" | "quarterly" | "yearly" | "once"
 export type RecurringKind = "bill" | "subscription" | "rent" | "loan" | "insurance" | "income" | "other"
 export type Severity = "positive" | "info" | "warning" | "critical"
 
@@ -208,6 +208,7 @@ export interface UpcomingItem {
   days_until_due: number
   is_overdue: boolean
   is_income: boolean
+  is_one_time: boolean
   category_id: string | null
   account_id: string | null
 }
@@ -286,7 +287,13 @@ export interface SafeToSpend {
   commitments_minor: number
   buffer_minor: number
   shortfall_minor: number
-  week: { start: string; end: string; allowance_minor: number; spent_minor: number; left_minor: number; days_left: number }
+  week: {
+    start: string; end: string; allowance_minor: number; spent_minor: number; left_minor: number; days_left: number
+    plan: {
+      joy_allowance_minor: number; joy_spent_minor: number; joy_left_minor: number
+      needs_allowance_minor: number; needs_spent_minor: number; needs_left_minor: number; limited_by: "plan" | "money"
+    } | null
+  }
   note: string
 }
 
@@ -315,6 +322,7 @@ export interface CheckResult {
   week_left_after_minor: number
   goal_impact: { goal: string; savings_at_risk_minor: number; delay_days: number | null; is_estimate: boolean } | null
   budget_impact: { category: string; remaining_before_minor: number; remaining_after_minor: number; would_exceed: boolean } | null
+  plan_impact: { bucket: "joy" | "needs"; left_before_minor: number; left_after_minor: number } | null
   until: string
   period: "until_income" | "rolling"
   next_income_on: string | null
@@ -644,4 +652,35 @@ export interface PlannedPurchase {
   affordable_is_estimate: boolean
   bought_transaction_id: string | null
   created_at: string
+}
+
+export interface MoneyPlanBucket {
+  key: "commitments" | "needs" | "joy" | "savings" | "buffer"
+  label: string
+  amount_minor: number
+  auto: boolean
+  pct: number | null
+}
+
+export interface MoneyPlan {
+  configured: boolean
+  period: { frequency: string; label: string; days: number; has_schedule: boolean; income_name: string | null; start: string; end: string }
+  income: { minor: number | null; source: "custom" | "schedule" | null; scheduled_minor: number | null }
+  commitments_minor: number
+  goal_savings_minor: number
+  plan: { savings_minor: number; joy_minor: number; buffer_minor: number; needs_minor: number | null; template: string; income_minor: number | null }
+  allocation: {
+    buckets: MoneyPlanBucket[]
+    needs_minor: number
+    unassigned_minor: number
+    pct_unassigned: number | null
+    warnings: { code: "bills_exceed_income" | "over_assigned" | "savings_below_goals"; amount_minor: number }[]
+  } | null
+  template_60_20_20: { savings_minor: number; joy_minor: number; buffer_minor: number; needs_minor: number; bills_over_needs_share_minor: number } | null
+  weekly: { joy_minor: number; needs_minor: number } | null
+  this_period: {
+    joy_minor: number; joy_spent_minor: number; joy_left_minor: number
+    needs_minor: number; needs_spent_minor: number; needs_left_minor: number
+  } | null
+  categories: { id: string; name: string; is_essential: boolean; icon: string | null; color: string | null }[]
 }

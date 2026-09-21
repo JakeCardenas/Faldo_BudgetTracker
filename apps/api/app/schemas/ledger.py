@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, StringConstraints, model_validator
 
@@ -156,6 +156,30 @@ class SplitIn(ApiModel):
     amount_minor: PositiveMoney
     due_on: date | None = None
     notes: LongText | None = None
+
+
+class ImportRowIn(ApiModel):
+    external_ref: Annotated[str, StringConstraints(min_length=4, max_length=120)]
+    line: int | None = None
+    occurred_on: date
+    description: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    amount_minor: Annotated[int, Field(ge=-10_000_000_000_00, le=10_000_000_000_00)]
+    kind: Literal["transaction", "transfer"] = "transaction"
+    counter_account_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
+    merchant: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
+
+    @model_validator(mode="after")
+    def check_amount(self) -> Self:
+        if self.amount_minor == 0:
+            raise ValueError("Amount can't be zero")
+        return self
+
+
+class ImportCommitIn(ApiModel):
+    account_id: uuid.UUID
+    file_name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
+    rows: list[ImportRowIn] = Field(min_length=1, max_length=1000)
 
 
 class TransactionList(OutModel):

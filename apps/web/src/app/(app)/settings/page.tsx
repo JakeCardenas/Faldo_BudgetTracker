@@ -135,7 +135,7 @@ function Preferences({ me }: { me: Me }) {
         </div>
         <div className="space-y-1.5"><Label>Pay frequency</Label>
           <Select value={frequency} onValueChange={setFrequency}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value={NONE}>Not set</SelectItem>{Object.entries(FREQUENCY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select>
+            <SelectContent><SelectItem value={NONE}>Not set</SelectItem>{Object.entries(FREQUENCY_LABELS).filter(([k]) => k !== "once").map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select>
         </div>
         <div className="space-y-1.5"><Label htmlFor="s-income">Typical monthly income</Label><AmountInput id="s-income" value={income} onValueChange={setIncome} placeholder="Optional" /></div>
         <div className="space-y-1.5"><Label htmlFor="s-buffer">Safety buffer</Label><AmountInput id="s-buffer" value={buffer} onValueChange={setBuffer} /><p className="text-xs text-muted-foreground">Kept aside in safe-to-spend and risk checks.</p></div>

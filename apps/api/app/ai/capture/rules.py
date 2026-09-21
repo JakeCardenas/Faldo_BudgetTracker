@@ -280,3 +280,29 @@ def parse_with_rules(text: str, context: CaptureContext) -> dict[str, Any]:
     transactions = [parse_segment(s, context) for s in segments]
     is_financial = any(t["amount"] is not None for t in transactions)
     return {"transactions": transactions, "is_financial": is_financial}
+
+
+INCOME_CATEGORY_RULES: list[tuple[str, str]] = [
+    (r"salary|sweldo|payroll|paycheck|13th month", "Salary"),
+    (r"freelance|commission|client|project|invoice", "Freelance"),
+    (r"allowance|baon", "Allowance"),
+    (r"refund|cashback|reversal|rebate", "Refunds"),
+    (r"gift|regalo", "Gifts Received"),
+]
+
+
+def categorize_text(text: str, is_income: bool) -> tuple[str | None, str | None, str | None]:
+    """(merchant, category, subcategory) guessed from free text with the same rules as typed entries."""
+    lowered = text.lower()
+    if is_income:
+        category = next((cat for pattern, cat in INCOME_CATEGORY_RULES if re.search(pattern, lowered)), "Other Income")
+        return None, category, None
+    for pattern, name, cat, sub, _ in MERCHANTS:
+        if re.search(pattern, lowered):
+            if name == "Grab" and re.search(r"food|meal|lunch|dinner", lowered):
+                return name, "Food & Dining", "Food delivery"
+            return name, cat, sub
+    for pattern, cat, sub in KEYWORD_CATEGORIES:
+        if re.search(pattern, lowered):
+            return None, cat, sub
+    return None, None, None

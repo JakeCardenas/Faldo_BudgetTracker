@@ -88,6 +88,7 @@ class GoalContribution(UUIDPk, UserOwned, Timestamps, Base):
         UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL")
     )
     note: Mapped[str | None] = mapped_column(String(200))
+    is_initial: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     goal: Mapped[SavingsGoal] = relationship(back_populates="contributions")
 
@@ -191,4 +192,25 @@ class PlannedPurchase(UUIDPk, UserOwned, Timestamps, Base):
     bought_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL")
     )
+
+
+class MoneyPlan(Timestamps, Base):
+    """How each income is given a job. Amounts are per pay period (per payday, or per month without a schedule)."""
+
+    __tablename__ = "money_plans"
+    __table_args__ = (
+        CheckConstraint("income_minor IS NULL OR income_minor > 0", name="income_positive"),
+        CheckConstraint("savings_minor >= 0 AND joy_minor >= 0 AND buffer_minor >= 0 AND (needs_minor IS NULL OR needs_minor >= 0)",
+                        name="amounts_non_negative"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    income_minor: Mapped[int | None] = mapped_column(BigInteger)  # None: use the income schedule
+    savings_minor: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    joy_minor: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    buffer_minor: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    needs_minor: Mapped[int | None] = mapped_column(BigInteger)  # None: whatever is left
+    template: Mapped[str] = mapped_column(String(20), default="custom", server_default="custom")
 

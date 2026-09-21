@@ -49,9 +49,10 @@ async def compute_progress(
         saved = sum(c.amount_minor for c in goal.contributions)
         created = goal.created_at.date()
         months = max(1, min(3, (today.year - created.year) * 12 + today.month - created.month))
-        recent = sum(c.amount_minor for c in goal.contributions if window_start <= c.occurred_on <= window_end)
+        regular = [c for c in goal.contributions if not c.is_initial]  # the starting amount isn't a saving pace
+        recent = sum(c.amount_minor for c in regular if window_start <= c.occurred_on <= window_end)
         if created > window_start:
-            recent = sum(c.amount_minor for c in goal.contributions if c.occurred_on <= today)
+            recent = sum(c.amount_minor for c in regular if c.occurred_on <= today)
         average = max(0, round(recent / months))
     return goal_progress(
         target_minor=goal.target_minor, saved_minor=saved, today=today, target_date=goal.target_date,
@@ -113,7 +114,7 @@ async def create_goal(db: AsyncSession, user_id: uuid.UUID, currency: str, data:
     await db.flush()
     if data.initial_amount_minor and not data.linked_account_id:
         db.add(GoalContribution(user_id=user_id, goal_id=goal.id, amount_minor=data.initial_amount_minor,
-                                occurred_on=today, note="Starting amount"))
+                                occurred_on=today, note="Starting amount", is_initial=True))
     await db.flush()
     await enqueue_index(db, user_id, "goal", goal.id)
     return goal
@@ -178,7 +179,7 @@ async def contributions_this_month(db: AsyncSession, user_id: uuid.UUID, today: 
         await db.execute(
             select(GoalContribution.goal_id, func.sum(GoalContribution.amount_minor))
             .where(GoalContribution.user_id == user_id, GoalContribution.occurred_on >= month_start(today),
-                   GoalContribution.occurred_on <= today)
+                   GoalContribution.occurred_on <= today, GoalContribution.is_initial.is_(False))
             .group_by(GoalContribution.goal_id)
         )
     ).all()

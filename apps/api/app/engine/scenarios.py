@@ -59,15 +59,24 @@ def adjustment_total(adj: Adjustment, horizon_end: date) -> int:
 
 def calculation_lines(forecast: ForecastResult, planned_savings_minor: int, adjustments: list[Adjustment]) -> list[dict[str, Any]]:
     savings_events = sum(-e.amount_minor for e in forecast.events if e.kind == "savings")
-    bills = forecast.scheduled_outflows_minor - savings_events
+    planned = sum(-e.amount_minor for e in forecast.events if e.kind == "planned")
+    one_time = sum(e.amount_minor for e in forecast.events if e.kind == "expected_income")
+    bills = forecast.scheduled_outflows_minor - savings_events - planned
     lines: list[dict[str, Any]] = [
         {"key": "balance", "label": "Spendable balance now", "amount_minor": forecast.start_balance_minor, "op": "start"},
-        {"key": "income", "label": "Expected income", "amount_minor": forecast.expected_income_minor, "op": "add"},
+        {"key": "income", "label": "Scheduled income", "amount_minor": forecast.expected_income_minor - one_time, "op": "add"},
+    ]
+    if one_time:
+        lines.append({"key": "expected_income", "label": "One-time expected income (may not arrive)", "amount_minor": one_time,
+                      "op": "add"})
+    lines += [
         {"key": "bills", "label": "Upcoming bills & recurring", "amount_minor": bills, "op": "subtract"},
         {"key": "savings", "label": "Planned savings", "amount_minor": planned_savings_minor, "op": "subtract"},
         {"key": "everyday", "label": "Typical everyday spending", "amount_minor": forecast.projected_discretionary_minor,
          "op": "subtract"},
     ]
+    if planned:
+        lines.append({"key": "planned", "label": "Planned purchases with a date", "amount_minor": planned, "op": "subtract"})
     for adj in adjustments:
         op = "add" if adj.kind in INFLOW_KINDS else "subtract"
         times = len(occurrences(adj, forecast.horizon_end))

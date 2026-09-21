@@ -60,7 +60,7 @@ function RecurringDialog({ item, onOpenChange }: { item?: Recurring; onOpenChang
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>{item ? "Edit recurring payment" : "Add recurring payment"}</DialogTitle><DialogDescription>Bills, subscriptions, loans and regular income feed your forecast.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{item ? "Edit recurring payment" : "Add recurring payment"}</DialogTitle><DialogDescription>Bills, subscriptions, loans and income feed your forecast. Expected income is never counted as spendable until you record it.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <div className="grid grid-cols-[1fr_9rem] gap-3">
             <div className="space-y-1.5"><Label htmlFor="r-name">Name</Label><Input id="r-name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Meralco" /></div>
@@ -77,7 +77,7 @@ function RecurringDialog({ item, onOpenChange }: { item?: Recurring; onOpenChang
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label htmlFor="r-due">Next due</Label><Input id="r-due" type="date" required value={nextDue} onChange={(e) => setNextDue(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="r-due">{frequency === "once" ? (kind === "income" ? "Expected on" : "Due on") : "Next due"}</Label><Input id="r-due" type="date" required value={nextDue} onChange={(e) => setNextDue(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Account</Label>
               <Select value={accountId} onValueChange={setAccountId}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value={NONE}>Not set</SelectItem>{accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select>
@@ -119,7 +119,7 @@ function PayDialog({ item, onOpenChange }: { item: Recurring; onOpenChange: (ope
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader><DialogTitle>{item.kind === "income" ? "Record" : "Pay"} {item.name}</DialogTitle><DialogDescription>Creates a transaction and moves the next due date forward.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{item.kind === "income" ? "Record" : "Pay"} {item.name}</DialogTitle><DialogDescription>{item.frequency === "once" ? "Creates a transaction. One-time items close after this." : "Creates a transaction and moves the next due date forward."}</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <AmountInput size="lg" value={amount} onValueChange={setAmount} aria-label="Amount" />
           <div className="grid grid-cols-2 gap-3">
@@ -163,7 +163,7 @@ export default function BillsPage() {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{item.name}</p>
         <p className={cn("truncate text-xs text-muted-foreground", item.days_until_due < 0 && "text-destructive")}>
-          {KINDS[item.kind]} · {FREQUENCY_LABELS[item.frequency]}{item.account_name && ` · ${item.account_name}`} · {item.is_active ? relativeDays(item.days_until_due) : "Paused"}
+          {KINDS[item.kind]} · {FREQUENCY_LABELS[item.frequency]}{item.account_name && ` · ${item.account_name}`} · {item.is_active ? relativeDays(item.days_until_due) : item.frequency === "once" ? "Done" : "Paused"}
         </p>
       </div>
       <div className="text-right">
@@ -197,7 +197,7 @@ export default function BillsPage() {
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Due in 7 days</p><Money minor={dueSoon} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">{outflows.filter((i) => i.days_until_due <= 7).length} payments</p></div>
           </div>
           <SectionCard title="Payments" bodyClassName="pt-1"><ul className="divide-y">{outflows.map(row)}</ul></SectionCard>
-          {active.some((i) => i.kind === "income") && <SectionCard title="Expected income" bodyClassName="pt-1"><ul className="divide-y">{(items ?? []).filter((i) => i.kind === "income").map(row)}</ul></SectionCard>}
+          {active.some((i) => i.kind === "income") && <SectionCard title="Expected income" description="Not spendable until it arrives and you record it" bodyClassName="pt-1"><ul className="divide-y">{(items ?? []).filter((i) => i.kind === "income" && (i.is_active || i.frequency !== "once")).map(row)}</ul></SectionCard>}
           {(items ?? []).some((i) => !i.is_active) && <SectionCard title="Paused" bodyClassName="pt-1"><ul className="divide-y">{(items ?? []).filter((i) => !i.is_active && i.kind !== "income").map(row)}</ul></SectionCard>}
         </>
       )}

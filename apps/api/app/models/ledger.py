@@ -17,6 +17,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -101,6 +102,8 @@ class Transaction(UUIDPk, UserOwned, Timestamps, Base):
         Index("ix_transactions_user_date", "user_id", "occurred_on"),
         Index("ix_transactions_user_category_date", "user_id", "category_id", "occurred_on"),
         Index("ix_transactions_user_account_date", "user_id", "account_id", "occurred_on"),
+        Index("uq_transactions_account_external_ref", "user_id", "account_id", "external_ref", unique=True,
+              postgresql_where=text("external_ref IS NOT NULL")),
     )
 
     type: Mapped[TransactionType] = mapped_column(str_enum(TransactionType, "transaction_type"))
@@ -133,6 +136,10 @@ class Transaction(UUIDPk, UserOwned, Timestamps, Base):
     debt_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("debts.id", ondelete="CASCADE"), index=True
     )
+    external_ref: Mapped[str | None] = mapped_column(String(120))  # statement line identity, for safe re-imports
+    import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("import_batches.id", ondelete="SET NULL"), index=True
+    )
 
     items: Mapped[list["TransactionItem"]] = relationship(
         back_populates="transaction", cascade="all, delete-orphan", order_by="TransactionItem.position"
@@ -163,3 +170,18 @@ class TransactionItem(UUIDPk, UserOwned, Base):
     position: Mapped[int] = mapped_column(Integer, default=0)
 
     transaction: Mapped[Transaction] = relationship(back_populates="items")
+
+
+class ImportBatch(UUIDPk, UserOwned, Timestamps, Base):
+    """One imported statement file. Undoing an import removes exactly the transactions it created."""
+
+    __tablename__ = "import_batches"
+
+    account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"))
+    source: Mapped[str] = mapped_column(String(20), default="csv", server_default="csv")
+    file_name: Mapped[str | None] = mapped_column(String(200))
+    imported_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    skipped_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    date_from: Mapped[date | None] = mapped_column(Date)
+    date_to: Mapped[date | None] = mapped_column(Date)
+

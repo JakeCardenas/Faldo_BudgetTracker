@@ -22,7 +22,7 @@ from app.engine.periods import (
 from app.engine.scenarios import Adjustment
 from app.models import Category, Transaction, TransactionItem
 from app.models.enums import TransactionType
-from app.services import analytics, budgets, debts, forecast, goals, health, insights, recurring
+from app.services import analytics, budgets, debts, forecast, goals, health, insights, money_plan, recurring
 from app.services import check as check_service
 from app.services.accounts import account_balances
 from app.services.transactions import TransactionFilters, list_transactions
@@ -744,6 +744,40 @@ async def get_debts(ctx: ToolContext, _: NoArgs) -> ToolOutput:
             {"label": ("You owe " if d.direction.value == "i_owe" else "Owes you: ") + d.counterparty,
              "amount_minor": -d.outstanding_minor if d.direction.value == "i_owe" else d.outstanding_minor,
              "hint": d.status.value + (f" · due {d.due_on:%b %-d}" if d.due_on else "")} for d in rows if d.status.value == "open"]}],
+    )
+
+
+@tool("get_money_plan", "The user's Money Plan: income per payday, how it is split (bills, needs, Joy Money for wants, "
+      "savings, buffer), unassigned money, and Joy Money and needs spent and left this pay period and this week.", NoArgs,
+      "Checking your money plan")
+async def get_money_plan(ctx: ToolContext, _: NoArgs) -> ToolOutput:
+    data = await money_plan.get_money_plan(ctx.db, ctx.user_id, ctx.settings, ctx.today)
+    if not data["configured"] or not data["allocation"]:
+        return ToolOutput({"configured": False, "note": "No money plan yet. The user can set one on Plan > Money plan."})
+    sts = await forecast.safe_to_spend(ctx.db, ctx.user_id, ctx.settings, ctx.today)
+    week = sts["week"].get("plan") or {}
+    buckets = data["allocation"]["buckets"]
+    period = data["this_period"]
+    return ToolOutput(
+        {"configured": True, "period": data["period"]["label"], "income_per_period": _fmt(ctx, data["income"]["minor"]),
+         "income_per_period_minor": data["income"]["minor"],
+         "allocation": [{"bucket": b["label"], "amount": _fmt(ctx, b["amount_minor"]), "amount_minor": b["amount_minor"],
+                         "percent_of_income": b["pct"]} for b in buckets],
+         "unassigned": _fmt(ctx, data["allocation"]["unassigned_minor"]), "unassigned_minor": data["allocation"]["unassigned_minor"],
+         "joy_money_this_period": _fmt(ctx, period["joy_minor"]), "joy_money_this_period_minor": period["joy_minor"],
+         "joy_money_spent_this_period": _fmt(ctx, period["joy_spent_minor"]), "joy_money_spent_this_period_minor": period["joy_spent_minor"],
+         "joy_money_left_this_period": _fmt(ctx, period["joy_left_minor"]), "joy_money_left_this_period_minor": period["joy_left_minor"],
+         "joy_money_left_this_week": _fmt(ctx, week.get("joy_left_minor", 0)), "joy_money_left_this_week_minor": week.get("joy_left_minor", 0),
+         "needs_left_this_week": _fmt(ctx, week.get("needs_left_minor", 0)), "needs_left_this_week_minor": week.get("needs_left_minor", 0),
+         "note": "Needs are categories the user marked essential; everything else counts as Joy Money."},
+        [{"type": "list", "title": f"Money plan · {data['period']['label']}", "items": [
+            {"label": b["label"], "amount_minor": b["amount_minor"], "hint": f"{b['pct']:g}%" if b["pct"] is not None else None}
+            for b in buckets]},
+         {"type": "stats", "title": "Joy Money", "items": [
+             {"label": "This pay period", "amount_minor": period["joy_minor"]},
+             {"label": "Spent", "amount_minor": period["joy_spent_minor"]},
+             {"label": "Left", "amount_minor": period["joy_left_minor"]},
+         ]}],
     )
 
 

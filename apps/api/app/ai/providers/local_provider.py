@@ -95,6 +95,8 @@ def plan(question: str) -> tuple[str, list[ToolCall]]:
         return "recurring", [_call("get_recurring_payments", kind=None)]
     if re.search(r"upcoming|due soon|bills (due|coming)|what.*due", q):
         return "upcoming", [_call("get_upcoming_payments", days=30)]
+    if re.search(r"joy money|money plan|spending plan|\bwants\b", q):
+        return "money_plan", [_call("get_money_plan")]
     if re.search(r"\b(owe|debt|utang|lent|borrowed|owed)\b", q):
         return "debts", [_call("get_debts")]
     if re.search(r"health|score|how am i doing financially", q):
@@ -492,6 +494,15 @@ def compose_forecast(question: str, r: dict[str, dict[str, Any]]) -> str:
             "in scheduled payments. This is an estimate, not a guarantee.")
 
 
+def compose_money_plan(question: str, r: dict[str, dict[str, Any]]) -> str:
+    m = r["get_money_plan"]
+    if not m.get("configured"):
+        return "You don't have a money plan yet. Set one on Plan > Money plan to give each payday a job, including Joy Money for wants."
+    return (f"Your Joy Money is {m['joy_money_this_period']} for this pay period ({m['period']}). You've spent "
+            f"{m['joy_money_spent_this_period']} of it, so {m['joy_money_left_this_period']} is left, with "
+            f"{m['joy_money_left_this_week']} of that for this week. For needs, {m['needs_left_this_week']} is left this week.")
+
+
 def compose_debts(question: str, r: dict[str, dict[str, Any]]) -> str:
     d = r["get_debts"]
     return f"You owe {d['total_i_owe']} in total, and others owe you {d['total_owed_to_me']}."
@@ -559,6 +570,7 @@ COMPOSERS = {
     "income": compose_income,
     "forecast": compose_forecast,
     "debts": compose_debts,
+    "money_plan": compose_money_plan,
     "health": compose_health,
     "insights": compose_insights,
     "transactions": compose_transactions,
