@@ -38,25 +38,25 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
   return (
     <div className="space-y-7">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-[-0.025em]">Choose a new password</h1>
-        <p className="text-sm text-muted-foreground">You'll be signed out on your other devices.</p>
+        <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">Choose a new password</h1>
+        <p className="text-[0.9375rem] text-muted-foreground">You'll be signed out on your other devices.</p>
       </div>
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="password">New password</Label>
-          <Input id="password" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} className="h-10" />
+          <Input id="password" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} className="h-12" />
           <p className="text-xs text-muted-foreground">At least 10 characters.</p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirm">Confirm password</Label>
-          <Input id="confirm" type="password" autoComplete="new-password" minLength={10} required value={confirm} onChange={(e) => setConfirm(e.target.value)} className="h-10" />
+          <Input id="confirm" type="password" autoComplete="new-password" minLength={10} required value={confirm} onChange={(e) => setConfirm(e.target.value)} className="h-12" />
         </div>
         {error && (
-          <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-destructive">
+          <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">
             {error} {error.includes("expired") && <Link href="/forgot-password" className="font-medium underline">Request a new link</Link>}
           </p>
         )}
-        <Button type="submit" className="h-10 w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Update password</Button>
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Update password</Button>
       </form>
     </div>
   )

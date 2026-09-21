@@ -33,23 +33,23 @@ export default function ForgotPasswordPage() {
       <Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to sign in</Link>
       {sent ? (
         <div className="space-y-4">
-          <span className="flex size-12 items-center justify-center rounded-lg bg-secondary text-primary"><MailCheck className="size-5" strokeWidth={1.75} /></span>
-          <h1 className="text-2xl font-semibold tracking-[-0.025em]">Check your email</h1>
-          <p className="text-sm text-muted-foreground">If an account exists for <span className="font-medium text-foreground">{email}</span>, we sent a link to reset your password. It expires in 30 minutes.</p>
+          <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary"><MailCheck className="size-5" strokeWidth={1.75} /></span>
+          <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">Check your email</h1>
+          <p className="text-[0.9375rem] text-muted-foreground">If an account exists for <span className="font-medium text-foreground">{email}</span>, we sent a link to reset your password. It expires in 30 minutes.</p>
         </div>
       ) : (
         <>
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-[-0.025em]">Reset your password</h1>
-            <p className="text-sm text-muted-foreground">Enter your email and we'll send you a reset link.</p>
+            <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">Reset your password</h1>
+            <p className="text-[0.9375rem] text-muted-foreground">Enter your email and we'll send you a reset link.</p>
           </div>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-10" />
+              <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-12" />
             </div>
-            {error && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="h-10 w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Send reset link</Button>
+            {error && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">{error}</p>}
+            <Button type="submit" size="lg" className="w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Send reset link</Button>
           </form>
         </>
       )}

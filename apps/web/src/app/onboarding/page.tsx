@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, ArrowRight, Banknote, Check, CreditCard, Landmark, Loader2, PiggyBank, Smartphone, Sparkles } from "lucide-react"
+import { ArrowLeft, ArrowRight, Banknote, Check, CreditCard, Landmark, Loader2, PiggyBank, Smartphone } from "lucide-react"
 import { toast } from "sonner"
 import { Logo, MascotArt } from "@/components/brand/logo"
 import { markWelcome } from "@/components/brand/welcome-splash"
@@ -52,7 +52,7 @@ function defaultPayday() {
 function Choice({ selected, onClick, children, className }: { selected: boolean; onClick: () => void; children: React.ReactNode; className?: string }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={selected}
-      className={cn("pressable relative rounded-xl border bg-card p-4 text-left hover:bg-accent/50", selected && "border-primary/50 bg-secondary/60 hover:bg-secondary/60", className)}>
+      className={cn("pressable relative rounded-2xl bg-card p-4 text-left shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/50", selected && "bg-secondary/70 shadow-[inset_0_0_0_1.5px_var(--primary)] hover:bg-secondary/70", className)}>
       {selected && <span className="absolute top-3 right-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-3" /></span>}
       {children}
     </button>
@@ -171,30 +171,32 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between px-5 py-5 sm:px-10">
+      <header className="flex items-center justify-between px-5 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-5 sm:px-10">
         <Logo />
-        {step > 0 && step < STEPS.length - 1 && <button onClick={() => finish("/")} className="text-sm text-muted-foreground hover:text-foreground">Skip setup</button>}
+        {step > 0 && step < STEPS.length - 1 && <button onClick={() => finish("/")} className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">Skip setup</button>}
       </header>
       <div className="px-5 sm:px-10">
         <div className="mx-auto flex max-w-xl gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-          {STEPS.map((s, i) => <span key={s} className={cn("h-1 flex-1 rounded-full transition-colors duration-500", i <= step ? "bg-primary" : "bg-border")} />)}
+          {STEPS.map((s, i) => <span key={s} className={cn("h-1.5 flex-1 rounded-full transition-colors duration-500", i <= step ? "bg-primary" : "bg-foreground/10")} />)}
         </div>
       </div>
       <main className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10">
         <div key={step} className="animate-rise w-full max-w-xl space-y-8">
           {step === 0 && (
-            <div className="space-y-6 text-center">
-              <MascotArt className="mx-auto w-28" priority />
+            <div className="space-y-7 text-center">
+              <span className="mx-auto flex size-32 items-end justify-center overflow-hidden rounded-full bg-secondary" aria-hidden>
+                <MascotArt className="-mb-3 w-28" priority />
+              </span>
               <div className="space-y-3">
-                <h1 className="text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">Welcome to Faldo{me ? `, ${me.display_name}` : ""}.</h1>
-                <p className="mx-auto max-w-md text-muted-foreground">Your AI financial copilot. Track your money, understand where it goes, and get answers grounded in your own numbers.</p>
+                <h1 className="text-[2rem] leading-tight font-semibold tracking-[-0.035em] sm:text-[2.5rem]">Welcome to Faldo{me ? `, ${me.display_name}` : ""}</h1>
+                <p className="mx-auto max-w-md text-[0.9375rem] leading-relaxed text-muted-foreground">Your money companion. Track what you spend, see what&apos;s safe to spend, and get answers from your own numbers.</p>
               </div>
-              <ul className="mx-auto grid max-w-md gap-2 text-left text-sm">
-                {["Log spending by typing it like a text message", "See budgets, goals and a month-end forecast", "Ask questions and get calculated, cited answers"].map((t) => (
-                  <li key={t} className="flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5"><Check className="size-4 text-primary" />{t}</li>
+              <ul className="ios-group mx-auto max-w-md divide-y divide-border/60 text-left text-[0.9375rem]">
+                {["Log spending by typing it like a text", "See what's safe to spend before your next payday", "Ask questions and see the math behind every answer"].map((t) => (
+                  <li key={t} className="flex items-center gap-3 px-4 py-3"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-primary"><Check className="size-3.5" strokeWidth={2.5} /></span>{t}</li>
                 ))}
               </ul>
-              <Button size="lg" className="px-6" onClick={next}>Set up in 2 minutes <ArrowRight /></Button>
+              <Button size="lg" className="px-7" onClick={next}>Set up in 2 minutes <ArrowRight /></Button>
             </div>
           )}
 
@@ -239,7 +241,7 @@ export default function OnboardingPage() {
                 {(Object.keys(INCOME_TYPES) as IncomeType[]).map((key) => (
                   <button key={key} type="button" role="radio" aria-checked={incomeType === key}
                     onClick={() => { setIncomeType(key); if (key === "allowance") setFrequency("weekly") }}
-                    className={cn("pressable rounded-xl border px-3.5 py-3 text-left", incomeType === key ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>
+                    className={cn("pressable rounded-2xl px-4 py-3 text-left shadow-[inset_0_0_0_1px_var(--border)]", incomeType === key ? "bg-secondary/70 text-secondary-foreground shadow-[inset_0_0_0_1.5px_var(--primary)]" : "bg-card hover:bg-accent/60")}>
                     <span className="block text-sm font-medium">{INCOME_TYPES[key].label}</span>
                     <span className="block text-xs text-muted-foreground">{INCOME_TYPES[key].hint}</span>
                   </button>
@@ -251,7 +253,7 @@ export default function OnboardingPage() {
                   <div className="space-y-2"><Label>How often?</Label>
                     <div className="flex flex-wrap gap-2">
                       {(["weekly", "biweekly", "semi_monthly", "monthly"] as Frequency[]).map((f) => (
-                        <button key={f} type="button" onClick={() => setFrequency(f)} className={cn("pressable rounded-lg border px-3.5 py-1.5 text-sm", frequency === f ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>{FREQUENCY_LABELS[f]}</button>
+                        <button key={f} type="button" onClick={() => setFrequency(f)} className={cn("pressable rounded-full px-4 py-2 text-sm font-medium", frequency === f ? "bg-foreground text-background" : "bg-card shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/60")}>{FREQUENCY_LABELS[f]}</button>
                       ))}
                     </div>
                   </div>
@@ -270,7 +272,7 @@ export default function OnboardingPage() {
               <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Set a savings goal</h1><p className="text-muted-foreground">Faldo will calculate how much to save each month and when you'll get there.</p></div>
               <div className="flex flex-wrap gap-2">
                 {["Emergency fund", "New laptop", "Travel", "Tuition", "New phone"].map((g) => (
-                  <button key={g} type="button" onClick={() => setGoalName(g)} className={cn("pressable rounded-lg border px-3.5 py-1.5 text-sm", goalName === g ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>{g}</button>
+                  <button key={g} type="button" onClick={() => setGoalName(g)} className={cn("pressable rounded-full px-4 py-2 text-sm font-medium", goalName === g ? "bg-foreground text-background" : "bg-card shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/60")}>{g}</button>
                 ))}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -286,7 +288,7 @@ export default function OnboardingPage() {
               <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Create your first budget</h1><p className="text-muted-foreground">Set limits for a few categories. Faldo warns you before you overspend.</p></div>
               <div className="space-y-2">
                 {BUDGET_PRESETS.map((name) => (
-                  <div key={name} className="flex items-center gap-3 rounded-xl border bg-card px-3 py-2">
+                  <div key={name} className="flex items-center gap-3 rounded-2xl bg-card px-4 py-2 shadow-[inset_0_0_0_1px_var(--border)]">
                     <span className="flex-1 text-sm font-medium">{name}</span>
                     <AmountInput aria-label={`${name} monthly limit`} value={budgets[name] ?? ""} onValueChange={(v) => setBudgets({ ...budgets, [name]: v })} placeholder="No limit" className="w-36" />
                   </div>
@@ -299,19 +301,19 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">Add your first transaction</h1><p className="text-muted-foreground">Just describe it. Faldo figures out the amount, merchant, category and date.</p></div>
               {txSaved ? (
-                <div className="animate-rise flex items-center gap-3 rounded-xl border bg-card p-4">
+                <div className="animate-rise flex items-center gap-3 rounded-2xl bg-card p-4 shadow-[inset_0_0_0_1px_var(--border)]">
                   <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-4" /></span>
                   <div><p className="font-medium">Saved</p><p className="text-sm text-muted-foreground">{txSaved}</p></div>
                 </div>
               ) : (
                 <>
                   <div className="relative">
-                    <Input value={txText} onChange={(e) => setTxText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTransaction()} placeholder={`e.g. Spent ${symbol}350 at Jollibee`} className="h-14 rounded-lg pr-28 text-base" aria-label="Describe a transaction" />
+                    <Input value={txText} onChange={(e) => setTxText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTransaction()} placeholder={`e.g. Spent ${symbol}350 at Jollibee`} className="h-14 rounded-2xl pr-28 text-base" aria-label="Describe a transaction" />
                     <Button className="absolute top-2 right-2 h-10" onClick={addTransaction} disabled={busy || !txText.trim()}>{busy ? <Loader2 className="animate-spin" /> : "Add"}</Button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {["Spent ₱350 at Jollibee", "Grab ₱180 today", "Groceries ₱1,250 at SM"].map((ex) => (
-                      <button key={ex} type="button" onClick={() => setTxText(ex)} className="rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">{ex}</button>
+                      <button key={ex} type="button" onClick={() => setTxText(ex)} className="rounded-full bg-muted px-3.5 py-1.5 text-[0.8125rem] text-foreground/75 hover:bg-accent hover:text-foreground">{ex}</button>
                     ))}
                   </div>
                 </>
@@ -321,25 +323,27 @@ export default function OnboardingPage() {
 
           {step === 7 && (
             <div className="space-y-6 text-center">
-              <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="size-6" /></div>
+              <span className="mx-auto flex size-28 items-end justify-center overflow-hidden rounded-full bg-secondary" aria-hidden>
+                <MascotArt className="-mb-3 w-24" />
+              </span>
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-[-0.025em]">Meet your AI assistant</h1>
-                <p className="mx-auto max-w-md text-muted-foreground">Ask about your money in plain language. Faldo looks up your records, calculates exact figures and shows its sources. It never invents numbers.</p>
+                <h1 className="text-[2rem] leading-tight font-semibold tracking-[-0.035em]">Ask Faldo anything</h1>
+                <p className="mx-auto max-w-md text-[0.9375rem] leading-relaxed text-muted-foreground">Ask about your money in plain words. Faldo looks up your records, works out exact figures and shows where they came from. It never invents numbers.</p>
               </div>
-              <div className="mx-auto grid max-w-md gap-2 text-left">
+              <ul className="ios-group mx-auto max-w-md divide-y divide-border/60 text-left">
                 {["Where did my money go this month?", "Can I afford a ₱3,000 purchase?", "When will I reach my goal?"].map((q) => (
-                  <div key={q} className="rounded-xl border bg-card px-4 py-3 text-sm">“{q}”</div>
+                  <li key={q} className="px-4 py-3 text-[0.9375rem]">“{q}”</li>
                 ))}
-              </div>
+              </ul>
               <div className="flex flex-col justify-center gap-2 sm:flex-row">
-                <Button size="lg" className="h-11" onClick={() => finish("/")} disabled={busy}>Go to my dashboard <ArrowRight /></Button>
-                <Button size="lg" variant="outline" className="h-11" onClick={() => finish("/assistant")} disabled={busy}><Sparkles /> Try the assistant</Button>
+                <Button size="lg" onClick={() => finish("/")} disabled={busy}>Go to Home <ArrowRight /></Button>
+                <Button size="lg" variant="secondary" onClick={() => finish("/assistant")} disabled={busy}>Ask Faldo a question</Button>
               </div>
             </div>
           )}
 
           {step > 0 && step < 7 && (
-            <div className="flex items-center justify-between border-t pt-6">
+            <div className="flex items-center justify-between border-t border-border/70 pt-6">
               <Button variant="ghost" onClick={back}><ArrowLeft /> Back</Button>
               <div className="flex gap-2">
                 {step >= 3 && <Button variant="ghost" onClick={next}>Skip</Button>}

@@ -15,11 +15,11 @@ export function MascotArt({ className, priority }: { className?: string; priorit
   )
 }
 
-export function Logo({ className }: { className?: string }) {
+export function Logo({ className, tone = "default" }: { className?: string; tone?: "default" | "light" }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
       <LogoMark className="size-8" />
-      <span className="font-brand text-[1.1rem] font-extrabold tracking-tight text-foreground">Faldo</span>
+      <span className={cn("font-brand text-[1.1rem] font-extrabold tracking-tight", tone === "light" ? "text-white" : "text-foreground")}>Faldo</span>
     </span>
   )
 }
