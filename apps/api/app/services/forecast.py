@@ -11,9 +11,11 @@ from sqlalchemy.orm import aliased, selectinload
 from app.engine.analysis import percentile
 from app.engine.forecast import ForecastResult, KnownEvent, build_forecast
 from app.engine.periods import add_months, month_end, month_start
+from app.engine.planning import occurrences_between
+from app.engine.safe_to_spend import MAX_CYCLE_DAYS, SafeToSpendInputs, compute_safe_to_spend, cycle_end, week_window
 from app.engine.scenarios import Adjustment, run_scenario
-from app.models import Account, Debt, SavingsGoal, Transaction
-from app.models.enums import DebtDirection, DebtStatus, GoalStatus, TransactionType
+from app.models import Account, Debt, RecurringPayment, SavingsGoal, Transaction
+from app.models.enums import AccountType, DebtDirection, DebtStatus, GoalStatus, RecurringKind, TransactionType
 from app.models.identity import UserSettings
 from app.services.accounts import account_balances
 from app.services.analytics import history_days
@@ -41,33 +43,10 @@ def _seed(user_id: uuid.UUID, today: date) -> int:
     return int(hashlib.sha256(f"{user_id}:{today.isoformat()}".encode()).hexdigest()[:8], 16)
 
 
-async def gather_inputs(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, today: date, horizon_end: date) -> ForecastInputs:
-    balances = await account_balances(db, user_id, include_archived=False)
-    spendable_ids = {b.account.id for b in balances if b.account.is_spendable}
-    start_balance = sum(b.balance_minor for b in balances if b.account.is_spendable)
-    days = await history_days(db, user_id, today)
-
-    window_start = max(today - timedelta(days=HISTORY_WINDOW_DAYS), today - timedelta(days=max(days - 1, 0)))
-    window_end = today - timedelta(days=1)
-    rows = (
-        await db.execute(
-            select(Transaction.occurred_on, Transaction.amount_minor)
-            .where(Transaction.user_id == user_id, Transaction.type == TransactionType.expense,
-                   Transaction.recurring_payment_id.is_(None),
-                   Transaction.occurred_on.between(window_start, window_end))
-        )
-    ).all()
-    amounts = [a for _, a in rows]
-    cap = percentile(amounts, 0.97) if len(amounts) >= 30 else None
-    daily: dict[date, int] = {}
-    if window_end >= window_start:
-        for i in range((window_end - window_start).days + 1):
-            daily[window_start + timedelta(days=i)] = 0
-    for d, amount in rows:
-        if cap is not None and amount > cap:
-            continue
-        daily[d] = daily.get(d, 0) + amount
-
+async def scheduled_events(
+    db: AsyncSession, user_id: uuid.UUID, today: date, horizon_end: date, spendable_ids: set[uuid.UUID],
+) -> tuple[list[KnownEvent], int, int | None]:
+    """Known money movements through the horizon: recurring bills and income, planned goal savings and money owed."""
     events: list[KnownEvent] = []
     for occ in await upcoming(db, user_id, today, horizon_end):
         if occ["account_id"] and uuid.UUID(occ["account_id"]) not in spendable_ids:
@@ -122,7 +101,37 @@ async def gather_inputs(db: AsyncSession, user_id: uuid.UUID, settings: UserSett
         outstanding = debt.amount_minor - sum(p.amount_minor for p in debt.payments)
         if outstanding > 0 and debt.due_on:
             events.append(KnownEvent(debt.due_on, -outstanding, f"Pay {debt.counterparty}", "debt", str(debt.id)))
+    return events, planned_savings, top_pace
 
+
+async def gather_inputs(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, today: date, horizon_end: date) -> ForecastInputs:
+    balances = await account_balances(db, user_id, include_archived=False)
+    spendable_ids = {b.account.id for b in balances if b.account.is_spendable}
+    start_balance = sum(b.balance_minor for b in balances if b.account.is_spendable)
+    days = await history_days(db, user_id, today)
+
+    window_start = max(today - timedelta(days=HISTORY_WINDOW_DAYS), today - timedelta(days=max(days - 1, 0)))
+    window_end = today - timedelta(days=1)
+    rows = (
+        await db.execute(
+            select(Transaction.occurred_on, Transaction.amount_minor)
+            .where(Transaction.user_id == user_id, Transaction.type == TransactionType.expense,
+                   Transaction.recurring_payment_id.is_(None),
+                   Transaction.occurred_on.between(window_start, window_end))
+        )
+    ).all()
+    amounts = [a for _, a in rows]
+    cap = percentile(amounts, 0.97) if len(amounts) >= 30 else None
+    daily: dict[date, int] = {}
+    if window_end >= window_start:
+        for i in range((window_end - window_start).days + 1):
+            daily[window_start + timedelta(days=i)] = 0
+    for d, amount in rows:
+        if cap is not None and amount > cap:
+            continue
+        daily[d] = daily.get(d, 0) + amount
+
+    events, planned_savings, top_pace = await scheduled_events(db, user_id, today, horizon_end, spendable_ids)
     return ForecastInputs(
         today=today, horizon_end=horizon_end, start_balance_minor=start_balance, daily_discretionary=daily,
         history_days=days, events=events, planned_savings_minor=planned_savings,
@@ -134,6 +143,8 @@ def resolve_horizon(today: date, horizon: str) -> date:
     if horizon == "end_of_month":
         end = month_end(today)
         return end if end > today else add_months(today, 1)
+    if horizon in {"6_months", "12_months"}:
+        return add_months(today, 6 if horizon == "6_months" else 12)
     return today + timedelta(days={"30_days": 30, "60_days": 60, "90_days": 90}.get(horizon, 30))
 
 
@@ -151,9 +162,9 @@ async def spendable_history(db: AsyncSession, user_id: uuid.UUID, start: date, t
     net: dict[date, int] = {}
     for d, t, amount, src_spend, dst_spend in rows:
         change = 0
-        if t == TransactionType.income and src_spend:
+        if t in {TransactionType.income, TransactionType.debt_in} and src_spend:
             change = amount
-        elif t == TransactionType.expense and src_spend:
+        elif t in {TransactionType.expense, TransactionType.debt_out} and src_spend:
             change = -amount
         elif t == TransactionType.transfer:
             change = (-amount if src_spend else 0) + (amount if dst_spend else 0)
@@ -201,32 +212,61 @@ async def scenario(
     )
 
 
+async def next_income(db: AsyncSession, user_id: uuid.UUID, today: date) -> tuple[date, str] | None:
+    """Next scheduled repeating income after today. Overdue, unreceived income is ignored: it isn't money yet."""
+    rows = (await db.execute(
+        select(RecurringPayment).where(RecurringPayment.user_id == user_id, RecurringPayment.is_active.is_(True),
+                                       RecurringPayment.kind == RecurringKind.income)
+    )).scalars().all()
+    best: tuple[date, str] | None = None
+    start, end = today + timedelta(days=1), today + timedelta(days=MAX_CYCLE_DAYS)
+    for r in rows:
+        dates = occurrences_between(r.next_due_on, r.frequency.value, r.interval_count, start, end, r.end_on, r.anchor_day)
+        if dates and (best is None or dates[0] < best[0]):
+            best = (dates[0], r.name)
+    return best
+
+
+async def week_spending(
+    db: AsyncSession, user_id: uuid.UUID, today: date, cycle_last_day: date, spendable_ids: set[uuid.UUID],
+) -> tuple[date, date, int]:
+    """Everyday spending this week from spendable accounts. The week restarts when money comes in."""
+    if not spendable_ids:
+        start, end = week_window(today, cycle_last_day, None)
+        return start, end, 0
+    last_income = await db.scalar(
+        select(func.max(Transaction.occurred_on)).where(
+            Transaction.user_id == user_id, Transaction.type == TransactionType.income,
+            Transaction.account_id.in_(spendable_ids),
+            Transaction.occurred_on.between(today - timedelta(days=6), today))
+    )
+    start, end = week_window(today, cycle_last_day, last_income)
+    spent = await db.scalar(
+        select(func.coalesce(func.sum(Transaction.amount_minor), 0)).where(
+            Transaction.user_id == user_id, Transaction.type == TransactionType.expense,
+            Transaction.account_id.in_(spendable_ids), Transaction.recurring_payment_id.is_(None),
+            Transaction.occurred_on.between(start, today))
+    )
+    return start, end, int(spent or 0)
+
+
 async def safe_to_spend(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, today: date) -> dict[str, Any]:
-    horizon_end = month_end(today)
-    inputs = await gather_inputs(db, user_id, settings, today, horizon_end)
-    income = sum(e.amount_minor for e in inputs.events if e.kind == "income")
-    bills = -sum(e.amount_minor for e in inputs.events if e.kind in {"bill", "debt"})
-    savings = inputs.planned_savings_minor
     balances = await account_balances(db, user_id, include_archived=False)
-    card_owed = -sum(min(0, b.balance_minor) for b in balances if b.account.type.value == "credit_card")
-    lines = [
-        {"label": "Spendable balance", "amount_minor": inputs.start_balance_minor, "op": "start"},
-        {"label": "Expected income this month", "amount_minor": income, "op": "add"},
-        {"label": "Bills due this month", "amount_minor": bills, "op": "subtract"},
-        {"label": "Planned savings", "amount_minor": savings, "op": "subtract"},
-        {"label": "Credit card balance owed", "amount_minor": card_owed, "op": "subtract"},
-        {"label": "Safety buffer", "amount_minor": inputs.buffer_minor, "op": "subtract"},
-    ]
-    raw = inputs.start_balance_minor + income - bills - savings - card_owed - inputs.buffer_minor
-    days_left = max(1, (horizon_end - today).days + 1)
-    amount = max(0, raw)
-    return {
-        "amount_minor": amount,
-        "raw_minor": raw,
-        "per_day_minor": (amount // days_left) // 100 * 100,
-        "days_left": days_left,
-        "until": horizon_end.isoformat(),
-        "lines": lines,
-        "shortfall_minor": -raw if raw < 0 else 0,
-        "note": "Excludes everyday spending you haven't made yet. Expected income is based on your recurring income.",
-    }
+    spendable_ids = {b.account.id for b in balances if b.account.is_spendable}
+    spendable = sum(b.balance_minor for b in balances if b.account.is_spendable)
+    card_owed = -sum(min(0, b.balance_minor) for b in balances if b.account.type == AccountType.credit_card)
+    income = await next_income(db, user_id, today)
+    last_day, period = cycle_end(today, income[0] if income else None)
+    events, _, _ = await scheduled_events(db, user_id, today, last_day, spendable_ids)
+    week_start, week_end, spent = await week_spending(db, user_id, today, last_day, spendable_ids)
+    result = compute_safe_to_spend(
+        SafeToSpendInputs(
+            today=today, currency=settings.currency, spendable_balance_minor=spendable,
+            next_income_on=income[0] if income else None, next_income_label=income[1] if income else None,
+            commitments=[e for e in events if e.kind != "income"], card_owed_minor=card_owed,
+            buffer_minor=settings.safe_to_spend_buffer_minor, week_start=week_start, week_end=week_end,
+            spent_this_week_minor=spent,
+        ),
+        last_day, period,
+    )
+    return result.as_dict()

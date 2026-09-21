@@ -1,19 +1,23 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { Pencil, Trash2 } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { HandCoins, Loader2, Pencil, Split, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
 import { TransactionForm } from "@/components/finance/transaction-form"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
-import { api } from "@/lib/api"
-import { formatDate, formatMoney } from "@/lib/format"
-import { useDeleteTransaction, useSaveTransaction } from "@/lib/queries"
-import type { Transaction } from "@/lib/types"
+import { api, ApiError } from "@/lib/api"
+import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
+import { invalidateFinancialData, useDeleteTransaction, useSaveTransaction } from "@/lib/queries"
+import type { Debt, Transaction } from "@/lib/types"
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -21,6 +25,60 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <span className="text-muted-foreground">{label}</span>
       <span className="text-right">{children}</span>
     </div>
+  )
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  income: "Income", expense: "Expense", transfer: "Transfer", debt_in: "Money owed, received", debt_out: "Money owed, paid out",
+}
+
+function SplitForm({ t, onDone }: { t: Transaction; onDone: () => void }) {
+  const qc = useQueryClient()
+  const [person, setPerson] = useState("")
+  const [share, setShare] = useState("")
+  const [due, setDue] = useState("")
+  const [busy, setBusy] = useState(false)
+  const minor = toMinor(share)
+  const mine = minor ? t.amount_minor - minor : null
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!minor) return
+    setBusy(true)
+    try {
+      const debt = await api.post<Debt>(`/transactions/${t.id}/split`, { counterparty: person.trim(), amount_minor: minor, due_on: due || null })
+      await invalidateFinancialData(qc)
+      toast.success(`${debt.counterparty} owes you ${formatMoney(debt.amount_minor)}`)
+      onDone()
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't split this.")
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <form onSubmit={submit} className="space-y-4 rounded-xl border bg-card p-4">
+      <div>
+        <p className="text-sm font-medium">Split with someone</p>
+        <p className="text-[0.8125rem] text-muted-foreground">You paid {formatMoney(t.amount_minor)}. Only your share counts as spending; theirs goes to Money owed.</p>
+      </div>
+      <div className="space-y-1.5"><Label htmlFor="split-person">Who owes you?</Label>
+        <Input id="split-person" required maxLength={80} value={person} onChange={(e) => setPerson(e.target.value)} placeholder="Mark" /></div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5"><Label htmlFor="split-share">Their share</Label>
+          <AmountInput id="split-share" required value={share} onValueChange={setShare} placeholder="0" /></div>
+        <div className="space-y-1.5"><Label htmlFor="split-due">Pay back by <span className="font-normal text-muted-foreground">Optional</span></Label>
+          <Input id="split-due" type="date" min={todayISO()} value={due} onChange={(e) => setDue(e.target.value)} /></div>
+      </div>
+      {mine !== null && (
+        <p className={`tabular text-[0.8125rem] ${mine <= 0 ? "text-destructive" : "text-muted-foreground"}`}>
+          {mine <= 0 ? "Their share must be less than the whole purchase." : `Your share: ${formatMoney(mine)}`}
+        </p>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
+        <Button type="submit" disabled={busy || !minor || !person.trim() || (mine ?? 0) <= 0}>{busy && <Loader2 className="animate-spin" />} Save split</Button>
+      </div>
+    </form>
   )
 }
 
@@ -32,6 +90,7 @@ const SOURCE_LABELS: Record<string, string> = {
 export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOpenChange: (open: boolean) => void }) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [splitting, setSplitting] = useState(false)
   const { data: t, isLoading } = useQuery({
     queryKey: ["transactions", "detail", id],
     queryFn: () => api.get<Transaction>(`/transactions/${id}`),
@@ -39,7 +98,9 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
   })
   const save = useSaveTransaction()
   const remove = useDeleteTransaction()
-  const close = () => { setEditing(false); onOpenChange(false) }
+  const close = () => { setEditing(false); setSplitting(false); onOpenChange(false) }
+  const owed = !!t?.debt_id
+  const inflow = t?.type === "income" || t?.type === "debt_in"
 
   return (
     <Sheet open={!!id} onOpenChange={(open) => { if (!open) close() }}>
@@ -66,17 +127,19 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
         ) : (
           <div className="space-y-5 p-5">
             <div className="flex items-center gap-3">
-              <CategoryIcon icon={t.type === "transfer" ? "transfer" : t.category_icon} color={t.category_color} size="lg" />
+              {t.type === "debt_in" || t.type === "debt_out" ? (
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><HandCoins className="size-5" /></span>
+              ) : <CategoryIcon icon={t.type === "transfer" ? "transfer" : t.category_icon} color={t.category_color} size="lg" />}
               <div className="min-w-0">
-                <p className="truncate text-[0.9375rem] font-medium">{t.type === "transfer" ? "Transfer" : t.merchant ?? t.category_name ?? "Transaction"}</p>
+                <p className="truncate text-[0.9375rem] font-medium">{t.type === "transfer" ? "Transfer" : t.merchant ?? t.notes ?? t.category_name ?? "Transaction"}</p>
                 <p className="text-[0.8125rem] text-muted-foreground">{formatDate(t.occurred_on, "EEEE, MMMM d, yyyy")}</p>
               </div>
             </div>
             <p className={`display-number ${t.type === "income" ? "text-income" : ""}`}>
-              {formatMoney(t.type === "expense" ? -t.amount_minor : t.amount_minor, t.currency, { signed: t.type === "income" })}
+              {formatMoney(t.type === "expense" || t.type === "debt_out" ? -t.amount_minor : t.amount_minor, t.currency, { signed: inflow })}
             </p>
             <div className="divide-y rounded-xl border bg-card px-4">
-              <Row label="Type">{t.type[0].toUpperCase() + t.type.slice(1)}</Row>
+              <Row label="Type">{TYPE_LABELS[t.type] ?? t.type}</Row>
               <Row label={t.type === "transfer" ? "From" : "Account"}>{t.account_name}</Row>
               {t.to_account_name && <Row label="To">{t.to_account_name}</Row>}
               {t.category_name && <Row label="Category">{t.category_name}{t.subcategory_name && `, ${t.subcategory_name}`}</Row>}
@@ -103,10 +166,25 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
                 <p className="text-sm leading-relaxed">{t.notes}</p>
               </div>
             )}
-            <div className="flex gap-2">
-              <Button variant="outline" size="lg" className="flex-1" onClick={() => setConfirmDelete(true)}><Trash2 className="text-destructive" /> Delete</Button>
-              <Button variant="secondary" size="lg" className="flex-1" onClick={() => setEditing(true)}><Pencil /> Edit</Button>
-            </div>
+            {owed ? (
+              <div className="space-y-3 rounded-xl bg-muted/60 p-4 text-[0.8125rem]">
+                <p>This is part of a Money owed record, so it moves your balance without counting as {inflow ? "income" : "spending"}.
+                  Change or remove it from Money owed.</p>
+                <Button variant="outline" size="sm" asChild><Link href="/debts" onClick={close}>Open Money owed</Link></Button>
+              </div>
+            ) : splitting ? (
+              <SplitForm t={t} onDone={() => setSplitting(false)} />
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="lg" className="flex-1" onClick={() => setConfirmDelete(true)}><Trash2 className="text-destructive" /> Delete</Button>
+                  <Button variant="secondary" size="lg" className="flex-1" onClick={() => setEditing(true)}><Pencil /> Edit</Button>
+                </div>
+                {t.type === "expense" && (
+                  <Button variant="ghost" className="w-full" onClick={() => setSplitting(true)}><Split /> Split with someone</Button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </SheetContent>

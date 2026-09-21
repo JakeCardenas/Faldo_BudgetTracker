@@ -1,6 +1,6 @@
 # Faldo
 
-Faldo is an AI financial copilot. Track money across cash, banks, e-wallets and cards, understand where it goes, and ask questions that get **grounded, calculated, cited** answers.
+Faldo is an AI-powered financial decision system for the Philippines. It follows one loop: **track → understand → forecast → decide → act**, and it is built to answer "What can I do with my money next?" before you spend. Track money across cash, banks, e-wallets and cards, see what is safe to spend, check a purchase before you buy it, and ask questions that get **grounded, calculated, cited** answers.
 
 The core idea: the LLM never produces financial numbers. A deterministic engine calculates, a RAG layer retrieves context from the user's own records, and the LLM explains. Every figure in an AI answer is checked against tool results before the user sees it.
 
@@ -30,31 +30,51 @@ PostgreSQL 17 + pgvector + pg_trgm, row-level security
 
 Faldo is designed like a native iOS app on phones (large collapsing titles, a floating tab bar for Home, Wallet, Plan and History, bottom sheets, and a round add button) and like a desktop companion app on larger screens (sidebar, multi-column home). It supports light and dark mode and can be installed from the browser (Add to Home Screen on iPhone, Install app on Android and desktop).
 
-- **Home:** streak counter, greeting with the Faldo mascot and a daily money tip, editable quick actions, category breakdown, today / week / month totals, last 7 days, days until payday, upcoming income and expenses, budgets, goals, net worth with a 30-day trend, safe-to-spend and quick notes.
+- **Home:** leads with **Safe to Spend** (the amount, what's left for this week, a per-day pace and a "Why this number?" breakdown), then only what needs attention (overdue bills, income that hasn't been recorded, money owed that's due, budgets at risk, a shortfall), upcoming commitments, recent activity, your money (spendable, net worth, money owed, next income), one insight, goals and shortcuts.
 - **Logging sheet:** a calculator keypad (+ − × ÷ %), expense / income / transfer, notes, recent-expense templates, category chips that show budget progress, date shortcuts, account picker, keyboard support on desktop, and feedback with Undo after saving. "Type it out" and receipt scanning live in the same sheet.
 - **Wallet:** net worth / assets / liabilities, insight and daily balance cards, accounts grouped by type with totals, colorful account cards with quick actions, press-and-hold to rearrange, grid and list views, and ready-made templates for common PH banks and e-wallets.
-- **Plan:** "Can I afford it?" check, budgets, goals, bills and subscriptions, installments and loans (with payments left), debt and money owed, salary schedule and the cashflow forecast.
+- **Plan:** Faldo Check, planned purchases, budgets, goals, bills and subscriptions, installments and loans (with payments left), money owed, income schedule and the cashflow forecast.
+- **Faldo Check:** enter a price (and optionally what it is and its category) from Home, Plan or a shortcut. Faldo shows Safe to Spend before and after, this week's share before and after, the per-day pace left, budget impact, what's already set aside before your next income, and, when it goes past Safe to Spend, an estimated goal delay. It is pure arithmetic on your data; the decision stays yours. Save it for later or log it if you buy it.
+- **Planned purchases:** things you intend to buy (price, link, category, priority, notes, target date) re-checked against Safe to Spend every time you look: fits now, fits but more than this week's share, or an estimated date based on your usual monthly surplus. An optional 24-hour pause is there if you want it. "I bought it" records the expense.
 - **Streaks & rewards:** daily logging streak with monthly restores, streak and milestone badges, and unlockable mascot outfits and home backgrounds.
 - **Learn:** ten short money lessons written for the Philippines, each with takeaways and a quick check; progress is saved to your account.
 - **Tools:** split a bill (creates "owed to you" entries), loan and installment calculator with true yearly cost and one-tap tracking, PH income tax calculator, currency converter, emergency fund planner, 50/30/20 planner against real spending, and quick notes.
 - **Talk to Faldo:** chat that logs plain-language entries straight away ("Paid 70 on the bus from Cash") with a Cancel button, answers questions with tools and calculations, and supports voice dictation where the browser allows it.
 - **Auth:** email/password (argon2id), server-side sessions in an httpOnly SameSite=Lax cookie, CSRF header + Origin checks, login throttling, password reset by email, password change, and active-session management.
 - **Transactions:** full CRUD, income/expense/transfer, merchant, category + subcategory, account, payment method, notes, tags, **item-level purchases**, search (merchant, items, notes, tags, categories), filters (type, account, category, tag, dates), sorting, infinite loading, detail sheet, and a queue for receipts awaiting review.
-- **Natural-language entry:** "Bought Nike shoes for ₱4,500 yesterday", Taglish ("nag-grab 180 kanina"), multiple transactions per message. Drafts show a confirmation card; unclear accounts, categories, dates and possible duplicates are highlighted with one-tap fixes. Merchant categories are learned from history.
+- **Natural-language entry:** "Bought Nike shoes for ₱4,500 yesterday", Taglish ("nag-grab 180 kanina"), multiple transactions per message. Drafts show a confirmation card; unclear accounts, categories, dates and possible duplicates are highlighted with one-tap fixes. Merchant categories are learned from history. When the built-in rules already understand every entry (amount, category, date, accounts), no paid AI call is made.
 - **Receipt scanning:** upload/camera → EXIF-stripped re-encoded image → vision extraction (merchant, date, items, total) → validation (totals, dates, currency) → review form → transaction → RAG indexing. Without a vision provider the upload is stored and the UI honestly asks for manual entry.
 - **Accounts:** cash, bank, e-wallet, credit card, savings, custom; computed balances, balance history, archive.
 - **Budgets:** monthly category budgets, pacing vs month elapsed, projection, warnings, previous month and 3-month averages, 6-month history, copy previous month, "Explain with AI".
 - **Goals:** target, current, target date, planned monthly contribution, required monthly savings, estimated completion; linked savings accounts use real balances.
 - **Bills & recurring:** subscriptions, bills, rent, loans, income; mark paid (creates a transaction), skip, pause.
-- **Money owed:** I owe / owed to me, partial payments, due dates, status.
+- **Money owed:** I owe / owed to me, partial repayments, due dates, status. When money actually moves (you lend from GCash, a friend pays you back into BPI) the movement is recorded against that account as its own type, so balances stay right without counting as income or spending. **Split a purchase** from its transaction: your share stays as spending and the other person's share becomes money owed, linked to the original purchase (deleting the record undoes the split). Paying back your share of something can optionally count as spending in a category.
 - **Forecast:** Monte Carlo projection from scheduled events and weekday spending patterns, P10–P90 range, lowest point, safe-to-spend breakdown, assumptions.
-- **What-if simulator:** multiple adjustments, calculated breakdown, risk level with reasons, budget impact, savings at risk, goal delay, baseline vs scenario chart.
+- **What-if simulator:** one-off or repeating changes (every day, week or month): extra spending, extra income, earning less, saving more or less. Horizons from month end to 12 months, calculated breakdown with how many times each change happens, risk level with reasons, budget impact, savings at risk, goal delay, baseline vs scenario chart, and presets such as "₱200 a day on food" or "Save ₱2,000 every month".
 - **Insights:** budget exceeded/at risk, category spending spikes, overall spending changes, unusual transactions (robust z-score), bill reminders, cash-flow warnings, goal progress, savings rate. Every insight stores the facts it came from.
 - **Statistics:** spent / income / net flow / transaction tiles, expense distribution, net worth trend over 30 days to a year, cashflow forecast summary, printable income statement, monthly overview, income vs expenses (12 months), category breakdown and biggest changes, daily spending, top merchants, top purchase items, AI summary written from the page's figures, and a transparent financial health score.
 - **AI Assistant:** dedicated page with conversations, live tool steps, streamed answers, calculation cards labelled "Calculated by Faldo", clickable transaction citations, sources, "How Faldo answered" tool trace, and follow-up suggestions.
 - **Global search (⌘K / Ctrl K):** transactions, merchants, items, categories, goals, accounts and financial memory, plus quick actions.
-- **Onboarding:** welcome, currency, first account, income, goal, budget, first transaction, assistant intro.
+- **Onboarding:** welcome, currency, first account, how money comes in (salary, allowance, freelance or business, or no income right now; only scheduled income gets a schedule), goal, budget, first transaction, assistant intro.
 - **Settings:** preferences (timezone, pay frequency, buffer, default account), security (password, signed-in devices), AI memory notes, category editing and deletion, data export, account deletion.
+
+## Safe to Spend
+
+Safe to Spend is money you **already have** that isn't spoken for before your next income. It is calculated by `app/engine/safe_to_spend.py` from database facts only:
+
+```
+Safe to Spend = spendable balance (cash, e-wallets, banks marked spendable)
+              − bills and subscriptions due before your next income (overdue ones included)
+              − money you owe that's due in that window
+              − planned goal savings for the month
+              − credit card balance to pay
+              − safety buffer
+```
+
+- **Expected income is never added.** It only sets how long the money has to last: the window ends the day before the next scheduled repeating income. Income that's overdue but not yet recorded isn't money yet.
+- **No regular income** (students between allowances, freelancers, people between jobs): the window is a rolling 30 days.
+- **This week:** the week runs Monday to Sunday, or starts again on the day money comes in, and is cut at the end of the window. Its share is the money at the start of the week spread across the days left, so spending this week lowers "left for this week" one for one.
+- The breakdown lists every bill, debt and savings item behind the number, so you can see why it changed.
 
 ## Database
 
@@ -70,7 +90,8 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 | `budgets`, `budget_categories` | monthly budgets and category limits |
 | `savings_goals`, `goal_contributions` | goals and contributions |
 | `recurring_payments` | bills, subscriptions and expected income (with an anchor day so month-end dates don't drift) |
-| `debts`, `debt_payments` | money owed |
+| `debts`, `debt_payments` | money owed; `debts.source_transaction_id` links a split to its purchase and `debt_payments.transaction_id` links a repayment to its account movement |
+| `planned_purchases` | things the user plans to buy, with an optional pause (RLS protected) |
 | `financial_notes` | user-authored context for the AI |
 | `receipts` | uploaded receipts, extraction and validation issues |
 | `ai_insights` | detected insights (facts + evidence) and cached pulse |
@@ -81,7 +102,9 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 | `stored_files` | receipt images when `STORAGE_BACKEND=database` (RLS protected) |
 | `rate_limit_hits` | fixed-window counters when `RATE_LIMIT_BACKEND=database` |
 
-Constraints enforce positive amounts, transfer destinations, distinct transfer accounts, valid currency codes and month-start budgets.
+Transactions have five types: `income`, `expense`, `transfer`, and `debt_in` / `debt_out` for money owed movements. The last two change account balances but never count as income or spending, and a constraint requires them to belong to a money owed record (`transactions.debt_id`). They can only be changed from Money owed.
+
+Constraints enforce positive amounts, transfer destinations, distinct transfer accounts, linked money owed movements, valid currency codes and month-start budgets.
 
 ## RAG
 
@@ -93,7 +116,7 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 
 ## AI tools
 
-`get_current_balance`, `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `get_upcoming_payments`, `get_recurring_payments`, `calculate_affordability`, `calculate_forecast`, `simulate_scenario`, `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
+`get_current_balance` (includes Safe to Spend and what's left this week), `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `get_upcoming_payments`, `get_recurring_payments`, `calculate_affordability` (Faldo Check plus a projected balance), `calculate_forecast`, `simulate_scenario` (one-off or repeating changes), `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
 
 - Pydantic argument models are converted to strict JSON schemas (all fields required, nullable where optional, no `$ref`).
 - `user_id` comes from the session, never from the model. Periods are resolved server-side in the user's timezone.
@@ -174,7 +197,7 @@ Faldo deploys as **two Vercel projects from the same GitHub repository** plus a 
    - Import the repository, set **Root Directory** to `apps/api`. Vercel detects FastAPI at `app/main.py`.
    - Environment variables: `DATABASE_URL`, `PUBLIC_APP_URL` (the web project's URL), `OPENAI_API_KEY`, `CRON_SECRET`, and optionally `RESEND_API_KEY` + `EMAIL_FROM`.
    - Each build runs `python -m app.deploy`, which applies Alembic migrations. Set `RUN_MIGRATIONS_ON_BUILD=false` to skip.
-   - `vercel.json` sets a 60-second function limit for assistant streaming and a daily cron that sweeps queued jobs.
+   - `vercel.json` sets a daily cron that sweeps queued jobs.
 3. **Web project.**
    - Import the same repository, set **Root Directory** to `apps/web` (framework: Next.js).
    - Environment variables: `API_ORIGIN` = the API project's URL, `NEXT_PUBLIC_SHOW_DEMO_LOGIN=false`.
@@ -182,12 +205,12 @@ Faldo deploys as **two Vercel projects from the same GitHub repository** plus a 
 4. **Order.** Deploy the API first, copy its URL into the web project's `API_ORIGIN`, deploy the web project, then set the API's `PUBLIC_APP_URL` to the web URL and redeploy the API.
 5. **Demo data (optional).** From your machine: `cd apps/api && DATABASE_URL="<production url>" uv run python -m app.seed.demo`.
 
-Tenant isolation holds with a single database role: every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the table owner as well.
+Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the table owner as well. Roles with the `BYPASSRLS` attribute skip policies entirely; on hosts whose default owner role has it (Neon's project owner does), run the app as a separate role created with `NOBYPASSRLS` and keep the owner for migrations. Check with `SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user;`.
 
 ## Quality checks
 
 ```bash
-make test        # 67 backend tests
+make test        # 101 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build
@@ -195,7 +218,7 @@ make build       # Next.js production build
 
 GitHub Actions (`.github/workflows/ci.yml`) runs migrations, ruff, mypy and pytest against pgvector Postgres, plus lint, type check and build for the web app.
 
-The backend suite covers the finance engine (exact money math, periods, pacing, goals, recurring dates, deterministic forecasts, scenario arithmetic, safe calculator, health score), API behaviour (auth, CSRF, CRUD, balances across transfers and credit cards, validation, pagination), tenant isolation at the API and RLS layers, RAG indexing and cross-user retrieval isolation, natural-language parsing, every example assistant question, numeric repair and fallback, prompt-injection output handling, receipt handling without vision, OpenAI response mapping, password reset and session revocation, category deletion, the database rate limiter and storage, inline job processing, the cron secret, database URL normalization, streaks with restores, badge and reward unlocking, account ordering and balance history.
+The backend suite covers the finance engine (exact money math, periods, pacing, goals, recurring dates, deterministic forecasts, scenario arithmetic including repeating changes, Safe to Spend windows and the weekly share, Faldo Check verdicts, affordability estimates, safe calculator, health score), money owed movements and splits (balances, income and spending totals, locked movements, undoing a split), planned purchases, API behaviour (auth, CSRF, CRUD, balances across transfers and credit cards, validation, pagination), tenant isolation at the API and RLS layers, RAG indexing and cross-user retrieval isolation, natural-language parsing, every example assistant question, numeric repair and fallback, prompt-injection output handling, receipt handling without vision, OpenAI response mapping, password reset and session revocation, category deletion, the database rate limiter and storage, inline job processing, the cron secret, database URL normalization, streaks with restores, badge and reward unlocking, account ordering and balance history.
 
 ## Known limitations
 

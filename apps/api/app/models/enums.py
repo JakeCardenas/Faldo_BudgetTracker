@@ -14,6 +14,11 @@ class TransactionType(StrEnum):
     income = "income"
     expense = "expense"
     transfer = "transfer"
+    debt_in = "debt_in"  # money in from lending/borrowing (not income)
+    debt_out = "debt_out"  # money out for lending/repaying (not spending)
+
+
+MONEY_OWED_TYPES = (TransactionType.debt_in, TransactionType.debt_out)
 
 
 class TransactionSource(StrEnum):

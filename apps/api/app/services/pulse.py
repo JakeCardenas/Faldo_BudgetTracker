@@ -83,8 +83,11 @@ def draft_pulse(facts: dict[str, Any], today: date) -> str:
     bill = facts["next_bill"]
     if bill and len(sentences) < 3:
         due = date.fromisoformat(bill["due_on"])
-        when = "today" if due == today else ("tomorrow" if due == today + timedelta(days=1) else f"on {due:%b %-d}")
-        sentences.append(f"{bill['name']} ({bill['amount']}) is due {when}.")
+        if due < today:
+            sentences.append(f"{bill['name']} ({bill['amount']}) was due on {due:%b %-d}.")
+        else:
+            when = "today" if due == today else ("tomorrow" if due == today + timedelta(days=1) else f"on {due:%b %-d}")
+            sentences.append(f"{bill['name']} ({bill['amount']}) is due {when}.")
     return " ".join(sentences)
 
 

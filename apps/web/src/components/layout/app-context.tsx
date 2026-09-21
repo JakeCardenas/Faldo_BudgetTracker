@@ -2,12 +2,14 @@
 
 import { createContext, useContext } from "react"
 import type { EntryPreset } from "@/components/capture/keypad-entry"
+import type { CheckPreset } from "@/components/decide/faldo-check"
 import type { Receipt } from "@/lib/types"
 
 export type AddModeOption = "expense" | "income" | "transfer" | "describe" | "manual" | "receipt"
 
 export interface AppActions {
   openAddTransaction: (options?: { mode?: AddModeOption; receipt?: Receipt; preset?: EntryPreset }) => void
+  openCheck: (preset?: CheckPreset) => void
   openMore: () => void
   openSearch: () => void
   openTransaction: (id: string) => void

@@ -18,8 +18,8 @@ from app.api.deps import CtxDep
 from app.core.config import get_settings
 from app.core.errors import AppError, NotFound
 from app.core.rate_limit import limiter
-from app.engine.periods import parse_month
-from app.engine.scenarios import Adjustment
+from app.engine.periods import month_end, parse_month
+from app.engine.scenarios import Adjustment, adjustment_total
 from app.models import (
     Account,
     AIConversation,
@@ -33,6 +33,7 @@ from app.models import (
 from app.models.enums import InsightStatus, TransactionSource
 from app.schemas.common import ApiModel
 from app.schemas.ledger import TransactionIn, TransactionOut
+from app.services import check as check_service
 from app.services import dashboard, forecast, health, insights, pulse, receipts, reports
 from app.services.common import get_owned
 from app.services.transactions import TransactionFilters, create_transaction, list_transactions
@@ -82,20 +83,21 @@ async def get_forecast(ctx: CtxDep, horizon: Literal["end_of_month", "30_days", 
 
 
 class AdjustmentIn(ApiModel):
-    kind: Literal["one_time_expense", "one_time_income", "extra_savings", "reduce_savings"]
+    kind: Literal["one_time_expense", "one_time_income", "extra_savings", "reduce_savings", "income_decrease"]
     amount_minor: Annotated[int, Field(gt=0, le=10_000_000_000_00)]
     date: dt.date | None = None
     label: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
     category_id: uuid.UUID | None = None
+    repeat: Literal["once", "daily", "weekly", "monthly"] = "once"
 
 
 class ScenarioIn(ApiModel):
     adjustments: list[AdjustmentIn] = Field(min_length=1, max_length=8)
-    horizon: Literal["end_of_month", "30_days", "60_days", "90_days"] = "end_of_month"
+    horizon: Literal["end_of_month", "30_days", "60_days", "90_days", "6_months", "12_months"] = "end_of_month"
 
 
 LABELS = {"one_time_expense": "Planned expense", "one_time_income": "Extra income", "extra_savings": "Extra savings",
-          "reduce_savings": "Reduced savings"}
+          "reduce_savings": "Reduced savings", "income_decrease": "Less income"}
 
 
 @router.post("/forecast/scenario", tags=["forecast"])
@@ -110,18 +112,33 @@ async def run_scenario(data: ScenarioIn, ctx: CtxDep) -> dict[str, Any]:
         on = max(adj.date or tomorrow, tomorrow)
         if on > ctx.today + timedelta(days=366):
             raise AppError("Scenarios can look at most a year ahead.")
-        adjustments.append(Adjustment(adj.kind, adj.amount_minor, on, adj.label or LABELS[adj.kind],
-                                      str(adj.category_id) if adj.category_id else None))
+        adjustment = Adjustment(adj.kind, adj.amount_minor, on, adj.label or LABELS[adj.kind],
+                                str(adj.category_id) if adj.category_id else None, adj.repeat)
+        adjustments.append(adjustment)
         if adj.category_id and adj.kind == "one_time_expense":
             line = next((line for line in status.lines if line.category_id == adj.category_id), None)
-            if line:
+            this_month = adjustment_total(adjustment, month_end(ctx.today))
+            if line and this_month:
                 budget_impacts.append({"category": line.category_name, "remaining_before_minor": line.remaining_minor,
-                                       "remaining_after_minor": line.remaining_minor - adj.amount_minor,
+                                       "remaining_after_minor": line.remaining_minor - this_month,
                                        "limit_minor": line.limit_minor})
     result = await forecast.scenario(ctx.db, ctx.user_id, ctx.settings, ctx.today, adjustments, data.horizon,
                                      budget_over=any(b["remaining_after_minor"] < 0 for b in budget_impacts))
     result["budget_impacts"] = budget_impacts
     return result
+
+
+class CheckIn(ApiModel):
+    amount_minor: Annotated[int, Field(gt=0, le=10_000_000_000_00)]
+    category_id: uuid.UUID | None = None
+    label: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
+
+
+@router.post("/check", tags=["forecast"])
+async def faldo_check(data: CheckIn, ctx: CtxDep) -> dict[str, Any]:
+    """What this purchase does to Safe to Spend, this week, a budget and your goals. Calculated, never generated."""
+    return await check_service.check_purchase(ctx.db, ctx.user_id, ctx.settings, ctx.today, data.amount_minor,
+                                              data.category_id, data.label)
 
 
 @router.get("/insights", tags=["insights"])

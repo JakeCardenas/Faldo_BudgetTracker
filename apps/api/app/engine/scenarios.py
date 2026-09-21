@@ -1,9 +1,15 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from app.engine.forecast import ForecastResult, KnownEvent, build_forecast
+from app.engine.periods import add_months
 from app.engine.planning import goal_delay_days
+
+INFLOW_KINDS = {"one_time_income", "reduce_savings"}
+OUTFLOW_KINDS = {"one_time_expense", "extra_savings", "income_decrease"}
+SPENDING_KINDS = {"one_time_expense", "income_decrease"}
+REPEATS = ("once", "daily", "weekly", "monthly")
 
 
 @dataclass(frozen=True)
@@ -13,17 +19,42 @@ class Adjustment:
     on: date
     label: str
     category_id: str | None = None
+    repeat: str = "once"
 
 
 RISK_VERDICT = {"low": "comfortable", "medium": "tight", "high": "not_recommended"}
 
 
-def adjustments_to_events(adjustments: list[Adjustment]) -> list[KnownEvent]:
+def occurrences(adj: Adjustment, horizon_end: date) -> list[date]:
+    """Dates an adjustment happens on, from its first date through the horizon."""
+    if adj.repeat == "once":
+        return [adj.on] if adj.on <= horizon_end else []
+    dates: list[date] = []
+    step = 0
+    current = adj.on
+    while current <= horizon_end and step < 400:
+        dates.append(current)
+        step += 1
+        if adj.repeat == "daily":
+            current = adj.on + timedelta(days=step)
+        elif adj.repeat == "weekly":
+            current = adj.on + timedelta(weeks=step)
+        else:
+            current = add_months(adj.on, step)
+    return dates
+
+
+def adjustments_to_events(adjustments: list[Adjustment], horizon_end: date | None = None) -> list[KnownEvent]:
     events: list[KnownEvent] = []
     for adj in adjustments:
-        sign = 1 if adj.kind in {"one_time_income", "reduce_savings"} else -1
-        events.append(KnownEvent(on=adj.on, amount_minor=sign * adj.amount_minor, label=adj.label, kind=adj.kind))
+        sign = 1 if adj.kind in INFLOW_KINDS else -1
+        for on in occurrences(adj, horizon_end or adj.on):
+            events.append(KnownEvent(on=on, amount_minor=sign * adj.amount_minor, label=adj.label, kind=adj.kind))
     return events
+
+
+def adjustment_total(adj: Adjustment, horizon_end: date) -> int:
+    return adj.amount_minor * len(occurrences(adj, horizon_end))
 
 
 def calculation_lines(forecast: ForecastResult, planned_savings_minor: int, adjustments: list[Adjustment]) -> list[dict[str, Any]]:
@@ -38,8 +69,11 @@ def calculation_lines(forecast: ForecastResult, planned_savings_minor: int, adju
          "op": "subtract"},
     ]
     for adj in adjustments:
-        op = "add" if adj.kind in {"one_time_income", "reduce_savings"} else "subtract"
-        lines.append({"key": adj.kind, "label": adj.label, "amount_minor": adj.amount_minor, "op": op})
+        op = "add" if adj.kind in INFLOW_KINDS else "subtract"
+        times = len(occurrences(adj, forecast.horizon_end))
+        label = adj.label if adj.repeat == "once" else f"{adj.label} ({adj.repeat}, ×{times})"
+        lines.append({"key": adj.kind, "label": label, "amount_minor": adj.amount_minor * times, "op": op,
+                      "repeat": adj.repeat, "times": times, "each_minor": adj.amount_minor})
     return lines
 
 
@@ -104,7 +138,7 @@ def run_scenario(
     scenario = build_forecast(
         today=today, horizon_end=horizon_end, start_balance_minor=start_balance_minor,
         daily_discretionary=daily_discretionary, history_days=history_days,
-        events=events + adjustments_to_events(adjustments), seed=seed,
+        events=events + adjustments_to_events(adjustments, horizon_end), seed=seed,
     )
     baseline_lines = calculation_lines(baseline, planned_savings_minor, [])
     lines = calculation_lines(baseline, planned_savings_minor, adjustments)
@@ -113,7 +147,7 @@ def run_scenario(
     level, reasons = assess_risk(
         projected_minor=projected, scenario=scenario, buffer_minor=buffer_minor, budget_over=budget_over
     )
-    spend = sum(a.amount_minor for a in adjustments if a.kind == "one_time_expense")
+    spend = sum(adjustment_total(a, horizon_end) for a in adjustments if a.kind in SPENDING_KINDS)
     savings_at_risk = min(planned_savings_minor, max(0, -projected))
     return {
         "horizon_end": horizon_end.isoformat(),

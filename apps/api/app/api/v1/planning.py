@@ -18,11 +18,15 @@ from app.schemas.planning import (
     GoalOut,
     GoalUpdate,
     MarkPaidIn,
+    PlannedBuyIn,
+    PlannedIn,
+    PlannedOut,
+    PlannedUpdate,
     RecurringIn,
     RecurringOut,
     RecurringUpdate,
 )
-from app.services import budgets, debts, goals, recurring
+from app.services import budgets, debts, goals, planned, recurring
 from app.services.transactions import to_out as txn_out
 
 router = APIRouter()
@@ -150,3 +154,36 @@ async def delete_debt(debt_id: uuid.UUID, ctx: CtxDep) -> Response:
 @router.post("/debts/{debt_id}/payments", response_model=DebtOut, status_code=201, tags=["debts"])
 async def add_debt_payment(debt_id: uuid.UUID, data: DebtPaymentIn, ctx: CtxDep) -> DebtOut:
     return await debts.add_payment(ctx.db, ctx.user_id, debt_id, data, ctx.today)
+
+
+async def _planned_out(ctx: CtxDep, pid: uuid.UUID) -> PlannedOut:
+    return next(p for p in await planned.list_planned(ctx.db, ctx.user_id, ctx.settings, ctx.today) if p.id == pid)
+
+
+@router.get("/planned-purchases", response_model=list[PlannedOut], tags=["planned"])
+async def list_planned(ctx: CtxDep) -> list[PlannedOut]:
+    return await planned.list_planned(ctx.db, ctx.user_id, ctx.settings, ctx.today)
+
+
+@router.post("/planned-purchases", response_model=PlannedOut, status_code=201, tags=["planned"])
+async def create_planned(data: PlannedIn, ctx: CtxDep) -> PlannedOut:
+    item = await planned.create_planned(ctx.db, ctx.user_id, data)
+    return await _planned_out(ctx, item.id)
+
+
+@router.patch("/planned-purchases/{pid}", response_model=PlannedOut, tags=["planned"])
+async def update_planned(pid: uuid.UUID, data: PlannedUpdate, ctx: CtxDep) -> PlannedOut:
+    await planned.update_planned(ctx.db, ctx.user_id, pid, data)
+    return await _planned_out(ctx, pid)
+
+
+@router.delete("/planned-purchases/{pid}", status_code=204, tags=["planned"])
+async def delete_planned(pid: uuid.UUID, ctx: CtxDep) -> Response:
+    await planned.delete_planned(ctx.db, ctx.user_id, pid)
+    return Response(status_code=204)
+
+
+@router.post("/planned-purchases/{pid}/buy", response_model=PlannedOut, tags=["planned"])
+async def buy_planned(pid: uuid.UUID, data: PlannedBuyIn, ctx: CtxDep) -> PlannedOut:
+    await planned.buy_planned(ctx.db, ctx.user_id, pid, data, ctx.today)
+    return await _planned_out(ctx, pid)

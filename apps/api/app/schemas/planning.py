@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, StringConstraints
 
@@ -175,6 +175,8 @@ class DebtIn(ApiModel):
     due_on: date | None = None
     started_on: date | None = None
     notes: LongText | None = None
+    account_id: uuid.UUID | None = Field(
+        None, description="Account the money left (you lent it) or entered (you borrowed it). Empty keeps a record only.")
 
 
 class DebtUpdate(ApiModel):
@@ -189,6 +191,9 @@ class DebtPaymentIn(ApiModel):
     amount_minor: PositiveMoney
     paid_on: date
     note: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
+    account_id: uuid.UUID | None = Field(None, description="Account the repayment left or arrived in.")
+    category_id: uuid.UUID | None = Field(
+        None, description="Only when you repay someone: count the repayment as spending in this expense category.")
 
 
 class DebtPaymentOut(OutModel):
@@ -196,6 +201,8 @@ class DebtPaymentOut(OutModel):
     amount_minor: int
     paid_on: date
     note: str | None
+    transaction_id: uuid.UUID | None = None
+    account_name: str | None = None
 
 
 class DebtOut(OutModel):
@@ -211,3 +218,58 @@ class DebtOut(OutModel):
     notes: str | None
     started_on: date
     payments: list[DebtPaymentOut]
+    account_name: str | None = None
+    source_transaction_id: uuid.UUID | None = None
+
+
+PlannedUrl = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500, pattern=r"^https?://[^\s]+$")]
+Priority = Literal["low", "medium", "high"]
+
+
+class PlannedIn(ApiModel):
+    name: Name
+    amount_minor: PositiveMoney
+    url: PlannedUrl | None = None
+    category_id: uuid.UUID | None = None
+    target_date: date | None = None
+    priority: Priority = "medium"
+    notes: LongText | None = None
+    pause_hours: Annotated[int, Field(ge=0, le=168, description="Optional cooling-off pause, e.g. 24 hours")] = 0
+
+
+class PlannedUpdate(ApiModel):
+    name: Name | None = None
+    amount_minor: PositiveMoney | None = None
+    url: PlannedUrl | None = None
+    category_id: uuid.UUID | None = None
+    target_date: date | None = None
+    priority: Priority | None = None
+    notes: LongText | None = None
+    status: Literal["planned", "dropped"] | None = None
+
+
+class PlannedBuyIn(ApiModel):
+    account_id: uuid.UUID
+    occurred_on: date | None = None
+
+
+class PlannedOut(OutModel):
+    id: uuid.UUID
+    name: str
+    amount_minor: int
+    url: str | None
+    category_id: uuid.UUID | None
+    category_name: str | None
+    target_date: date | None
+    priority: str
+    notes: str | None
+    status: str
+    pause_until: datetime | None
+    is_paused: bool
+    verdict: Literal["fits", "stretch", "over"] | None
+    safe_after_minor: int | None
+    over_by_minor: int | None
+    affordable_on: date | None
+    affordable_is_estimate: bool
+    bought_transaction_id: uuid.UUID | None
+    created_at: datetime

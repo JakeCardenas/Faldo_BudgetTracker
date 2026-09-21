@@ -166,11 +166,21 @@ async def _resolve(
     }
 
 
+def rules_are_confident(parsed: dict[str, Any]) -> bool:
+    """Deterministic parsing already understood every entry, so a paid model call adds nothing."""
+    txns = parsed.get("transactions") or []
+    return bool(parsed.get("is_financial")) and bool(txns) and all(
+        t.get("amount") is not None and t.get("date_certain") and not t.get("category_alternatives")
+        and (t.get("category") is not None if t.get("type") != "transfer" else t.get("to_account") is not None)
+        for t in txns
+    )
+
+
 async def parse_capture(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, today: date, text: str) -> dict[str, Any]:
     context = await build_context(db, user_id, settings, today)
     provider = get_llm()
     rules = parse_with_rules(text, context)
-    ai = await provider.parse_transactions(text, context)
+    ai = None if rules_are_confident(rules) else await provider.parse_transactions(text, context)
     raw = rules
     source = "rules"
     if ai and ai.get("is_financial") and ai.get("transactions"):

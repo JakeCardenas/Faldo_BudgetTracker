@@ -1,5 +1,5 @@
 import { Calculator } from "lucide-react"
-import { formatMoney } from "@/lib/format"
+import { formatDate, formatMoney } from "@/lib/format"
 import type { CalcLine } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -19,12 +19,25 @@ export function CalculationCard({ title, lines, resultLabel, resultMinor, note, 
       </div>
       <dl className="divide-y divide-border/60 px-4">
         {lines.map((line, index) => (
-          <div key={`${line.label}-${index}`} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <dt className="text-muted-foreground">{line.label}</dt>
-            <dd className="tabular font-medium">
-              <span className="mr-1 text-muted-foreground">{line.op === "add" ? "+" : line.op === "subtract" ? "−" : ""}</span>
-              {formatMoney(line.amount_minor)}
-            </dd>
+          <div key={`${line.label}-${index}`} className="py-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-muted-foreground">{line.label}</dt>
+              <dd className="tabular font-medium">
+                <span className="mr-1 text-muted-foreground">{line.op === "add" ? "+" : line.op === "subtract" ? "−" : ""}</span>
+                {formatMoney(line.amount_minor)}
+              </dd>
+            </div>
+            {line.hint && <p className="mt-0.5 text-xs text-muted-foreground/80">{line.hint}</p>}
+            {line.items && line.items.length > 0 && (
+              <ul className="mt-1 space-y-0.5 border-l pl-3">
+                {line.items.map((item) => (
+                  <li key={`${item.ref_id}-${item.date}-${item.label}`} className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <span className="min-w-0 truncate">{item.label} · <span className={cn(item.is_overdue && "font-medium text-expense")}>{item.is_overdue ? "overdue" : formatDate(item.date, "MMM d")}</span></span>
+                    <span className="tabular">{formatMoney(item.amount_minor)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </dl>

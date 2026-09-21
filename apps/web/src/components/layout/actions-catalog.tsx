@@ -1,6 +1,6 @@
 import {
   ArrowLeftRight, BarChart3, BookOpen, CalendarClock, Calculator, CircleDollarSign, CreditCard, Flag, Flame, HandCoins,
-  Landmark, Lightbulb, LineChart, MessageCircle, Minus, NotebookPen, PiggyBank, Plus, ReceiptText, ScanLine, Settings,
+  Landmark, Lightbulb, LineChart, MessageCircle, Minus, NotebookPen, PiggyBank, Plus, ReceiptText, ScanLine, Scale, Settings,
   Split, Wallet, Wrench, type LucideIcon,
 } from "lucide-react"
 
@@ -12,6 +12,7 @@ export interface QuickAction {
   icon: LucideIcon
   href?: string
   add?: QuickActionKind
+  check?: boolean
   group: "Log" | "Plan" | "Understand" | "Tools"
 }
 
@@ -21,11 +22,12 @@ export const QUICK_ACTIONS: QuickAction[] = [
   { id: "transfer", label: "Transfer", icon: ArrowLeftRight, add: "transfer", group: "Log" },
   { id: "scan_receipt", label: "Scan receipt", icon: ScanLine, add: "receipt", group: "Log" },
   { id: "talk", label: "Talk to Faldo", icon: MessageCircle, href: "/assistant", group: "Log" },
+  { id: "check", label: "Faldo Check", icon: Scale, check: true, group: "Plan" },
   { id: "budgets", label: "Budgets", icon: PiggyBank, href: "/budgets", group: "Plan" },
   { id: "goals", label: "Goals", icon: Flag, href: "/goals", group: "Plan" },
   { id: "bills", label: "Planned", icon: CalendarClock, href: "/bills", group: "Plan" },
   { id: "installments", label: "Installments", icon: CreditCard, href: "/plan#installments", group: "Plan" },
-  { id: "debts", label: "Debt & owed", icon: HandCoins, href: "/debts", group: "Plan" },
+  { id: "debts", label: "Money owed", icon: HandCoins, href: "/debts", group: "Plan" },
   { id: "forecast", label: "Forecast", icon: LineChart, href: "/forecast", group: "Plan" },
   { id: "wallet", label: "Wallet", icon: Wallet, href: "/accounts", group: "Understand" },
   { id: "statistics", label: "Statistics", icon: BarChart3, href: "/reports", group: "Understand" },
@@ -42,7 +44,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
   { id: "settings", label: "Settings", icon: Settings, href: "/settings", group: "Tools" },
 ]
 
-export const DEFAULT_QUICK_ACTIONS = ["budgets", "goals", "debts", "bills", "installments"]
+export const DEFAULT_QUICK_ACTIONS = ["check", "budgets", "goals", "debts", "bills"]
 
 export function resolveQuickActions(ids: string[] | undefined) {
   const chosen = (ids?.length ? ids : DEFAULT_QUICK_ACTIONS).map((id) => QUICK_ACTIONS.find((a) => a.id === id)).filter(Boolean)

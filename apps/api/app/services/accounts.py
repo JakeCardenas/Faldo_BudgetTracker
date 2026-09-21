@@ -31,8 +31,8 @@ class AccountBalance:
 
 def _signed_amount(account_col):
     return case(
-        (and_(Transaction.type == "income", Transaction.account_id == account_col), Transaction.amount_minor),
-        (and_(Transaction.type == "expense", Transaction.account_id == account_col), -Transaction.amount_minor),
+        (and_(Transaction.type.in_(["income", "debt_in"]), Transaction.account_id == account_col), Transaction.amount_minor),
+        (and_(Transaction.type.in_(["expense", "debt_out"]), Transaction.account_id == account_col), -Transaction.amount_minor),
         (and_(Transaction.type == "transfer", Transaction.account_id == account_col), -Transaction.amount_minor),
         (and_(Transaction.type == "transfer", Transaction.to_account_id == account_col), Transaction.amount_minor),
         else_=0,

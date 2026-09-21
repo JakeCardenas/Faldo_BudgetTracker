@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from typing import Any
 
 from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, ToolCall, TranscriptItem
@@ -64,11 +65,16 @@ def plan(question: str) -> tuple[str, list[ToolCall]]:
     amount = _amount(question)
     topic = _topic(question)
 
-    if re.search(r"what (happens|if)|if i (spend|save|buy|put|get)", q) and amount:
-        kind = "extra_savings" if re.search(r"\bsave|put .* savings", q) else (
-            "one_time_income" if re.search(r"\b(earn|bonus|receive|get paid)", q) else "one_time_expense")
-        return "scenario", [_call("simulate_scenario", adjustments=[{"kind": kind, "amount": amount, "date": None, "label": None}],
-                                  horizon="end_of_month")]
+    if re.search(r"what (happens|if)|if i (spend|save|buy|put|get)|if my (income|salary|allowance)", q) and amount:
+        kind = "income_decrease" if re.search(r"(income|salary|allowance|pay) (drops|goes down|decreases|is cut)|earn less", q) \
+            else "extra_savings" if re.search(r"\bsave|put .* savings", q) \
+            else "one_time_income" if re.search(r"\b(earn|bonus|receive|get paid)", q) else "one_time_expense"
+        repeat = "daily" if re.search(r"\b(a|per|every|each) day\b|daily", q) else (
+            "weekly" if re.search(r"\b(a|per|every|each) week\b|weekly", q) else (
+                "monthly" if re.search(r"\b(a|per|every|each) month\b|monthly", q) or kind == "income_decrease" else "once"))
+        horizon = "12_months" if repeat == "monthly" else ("90_days" if repeat == "weekly" else "end_of_month")
+        return "scenario", [_call("simulate_scenario", adjustments=[
+            {"kind": kind, "amount": amount, "repeat": repeat, "date": None, "label": None}], horizon=horizon)]
     if re.search(r"\bafford\b|can i (buy|get)|should i (buy|get)", q):
         if amount:
             return "afford", [_call("calculate_affordability", amount=amount, description=None, category=None, date=None)]
@@ -320,20 +326,24 @@ def compose_compare(question: str, r: dict[str, dict[str, Any]]) -> str:
 
 def compose_afford(question: str, r: dict[str, dict[str, Any]]) -> str:
     a = r["calculate_affordability"]
+    until = _d(a["safe_to_spend_until"])
     lead = {
-        "comfortable": "Yes, it looks affordable.",
-        "tight": "You could, but it would be tight.",
-        "not_recommended": "I wouldn't recommend it right now.",
-    }[a["verdict"]]
-    text = (f"{lead} After the {a['purchase']} purchase, your spendable balance is projected to be about "
-            f"{a['projected_balance']} by {_d(a['horizon_end'])}, compared with {a['without_change']} without it.")
-    if a.get("goal_delay_days"):
-        text += f" It could delay your savings goal by roughly {a['goal_delay_days']} days."
-    if a.get("planned_savings_at_risk_minor"):
-        text += f" Up to {a['planned_savings_at_risk']} of planned savings could be affected."
+        "fits": f"It fits. You have {a['safe_to_spend_before']} safe to spend until {until}, and "
+                f"{a['safe_to_spend_after']} after the {a['purchase']} purchase.",
+        "stretch": f"It fits in your safe-to-spend of {a['safe_to_spend_before']}, but it's more than this week's share "
+                   f"({a['left_this_week_before']}). You'd have {a['safe_to_spend_after']} left until {until}, "
+                   f"about {a['per_day_after']} a day.",
+        "over": f"It's {a['over_safe_to_spend_by']} more than your safe-to-spend of {a['safe_to_spend_before']}, so it would "
+                f"come out of money set aside for bills, savings or your buffer.",
+    }[a["check_verdict"]]
+    text = (f"{lead} Looking further ahead, your spendable balance is projected to be about {a['projected_balance']} by "
+            f"{_d(a['horizon_end'])}, compared with {a['without_change']} without it.")
+    goal = a.get("goal_impact")
+    if goal and goal.get("estimated_delay_days"):
+        text += f" If it came out of savings, {goal['goal']} could be about {goal['estimated_delay_days']} days later."
     if a.get("budget_impact") and a["budget_impact"]["would_exceed"]:
         text += f" It would put {a['budget_impact']['category']} over budget."
-    return text + " This is an estimate based on your scheduled bills and typical spending."
+    return text + " The projection is an estimate based on your scheduled bills and typical spending."
 
 
 def compose_scenario(question: str, r: dict[str, dict[str, Any]]) -> str:
@@ -456,10 +466,12 @@ def compose_reduce(question: str, r: dict[str, dict[str, Any]]) -> str:
 def compose_balance(question: str, r: dict[str, dict[str, Any]]) -> str:
     b = r["get_current_balance"]
     accounts = ", ".join(f"{a['name']} {a['balance']}" for a in b["accounts"][:6])
-    return (f"Your total balance is {b['total_balance']} ({accounts}). Spendable money is {b['spendable_balance']}. Counting "
-            f"expected income and setting aside bills, planned savings, your card balance and buffer, about {b['safe_to_spend']} "
-            f"is safe to spend this month "
-            f"(≈ {b['safe_to_spend_per_day']} a day).")
+    until = date.fromisoformat(b["safe_to_spend_until"]).strftime("%b %-d")
+    window = f"until {until}" if b["safe_to_spend_period"] == "until next income" else "over the next 30 days"
+    return (f"Your total balance is {b['total_balance']} ({accounts}). Spendable money is {b['spendable_balance']}. After "
+            f"setting aside bills, planned savings, money you owe, your card balance and your buffer, {b['safe_to_spend']} "
+            f"is safe to spend {window} (≈ {b['safe_to_spend_per_day']} a day), with {b['left_this_week']} left for this "
+            f"week. Income you haven't received yet isn't counted.")
 
 
 def compose_income(question: str, r: dict[str, dict[str, Any]]) -> str:

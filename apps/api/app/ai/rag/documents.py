@@ -24,6 +24,8 @@ from app.models import (
 )
 from app.models.enums import TransactionType
 
+TYPE_LABELS = {TransactionType.debt_in: "Money owed (received)", TransactionType.debt_out: "Money owed (paid out)"}
+
 
 @dataclass
 class RenderedDocument:
@@ -72,7 +74,8 @@ async def render_transaction(db: AsyncSession, user_id: uuid.UUID, txn_id: uuid.
     cat = categories.get(txn.category_id) if txn.category_id else None
     sub = categories.get(txn.subcategory_id) if txn.subcategory_id else None
     money = format_money(txn.amount_minor, txn.currency, cents=True)
-    lines = [f"[transaction] {txn.occurred_on:%Y-%m-%d (%A)} · {txn.type.value.title()} · {money}"]
+    type_label = TYPE_LABELS.get(txn.type, txn.type.value.title())
+    lines = [f"[transaction] {txn.occurred_on:%Y-%m-%d (%A)} · {type_label} · {money}"]
     if merchant:
         lines.append(f"Merchant: {merchant.name}")
     if txn.type == TransactionType.transfer:

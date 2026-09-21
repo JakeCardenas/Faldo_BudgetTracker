@@ -17,6 +17,14 @@ import { useCategories, useMe } from "@/lib/queries"
 import type { AccountType, CaptureResult, Frequency, Me } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
+type IncomeType = "salary" | "allowance" | "freelance" | "none"
+const INCOME_TYPES: Record<IncomeType, { label: string; hint: string; name: string; category: string; scheduled: boolean }> = {
+  salary: { label: "Salary", hint: "Paid on a schedule", name: "Salary", category: "Salary", scheduled: true },
+  allowance: { label: "Allowance", hint: "From family, on a schedule", name: "Allowance", category: "Allowance", scheduled: true },
+  freelance: { label: "Freelance or business", hint: "Varies, log it as it comes", name: "Income", category: "Freelance", scheduled: false },
+  none: { label: "No income right now", hint: "Track what you have", name: "Income", category: "Other Income", scheduled: false },
+}
+
 const STEPS = ["Welcome", "Currency", "Account", "Income", "Goal", "Budget", "Transaction", "Assistant"]
 const CURRENCIES = [
   { code: "PHP", label: "Philippine peso", symbol: "₱" },
@@ -63,6 +71,7 @@ export default function OnboardingPage() {
   const [accountName, setAccountName] = useState("GCash")
   const [accountBalance, setAccountBalance] = useState("")
   const [accountId, setAccountId] = useState<string | null>(null)
+  const [incomeType, setIncomeType] = useState<IncomeType>("salary")
   const [income, setIncome] = useState("")
   const [frequency, setFrequency] = useState<Frequency>("semi_monthly")
   const [nextPayday, setNextPayday] = useState(defaultPayday)
@@ -106,12 +115,12 @@ export default function OnboardingPage() {
   })
 
   const saveIncome = () => run(async () => {
-    const minor = toMinor(income)
-    if (!minor) return
-    const salary = categories.find((c) => c.kind === "income" && c.name === "Salary")
-    await api.patch("/me/settings", { monthly_income_minor: minor, pay_frequency: frequency })
-    const perPay = frequency === "semi_monthly" ? Math.round(minor / 2) : frequency === "weekly" ? Math.round((minor * 12) / 52) : frequency === "biweekly" ? Math.round((minor * 12) / 26) : minor
-    await api.post("/recurring", { name: "Salary", kind: "income", amount_minor: perPay, frequency, next_due_on: nextPayday, account_id: accountId, category_id: salary?.id ?? null })
+    const perPay = toMinor(income)
+    const option = INCOME_TYPES[incomeType]
+    if (!option.scheduled || !perPay) return
+    const category = categories.find((c) => c.kind === "income" && c.name === option.category)
+    await api.patch("/me/settings", { pay_frequency: frequency })
+    await api.post("/recurring", { name: option.name, kind: "income", amount_minor: perPay, frequency, next_due_on: nextPayday, account_id: accountId, category_id: category?.id ?? null })
   })
 
   const saveGoal = () => run(async () => {
@@ -222,16 +231,37 @@ export default function OnboardingPage() {
 
           {step === 3 && (
             <div className="space-y-6">
-              <div className="space-y-2"><h1 className="text-2xl font-semibold tracking-[-0.025em]">How much do you earn each month?</h1><p className="text-muted-foreground">Used for your forecast and safe-to-spend. Faldo adds it as expected income.</p></div>
-              <div className="space-y-1.5"><Label htmlFor="ob-income">Monthly take-home pay</Label><AmountInput id="ob-income" size="lg" value={income} onValueChange={setIncome} placeholder="0" /></div>
-              <div className="space-y-2"><Label>How often are you paid?</Label>
-                <div className="flex flex-wrap gap-2">
-                  {(["semi_monthly", "monthly", "biweekly", "weekly"] as Frequency[]).map((f) => (
-                    <button key={f} type="button" onClick={() => setFrequency(f)} className={cn("pressable rounded-lg border px-3.5 py-1.5 text-sm", frequency === f ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>{FREQUENCY_LABELS[f]}</button>
-                  ))}
-                </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-semibold tracking-[-0.025em]">How does money come in?</h1>
+                <p className="text-muted-foreground">Faldo only counts money you&apos;ve already received. A schedule tells it how long that money has to last.</p>
               </div>
-              <div className="space-y-1.5 sm:w-1/2"><Label htmlFor="ob-payday">Next payday</Label><Input id="ob-payday" type="date" min={todayISO()} value={nextPayday} onChange={(e) => setNextPayday(e.target.value)} /></div>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Income type">
+                {(Object.keys(INCOME_TYPES) as IncomeType[]).map((key) => (
+                  <button key={key} type="button" role="radio" aria-checked={incomeType === key}
+                    onClick={() => { setIncomeType(key); if (key === "allowance") setFrequency("weekly") }}
+                    className={cn("pressable rounded-xl border px-3.5 py-3 text-left", incomeType === key ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>
+                    <span className="block text-sm font-medium">{INCOME_TYPES[key].label}</span>
+                    <span className="block text-xs text-muted-foreground">{INCOME_TYPES[key].hint}</span>
+                  </button>
+                ))}
+              </div>
+              {INCOME_TYPES[incomeType].scheduled ? (
+                <>
+                  <div className="space-y-1.5"><Label htmlFor="ob-income">How much each time?</Label><AmountInput id="ob-income" size="lg" value={income} onValueChange={setIncome} placeholder="0" /></div>
+                  <div className="space-y-2"><Label>How often?</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {(["weekly", "biweekly", "semi_monthly", "monthly"] as Frequency[]).map((f) => (
+                        <button key={f} type="button" onClick={() => setFrequency(f)} className={cn("pressable rounded-lg border px-3.5 py-1.5 text-sm", frequency === f ? "border-primary/45 bg-secondary text-secondary-foreground" : "bg-card hover:bg-accent/60")}>{FREQUENCY_LABELS[f]}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 sm:w-1/2"><Label htmlFor="ob-payday">Next one arrives</Label><Input id="ob-payday" type="date" min={todayISO()} value={nextPayday} onChange={(e) => setNextPayday(e.target.value)} /></div>
+                </>
+              ) : (
+                <p className="rounded-xl bg-muted/60 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+                  No schedule needed. Log income when it arrives. Until then, Safe to Spend plans the money you have over the next 30 days.
+                </p>
+              )}
             </div>
           )}
 

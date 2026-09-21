@@ -78,3 +78,14 @@ def test_local_planner_routes_questions_to_tools():
     for question, tool in cases.items():
         _, calls = plan(question)
         assert calls[0].name == tool, question
+
+
+def test_confident_rule_parses_skip_the_paid_model():
+    from app.ai.capture.service import rules_are_confident
+
+    ctx = CaptureContext(today="2026-09-21", currency="PHP", accounts=[{"name": "GCash", "type": "e_wallet", "institution": None}],
+                         expense_categories=[], income_categories=[], known_merchants=[])
+    assert rules_are_confident(parse_with_rules("₱180 Jollibee lunch via GCash", ctx))
+    assert rules_are_confident(parse_with_rules("200 lunch, 150 coffee, 80 fare", ctx))
+    assert not rules_are_confident(parse_with_rules("paid 500 to Kuya for the thing last week", ctx))
+    assert not rules_are_confident(parse_with_rules("hello there", ctx))

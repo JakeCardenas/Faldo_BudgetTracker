@@ -97,6 +97,7 @@ class Transaction(UUIDPk, UserOwned, Timestamps, Base):
             "(type = 'transfer') = (to_account_id IS NOT NULL)", name="transfer_destination"
         ),
         CheckConstraint("to_account_id IS NULL OR to_account_id <> account_id", name="transfer_distinct"),
+        CheckConstraint("type NOT IN ('debt_in', 'debt_out') OR debt_id IS NOT NULL", name="debt_movement_linked"),
         Index("ix_transactions_user_date", "user_id", "occurred_on"),
         Index("ix_transactions_user_category_date", "user_id", "category_id", "occurred_on"),
         Index("ix_transactions_user_account_date", "user_id", "account_id", "occurred_on"),
@@ -128,6 +129,9 @@ class Transaction(UUIDPk, UserOwned, Timestamps, Base):
     )
     recurring_payment_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("recurring_payments.id", ondelete="SET NULL")
+    )
+    debt_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("debts.id", ondelete="CASCADE"), index=True
     )
 
     items: Mapped[list["TransactionItem"]] = relationship(

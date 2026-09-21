@@ -17,6 +17,7 @@ import type {
   Insight,
   Me,
   MonthlyReport,
+  PlannedPurchase,
   Recurring,
   Transaction,
   TransactionInput,
@@ -43,11 +44,12 @@ export const keys = {
   engagement: ["engagement"] as const,
   balanceHistory: (days: number) => ["balance-history", days] as const,
   notes: ["notes"] as const,
+  planned: ["planned"] as const,
 }
 
 export async function invalidateFinancialData(qc: QueryClient) {
   const roots = ["dashboard", "pulse", "accounts", "transactions", "budget", "goals", "recurring", "upcoming", "debts",
-    "insights", "forecast", "report", "health", "account-history", "tags", "receipts", "engagement", "balance-history"]
+    "insights", "forecast", "report", "health", "account-history", "tags", "receipts", "engagement", "balance-history", "planned"]
   for (const root of roots) void qc.invalidateQueries({ queryKey: [root] })
 }
 
@@ -170,4 +172,8 @@ export function useUpdateSettings() {
       void qc.invalidateQueries({ queryKey: keys.engagement })
     },
   })
+}
+
+export function usePlanned() {
+  return useQuery({ queryKey: keys.planned, queryFn: () => api.get<PlannedPurchase[]>("/planned-purchases") })
 }

@@ -2,19 +2,19 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { useMutation } from "@tanstack/react-query"
 import { differenceInCalendarMonths, parseISO } from "date-fns"
-import { ArrowRight, ChevronRight, CircleAlert, CircleCheck, CircleX, LineChart, Loader2 } from "lucide-react"
+import { ArrowRight, ChevronRight, LineChart, Loader2 } from "lucide-react"
+import { CheckResultView, useFaldoCheck } from "@/components/decide/faldo-check"
+import { PlannedPurchases } from "@/components/decide/planned"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { AmountInput } from "@/components/finance/amount-input"
 import { ProgressBar } from "@/components/finance/progress-bar"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { api, ApiError } from "@/lib/api"
+import { ApiError } from "@/lib/api"
 import { FREQUENCY_LABELS, formatDate, formatMoney, formatPct, monthKey, toMinor } from "@/lib/format"
 import { GoalIcon } from "@/lib/goal-icons"
 import { useBudget, useDebts, useForecast, useGoals, useRecurring } from "@/lib/queries"
-import type { ScenarioResult } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 function PlanCard({ href, title, subtitle, children, id }: {
@@ -47,43 +47,30 @@ function Figure({ label, value, className }: { label: string; value: React.React
   )
 }
 
-function AffordCheck() {
+function PlanCheck() {
   const [amount, setAmount] = useState("")
-  const check = useMutation({
-    mutationFn: (minor: number) => api.post<ScenarioResult>("/forecast/scenario", {
-      horizon: "end_of_month", adjustments: [{ kind: "one_time_expense", amount_minor: minor, label: "Planned purchase" }],
-    }),
-  })
-  const result = check.data
-  const verdict = result && {
-    comfortable: { label: "Yes, you can afford it", tone: "text-income", icon: CircleCheck },
-    tight: { label: "Possible, but it gets tight", tone: "text-warning", icon: CircleAlert },
-    not_recommended: { label: "Better to wait on this one", tone: "text-expense", icon: CircleX },
-  }[result.verdict]
-  const VerdictIcon = verdict?.icon
-
+  const check = useFaldoCheck()
+  const minor = toMinor(amount)
   return (
     <section className="card-surface p-4 sm:p-5">
       <div className="grid gap-4 md:grid-cols-[1fr_minmax(0,22rem)] md:items-center">
         <div>
-          <h2 className="section-title">Can I afford it?</h2>
-          <p className="text-[0.8125rem] text-muted-foreground">Check a purchase against your end-of-month balance.</p>
+          <h2 className="section-title">Faldo Check</h2>
+          <p className="text-[0.8125rem] text-muted-foreground">Before you buy, see what it does to your Safe to Spend, this week and your goals.</p>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); const minor = toMinor(amount); if (minor) check.mutate(minor) }} className="flex gap-2">
-          <AmountInput value={amount} onValueChange={setAmount} placeholder="3,000" aria-label="Purchase amount" className="flex-1" />
-          <Button type="submit" className="h-10" disabled={!toMinor(amount) || check.isPending}>
+        <form onSubmit={(e) => { e.preventDefault(); if (minor) check.mutate({ amount_minor: minor }) }} className="flex gap-2">
+          <AmountInput value={amount} onValueChange={(v) => { setAmount(v); if (check.data) check.reset() }} placeholder="5,999" aria-label="Purchase amount" className="flex-1" />
+          <Button type="submit" className="h-10" disabled={!minor || check.isPending}>
             {check.isPending && <Loader2 className="animate-spin" />} Check
           </Button>
         </form>
       </div>
       {check.error && <p className="mt-3 text-sm text-destructive">{check.error instanceof ApiError ? check.error.message : "Couldn't check that."}</p>}
-      {result && verdict && VerdictIcon && (
+      {check.data && (
         <div className="animate-rise mt-4 border-t pt-4">
-          <p className={cn("flex items-center gap-2 text-[0.9375rem] font-medium", verdict.tone)}><VerdictIcon className="size-4.5" strokeWidth={2} /> {verdict.label}</p>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Your balance on {formatDate(result.horizon_end, "MMM d")} would be about <span className="tabular font-medium text-foreground">{formatMoney(result.projected_minor)}</span>
-            {result.goal_delay_days ? `, and a goal could slip by ${result.goal_delay_days} days` : ""}.</p>
-          <Link href={`/assistant?q=${encodeURIComponent(`Can I afford a ${formatMoney(toMinor(amount) ?? 0)} purchase?`)}`} className="mt-2 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:opacity-80">
-            Ask Faldo for the full picture <ArrowRight className="size-3.5" />
+          <CheckResultView result={check.data} />
+          <Link href={`/assistant?q=${encodeURIComponent(`Can I afford a ${formatMoney(check.data.amount_minor)} purchase?`)}`} className="mt-3 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:opacity-80">
+            Ask Faldo about it <ArrowRight className="size-3.5" />
           </Link>
         </div>
       )}
@@ -117,8 +104,9 @@ export default function PlanPage() {
 
   return (
     <div className="space-y-5">
-      <LargeTitle title="Plan" subtitle="Budgets, goals, bills and debts in one place" />
-      <AffordCheck />
+      <LargeTitle title="Plan" subtitle="Check purchases, and see budgets, goals, bills and money owed in one place" />
+      <PlanCheck />
+      <PlannedPurchases />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">
         <PlanCard href="/budgets" title="Budgets" subtitle="Monthly limits by category">
@@ -200,7 +188,7 @@ export default function PlanPage() {
           </ul>
         </PlanCard>
 
-        <PlanCard href="/debts" title="Debt and owed" subtitle={`${openDebts.length} open`}>
+        <PlanCard href="/debts" title="Money owed" subtitle={`${openDebts.length} open`}>
           <div className="grid grid-cols-2 divide-x rounded-lg bg-muted/50 py-2.5 [&>div]:px-3">
             <Figure label="You owe" value={formatMoney(iOwe)} />
             <Figure label="Owed to you" value={<span className="text-income">{formatMoney(owedToMe)}</span>} />
@@ -213,10 +201,10 @@ export default function PlanPage() {
               </li>
             ))}
           </ul>
-          <Link href="/tools/split" className="mt-3 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary hover:opacity-80">Split a bill with friends <ArrowRight className="size-3.5" /></Link>
+          <p className="mt-3 text-[0.8125rem] text-muted-foreground">Paid for a group? Open the purchase in History and choose Split with someone.</p>
         </PlanCard>
 
-        <PlanCard href="/bills" title="Salary and income" subtitle="Paydays and expected income">
+        <PlanCard href="/bills" title="Income" subtitle="Expected, not spendable until it arrives">
           <ul className="space-y-1.5">
             {income.map((r) => (
               <li key={r.id} className="flex items-center gap-3 text-sm">
@@ -225,7 +213,7 @@ export default function PlanPage() {
                 <span className="tabular w-24 text-right font-medium text-income">{formatMoney(r.amount_minor, "PHP", { signed: true })}</span>
               </li>
             ))}
-            {income.length === 0 && <li><RowEmpty>Add your salary schedule to see days until payday.</RowEmpty></li>}
+            {income.length === 0 && <li><RowEmpty>Add a salary, allowance or other regular income so Faldo knows how long your money has to last.</RowEmpty></li>}
           </ul>
         </PlanCard>
       </div>

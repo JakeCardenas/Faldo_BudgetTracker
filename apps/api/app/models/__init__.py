@@ -9,6 +9,7 @@ from app.models.planning import (
     DebtPayment,
     FinancialNote,
     GoalContribution,
+    PlannedPurchase,
     RecurringPayment,
     SavingsGoal,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "Job",
     "MemoryDocument",
     "Merchant",
+    "PlannedPurchase",
     "Receipt",
     "RecurringPayment",
     "SavingsGoal",
@@ -66,4 +68,5 @@ USER_SCOPED_TABLES = [
     "ai_conversations",
     "ai_messages",
     "stored_files",
+    "planned_purchases",
 ]

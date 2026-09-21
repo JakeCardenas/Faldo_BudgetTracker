@@ -20,12 +20,15 @@ from app.schemas.ledger import (
     MerchantOut,
     NoteIn,
     NoteOut,
+    SplitIn,
     TransactionIn,
     TransactionList,
     TransactionOut,
 )
+from app.schemas.planning import DebtOut
 from app.services import accounts as account_service
 from app.services import categories as category_service
+from app.services import debts as debt_service
 from app.services import transactions as txn_service
 from app.services.common import get_owned
 
@@ -179,6 +182,11 @@ async def update_transaction(transaction_id: uuid.UUID, data: TransactionIn, ctx
 async def delete_transaction(transaction_id: uuid.UUID, ctx: CtxDep) -> Response:
     await txn_service.delete_transaction(ctx.db, ctx.user_id, transaction_id)
     return Response(status_code=204)
+
+
+@router.post("/transactions/{transaction_id}/split", response_model=DebtOut, status_code=201, tags=["transactions"])
+async def split_transaction(transaction_id: uuid.UUID, data: SplitIn, ctx: CtxDep) -> DebtOut:
+    return await debt_service.split_transaction(ctx.db, ctx.user_id, transaction_id, data, ctx.today)
 
 
 @router.get("/notes", response_model=list[NoteOut], tags=["notes"])

@@ -8,6 +8,7 @@ import { AddTransactionDialog, type AddMode } from "@/components/capture/add-tra
 import type { EntryPreset } from "@/components/capture/keypad-entry"
 import Image from "next/image"
 import { SplashContent } from "@/components/brand/splash"
+import { FaldoCheckSheet, type CheckPreset } from "@/components/decide/faldo-check"
 import { TransactionSheet } from "@/components/finance/transaction-sheet"
 import { AppActionsContext, type AddModeOption } from "@/components/layout/app-context"
 import { CommandSearch } from "@/components/layout/command-search"
@@ -33,6 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [transactionId, setTransactionId] = useState<string | null>(null)
+  const [checkOpen, setCheckOpen] = useState(false)
+  const [checkPreset, setCheckPreset] = useState<CheckPreset | undefined>()
   const theme = me?.settings.theme
 
   useEffect(() => {
@@ -67,6 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     openMore: () => { play("open"); setMoreOpen(true) },
     openSearch: () => setSearchOpen(true),
     openTransaction: (id: string) => setTransactionId(id),
+    openCheck: (preset?: CheckPreset) => { setCheckPreset(preset); setCheckOpen(true); play("open") },
   }), [openAddTransaction])
 
   const booting = isLoading || !me || !me.settings.onboarding_completed_at
@@ -100,6 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
           <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} onAddTransaction={() => openAddTransaction()} onOpenTransaction={setTransactionId} />
           <TransactionSheet id={transactionId} onOpenChange={(open) => { if (!open) setTransactionId(null) }} />
+          <FaldoCheckSheet open={checkOpen} onOpenChange={setCheckOpen} preset={checkPreset} />
         </AppActionsContext.Provider>
       )}
     </>

@@ -23,6 +23,7 @@ from app.engine.scenarios import Adjustment
 from app.models import Category, Transaction, TransactionItem
 from app.models.enums import TransactionType
 from app.services import analytics, budgets, debts, forecast, goals, health, insights, recurring
+from app.services import check as check_service
 from app.services.accounts import account_balances
 from app.services.transactions import TransactionFilters, list_transactions
 
@@ -93,8 +94,9 @@ class NoArgs(BaseModel):
     pass
 
 
-@tool("get_current_balance", "Current balances for every account, total balance, spendable balance, and safe-to-spend "
-      "for the rest of the month. Use for any balance or 'how much money do I have' question.", NoArgs,
+@tool("get_current_balance", "Current balances for every account, total balance, spendable balance, safe-to-spend until "
+      "the next income (only money already received counts) and what's left for this week. Use for any balance, "
+      "'how much money do I have' or 'how much can I spend' question.", NoArgs,
       "Checking your account balances")
 async def get_current_balance(ctx: ToolContext, _: NoArgs) -> ToolOutput:
     balances = await account_balances(ctx.db, ctx.user_id, include_archived=False)
@@ -107,13 +109,20 @@ async def get_current_balance(ctx: ToolContext, _: NoArgs) -> ToolOutput:
         {"as_of": ctx.today.isoformat(), "accounts": accounts, "total_balance": _fmt(ctx, total), "total_balance_minor": total,
          "spendable_balance": _fmt(ctx, spendable), "spendable_balance_minor": spendable,
          "safe_to_spend": _fmt(ctx, sts["amount_minor"]), "safe_to_spend_minor": sts["amount_minor"],
-         "safe_to_spend_per_day": _fmt(ctx, sts["per_day_minor"]), "safe_to_spend_breakdown": sts["lines"],
-         "note": "Total balance subtracts credit card balances owed. Spendable excludes savings and credit cards."},
+         "safe_to_spend_per_day": _fmt(ctx, sts["per_day_minor"]), "safe_to_spend_until": sts["until"],
+         "safe_to_spend_period": "until next income" if sts["period"] == "until_income" else "next 30 days",
+         "next_income": sts["next_income_label"], "next_income_date": sts["next_income_on"],
+         "left_this_week": _fmt(ctx, sts["week"]["left_minor"]), "left_this_week_minor": sts["week"]["left_minor"],
+         "safe_to_spend_breakdown": [{"label": line["label"], "operation": line["op"], "amount": _fmt(ctx, line["amount_minor"]),
+                                      "amount_minor": line["amount_minor"]} for line in sts["lines"]],
+         "note": "Total balance subtracts credit card balances owed. Spendable excludes savings and credit cards. "
+                 "Safe to spend never counts income that hasn't arrived yet."},
         [
             {"type": "stats", "title": "Balances", "items": [
                 {"label": "Total balance", "amount_minor": total},
                 {"label": "Spendable", "amount_minor": spendable},
                 {"label": "Safe to spend", "amount_minor": sts["amount_minor"], "hint": f"≈ {_fmt(ctx, sts['per_day_minor'])}/day"},
+                {"label": "Left this week", "amount_minor": sts["week"]["left_minor"]},
             ]},
             {"type": "list", "title": "Accounts", "items": [
                 {"label": b.account.name, "amount_minor": b.balance_minor, "hint": b.account.type.value.replace("_", " ")}
@@ -484,38 +493,52 @@ class AffordArgs(BaseModel):
     date: str | None = Field(None, description="YYYY-MM-DD purchase date; null for today")
 
 
-@tool("calculate_affordability", "Check whether the user can afford a purchase. Returns a calculated breakdown (balance, "
-      "income, bills, planned savings, typical spending, purchase, projected month-end balance), risk level, budget impact "
-      "and goal delay.", AffordArgs, "Running the affordability calculation")
+@tool("calculate_affordability", "Faldo Check: whether the user can afford a purchase. Returns Safe to Spend before and "
+      "after, what's left for this week, the verdict (fits / stretch / over), budget impact, goal impact, and a "
+      "projected balance with risk level.", AffordArgs, "Running Faldo Check")
 async def calculate_affordability(ctx: ToolContext, args: AffordArgs) -> ToolOutput:
     amount = to_minor(args.amount, ctx.currency)
     on = date.fromisoformat(args.date) if args.date else ctx.today + timedelta(days=1)
     on = max(on, ctx.today + timedelta(days=1))
-    budget_impact = None
-    budget_over = False
-    if args.category:
-        cat = await _find_category(ctx, args.category)
-        if cat:
-            status = await budgets.budget_status(ctx.db, ctx.user_id, on, ctx.today)
-            line = next((line for line in status.lines if line.category_id in {cat.id, cat.parent_id}), None)
-            if line:
-                after = line.remaining_minor - amount
-                budget_over = after < 0
-                budget_impact = {"category": line.category_name, "remaining_before": _fmt(ctx, line.remaining_minor),
-                                 "remaining_before_minor": line.remaining_minor, "remaining_after": _fmt(ctx, after),
-                                 "remaining_after_minor": after, "would_exceed": budget_over}
+    category = await _find_category(ctx, args.category) if args.category else None
+    check = await check_service.check_purchase(ctx.db, ctx.user_id, ctx.settings, ctx.today, amount,
+                                               category.id if category else None, args.description)
+    budget = check["budget_impact"]
     label = f"Purchase{': ' + args.description if args.description else ''}"
     data = await forecast.scenario(ctx.db, ctx.user_id, ctx.settings, ctx.today,
-                                   [Adjustment("one_time_expense", amount, on, label[:60])], budget_over=budget_over)
+                                   [Adjustment("one_time_expense", amount, on, label[:60])],
+                                   budget_over=bool(budget and budget["would_exceed"]))
     result = _scenario_llm(ctx, data)
-    result["purchase"] = _fmt(ctx, amount)
-    result["purchase_minor"] = amount
-    result["budget_impact"] = budget_impact
+    goal = check["goal_impact"]
+    result.update({
+        "purchase": _fmt(ctx, amount), "purchase_minor": amount,
+        "check_verdict": check["verdict"],
+        "safe_to_spend_before": _fmt(ctx, check["safe_before_minor"]), "safe_to_spend_before_minor": check["safe_before_minor"],
+        "safe_to_spend_after": _fmt(ctx, check["safe_after_minor"]), "safe_to_spend_after_minor": check["safe_after_minor"],
+        "over_safe_to_spend_by": _fmt(ctx, check["over_by_minor"]), "over_safe_to_spend_by_minor": check["over_by_minor"],
+        "left_this_week_before": _fmt(ctx, check["week_left_before_minor"]),
+        "left_this_week_before_minor": check["week_left_before_minor"],
+        "per_day_after": _fmt(ctx, check["per_day_after_minor"]), "per_day_after_minor": check["per_day_after_minor"],
+        "safe_to_spend_until": check["until"],
+        "budget_impact": {"category": budget["category"], "remaining_before": _fmt(ctx, budget["remaining_before_minor"]),
+                          "remaining_before_minor": budget["remaining_before_minor"],
+                          "remaining_after": _fmt(ctx, budget["remaining_after_minor"]),
+                          "remaining_after_minor": budget["remaining_after_minor"],
+                          "would_exceed": budget["would_exceed"]} if budget else None,
+        "goal_impact": {"goal": goal["goal"], "savings_at_risk": _fmt(ctx, goal["savings_at_risk_minor"]),
+                        "savings_at_risk_minor": goal["savings_at_risk_minor"], "estimated_delay_days": goal["delay_days"],
+                        "is_estimate": True} if goal else None,
+    })
     blocks = _scenario_blocks(ctx, data, "Can you afford it?")
-    if budget_impact:
-        blocks.insert(1, {"type": "stats", "title": f"{budget_impact['category']} budget", "items": [
-            {"label": "Remaining now", "amount_minor": budget_impact["remaining_before_minor"]},
-            {"label": "After purchase", "amount_minor": budget_impact["remaining_after_minor"]},
+    blocks.insert(0, {"type": "stats", "title": "Faldo Check", "items": [
+        {"label": "Safe to spend now", "amount_minor": check["safe_before_minor"]},
+        {"label": "After this purchase", "amount_minor": check["safe_after_minor"],
+         "hint": f"≈ {_fmt(ctx, check['per_day_after_minor'])}/day"},
+    ]})
+    if budget:
+        blocks.insert(1, {"type": "stats", "title": f"{budget['category']} budget", "items": [
+            {"label": "Remaining now", "amount_minor": budget["remaining_before_minor"]},
+            {"label": "After purchase", "amount_minor": budget["remaining_after_minor"]},
         ]})
     return ToolOutput(result, blocks)
 
@@ -557,28 +580,32 @@ async def calculate_forecast(ctx: ToolContext, args: ForecastArgs) -> ToolOutput
 
 
 class AdjustmentArg(BaseModel):
-    kind: Literal["one_time_expense", "one_time_income", "extra_savings", "reduce_savings"]
-    amount: float = Field(..., gt=0, description="Major units")
-    date: str | None = Field(None, description="YYYY-MM-DD; null for tomorrow")
+    kind: Literal["one_time_expense", "one_time_income", "extra_savings", "reduce_savings", "income_decrease"] = Field(
+        ..., description="one_time_expense = extra spending, one_time_income = extra income, income_decrease = less income")
+    amount: float = Field(..., gt=0, description="Major units, per occurrence")
+    repeat: Literal["once", "daily", "weekly", "monthly"] = Field(
+        "once", description="How often it happens, e.g. 'daily' for ₱200 a day, 'monthly' for saving ₱2,000 every month")
+    date: str | None = Field(None, description="YYYY-MM-DD first date; null for tomorrow")
     label: str | None = None
 
 
 class ScenarioArgs(BaseModel):
     adjustments: list[AdjustmentArg] = Field(..., min_length=1, max_length=5)
-    horizon: Literal["end_of_month", "30_days", "60_days", "90_days"] = "end_of_month"
+    horizon: Literal["end_of_month", "30_days", "60_days", "90_days", "6_months", "12_months"] = Field(
+        "end_of_month", description="Use 6_months or 12_months for monthly or recurring changes")
 
 
-@tool("simulate_scenario", "What-if simulation: apply hypothetical expenses, income or savings changes and compare the "
-      "projected balance with the baseline. Returns calculation, risk level and projected series.", ScenarioArgs,
-      "Simulating the scenario")
+@tool("simulate_scenario", "What-if simulation: apply hypothetical one-off or repeating changes (extra spending, extra or "
+      "lower income, more or less saving) and compare the projected balance with the baseline. Returns calculation, risk "
+      "level and projected series.", ScenarioArgs, "Simulating the scenario")
 async def simulate_scenario(ctx: ToolContext, args: ScenarioArgs) -> ToolOutput:
     labels = {"one_time_expense": "Planned expense", "one_time_income": "Extra income", "extra_savings": "Extra savings",
-              "reduce_savings": "Reduced savings"}
+              "reduce_savings": "Reduced savings", "income_decrease": "Less income"}
     adjustments = []
     for a in args.adjustments:
         on = date.fromisoformat(a.date) if a.date else ctx.today + timedelta(days=1)
         adjustments.append(Adjustment(a.kind, to_minor(a.amount, ctx.currency), max(on, ctx.today + timedelta(days=1)),
-                                      (a.label or labels[a.kind])[:60]))
+                                      (a.label or labels[a.kind])[:60], None, a.repeat))
     data = await forecast.scenario(ctx.db, ctx.user_id, ctx.settings, ctx.today, adjustments, args.horizon)
     return ToolOutput(_scenario_llm(ctx, data), _scenario_blocks(ctx, data, "What-if result"))
 

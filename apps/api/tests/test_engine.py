@@ -160,3 +160,28 @@ def test_output_sanitizer():
     text = "See ![x](https://evil.test/p.png) and [click](https://evil.test) <script>x</script> [t1] [t9]"
     clean = strip_unknown_refs(sanitize_markdown(text), {"t1"})
     assert "evil" not in clean and "<script>" not in clean and "[t1]" in clean and "[t9]" not in clean
+
+
+def test_repeating_what_if_changes():
+    from app.engine.scenarios import adjustment_total, occurrences
+
+    start = date(2026, 9, 15)
+    daily = Adjustment("one_time_expense", 20_000, start, "Food", repeat="daily")
+    assert len(occurrences(daily, date(2026, 9, 30))) == 16
+    assert adjustment_total(daily, date(2026, 9, 30)) == 320_000
+    weekly = Adjustment("one_time_expense", 50_000, start, "Eating out", repeat="weekly")
+    assert occurrences(weekly, date(2026, 10, 6)) == [date(2026, 9, 15), date(2026, 9, 22), date(2026, 9, 29), date(2026, 10, 6)]
+    monthly = Adjustment("extra_savings", 200_000, date(2026, 1, 31), "Save more", repeat="monthly")
+    assert occurrences(monthly, date(2026, 4, 30)) == [date(2026, 1, 31), date(2026, 2, 28), date(2026, 3, 31), date(2026, 4, 30)]
+
+    today = date(2026, 9, 14)
+    kwargs = dict(today=today, horizon_end=date(2027, 3, 14), start_balance_minor=5_000_000,
+                  daily_discretionary=_history(45, 40_000, today), history_days=45, events=[],
+                  planned_savings_minor=0, buffer_minor=200_000, seed=3)
+    drop = run_scenario(adjustments=[Adjustment("income_decrease", 500_000, start, "Less income", repeat="monthly")], **kwargs)
+    assert drop["delta_minor"] == -500_000 * 6  # Sep 15 .. Feb 15; Mar 15 is after the horizon
+    line = drop["lines"][-1]
+    assert line["times"] == 6 and line["each_minor"] == 500_000 and line["amount_minor"] == 3_000_000
+    assert total_from_lines(drop["lines"]) == drop["projected_minor"]
+    save = run_scenario(adjustments=[Adjustment("extra_savings", 200_000, start, "Save", repeat="monthly")], **kwargs)
+    assert save["delta_minor"] == -1_200_000

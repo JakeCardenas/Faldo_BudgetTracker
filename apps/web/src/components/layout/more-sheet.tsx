@@ -24,9 +24,10 @@ export function ActionTile({ action, onPick, highlight, compact }: { action: Qui
 
 export function useRunAction() {
   const router = useRouter()
-  const { openAddTransaction } = useAppActions()
+  const { openAddTransaction, openCheck } = useAppActions()
   return (action: QuickAction) => {
     if (action.add) openAddTransaction({ mode: action.add })
+    else if (action.check) openCheck()
     else if (action.href) router.push(action.href)
   }
 }

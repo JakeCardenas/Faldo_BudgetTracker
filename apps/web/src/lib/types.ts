@@ -1,4 +1,4 @@
-export type TransactionType = "income" | "expense" | "transfer"
+export type TransactionType = "income" | "expense" | "transfer" | "debt_in" | "debt_out"
 export type AccountType = "cash" | "bank" | "e_wallet" | "credit_card" | "savings" | "custom"
 export type Frequency = "weekly" | "biweekly" | "semi_monthly" | "monthly" | "quarterly" | "yearly"
 export type RecurringKind = "bill" | "subscription" | "rent" | "loan" | "insurance" | "income" | "other"
@@ -88,6 +88,7 @@ export interface Transaction {
   items: TransactionItem[]
   source: string
   recurring_payment_id: string | null
+  debt_id: string | null
   created_at: string
   updated_at: string
 }
@@ -223,7 +224,9 @@ export interface Debt {
   status: "open" | "settled" | "cancelled"
   notes: string | null
   started_on: string
-  payments: { id: string; amount_minor: number; paid_on: string; note: string | null }[]
+  payments: { id: string; amount_minor: number; paid_on: string; note: string | null; transaction_id: string | null; account_name: string | null }[]
+  account_name: string | null
+  source_transaction_id: string | null
 }
 
 export interface Insight {
@@ -248,11 +251,25 @@ export interface CategoryRow {
   icon: string
 }
 
+export interface CalcLineItem {
+  label: string
+  amount_minor: number
+  date: string
+  is_overdue: boolean
+  kind: string
+  ref_id: string | null
+}
+
 export interface CalcLine {
   key?: string
   label: string
   amount_minor: number
   op: "start" | "add" | "subtract"
+  hint?: string
+  items?: CalcLineItem[]
+  repeat?: "once" | "daily" | "weekly" | "monthly"
+  times?: number
+  each_minor?: number
 }
 
 export interface SafeToSpend {
@@ -261,9 +278,52 @@ export interface SafeToSpend {
   per_day_minor: number
   days_left: number
   until: string
+  period: "until_income" | "rolling"
+  next_income_on: string | null
+  next_income_label: string | null
+  status: "good" | "tight" | "short"
   lines: CalcLine[]
+  commitments_minor: number
+  buffer_minor: number
   shortfall_minor: number
+  week: { start: string; end: string; allowance_minor: number; spent_minor: number; left_minor: number; days_left: number }
   note: string
+}
+
+export interface AttentionItem {
+  kind: "short" | "bill_overdue" | "income_unconfirmed" | "owe_due" | "owed_overdue" | "budget_over" | "budget_at_risk"
+  severity: "critical" | "warning" | "info"
+  title?: string
+  amount_minor: number
+  date?: string
+  ref_id?: string
+  account_id?: string | null
+  pct_used?: number
+  is_overdue?: boolean
+}
+
+export interface CheckResult {
+  amount_minor: number
+  label: string | null
+  verdict: "fits" | "stretch" | "over"
+  safe_before_minor: number
+  safe_after_minor: number
+  raw_after_minor: number
+  over_by_minor: number
+  per_day_after_minor: number
+  week_left_before_minor: number
+  week_left_after_minor: number
+  goal_impact: { goal: string; savings_at_risk_minor: number; delay_days: number | null; is_estimate: boolean } | null
+  budget_impact: { category: string; remaining_before_minor: number; remaining_after_minor: number; would_exceed: boolean } | null
+  until: string
+  period: "until_income" | "rolling"
+  next_income_on: string | null
+  next_income_label: string | null
+  days_left: number
+  buffer_minor: number
+  commitments: CalcLineItem[]
+  commitments_minor: number
+  safe_to_spend: SafeToSpend
 }
 
 export interface Dashboard {
@@ -288,6 +348,8 @@ export interface Dashboard {
   upcoming: UpcomingItem[]
   accounts: Account[]
   safe_to_spend: SafeToSpend
+  attention: AttentionItem[]
+  money_owed: { you_owe_minor: number; owed_to_you_minor: number }
   has_data: boolean
 }
 
@@ -559,5 +621,27 @@ export interface FinancialNote {
   id: string
   content: string
   related_goal_id: string | null
+  created_at: string
+}
+
+export interface PlannedPurchase {
+  id: string
+  name: string
+  amount_minor: number
+  url: string | null
+  category_id: string | null
+  category_name: string | null
+  target_date: string | null
+  priority: "low" | "medium" | "high"
+  notes: string | null
+  status: "planned" | "bought" | "dropped"
+  pause_until: string | null
+  is_paused: boolean
+  verdict: "fits" | "stretch" | "over" | null
+  safe_after_minor: number | null
+  over_by_minor: number | null
+  affordable_on: string | null
+  affordable_is_estimate: boolean
+  bought_transaction_id: string | null
   created_at: string
 }

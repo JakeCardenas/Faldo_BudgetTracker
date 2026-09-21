@@ -5,7 +5,7 @@ from typing import Annotated, Self
 
 from pydantic import Field, StringConstraints, model_validator
 
-from app.models.enums import AccountType, CategoryKind, TransactionSource, TransactionType
+from app.models.enums import MONEY_OWED_TYPES, AccountType, CategoryKind, TransactionSource, TransactionType
 from app.schemas.common import ApiModel, CurrencyCode, LongText, Name, OutModel, PositiveMoney, SignedMoney
 
 
@@ -107,6 +107,8 @@ class TransactionIn(ApiModel):
 
     @model_validator(mode="after")
     def check_shape(self) -> Self:
+        if self.type in MONEY_OWED_TYPES:
+            raise ValueError("Record money lent, borrowed or repaid from Money owed")
         if self.type == TransactionType.transfer:
             if not self.to_account_id:
                 raise ValueError("Transfers need a destination account")
@@ -144,8 +146,16 @@ class TransactionOut(OutModel):
     items: list[ItemOut]
     source: TransactionSource
     recurring_payment_id: uuid.UUID | None
+    debt_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class SplitIn(ApiModel):
+    counterparty: Name
+    amount_minor: PositiveMoney
+    due_on: date | None = None
+    notes: LongText | None = None
 
 
 class TransactionList(OutModel):

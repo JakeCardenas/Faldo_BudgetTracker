@@ -1,11 +1,12 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -133,6 +134,9 @@ class Debt(UUIDPk, UserOwned, Timestamps, Base):
     status: Mapped[DebtStatus] = mapped_column(str_enum(DebtStatus, "debt_status"), default=DebtStatus.open)
     notes: Mapped[str | None] = mapped_column(Text)
     started_on: Mapped[date] = mapped_column(Date)
+    source_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL", use_alter=True)
+    )
 
     payments: Mapped[list["DebtPayment"]] = relationship(
         back_populates="debt", cascade="all, delete-orphan", order_by="DebtPayment.paid_on"
@@ -147,6 +151,9 @@ class DebtPayment(UUIDPk, UserOwned, Timestamps, Base):
     amount_minor: Mapped[int] = mapped_column(BigInteger)
     paid_on: Mapped[date] = mapped_column(Date)
     note: Mapped[str | None] = mapped_column(String(200))
+    transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL", use_alter=True)
+    )
 
     debt: Mapped[Debt] = relationship(back_populates="payments")
 
@@ -158,3 +165,30 @@ class FinancialNote(UUIDPk, UserOwned, Timestamps, Base):
     related_goal_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("savings_goals.id", ondelete="SET NULL")
     )
+
+
+class PlannedPurchase(UUIDPk, UserOwned, Timestamps, Base):
+    """Something the user means to buy. Faldo checks it against Safe to Spend; it is never spent automatically."""
+
+    __tablename__ = "planned_purchases"
+    __table_args__ = (
+        CheckConstraint("amount_minor > 0", name="amount_positive"),
+        CheckConstraint("priority IN ('low', 'medium', 'high')", name="priority_value"),
+        CheckConstraint("status IN ('planned', 'bought', 'dropped')", name="status_value"),
+    )
+
+    name: Mapped[str] = mapped_column(String(80))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    url: Mapped[str | None] = mapped_column(String(500))
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL")
+    )
+    target_date: Mapped[date | None] = mapped_column(Date)
+    priority: Mapped[str] = mapped_column(String(10), default="medium", server_default="medium")
+    notes: Mapped[str | None] = mapped_column(Text)
+    pause_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(12), default="planned", server_default="planned")
+    bought_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL")
+    )
+

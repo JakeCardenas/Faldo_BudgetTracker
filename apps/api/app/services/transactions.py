@@ -9,10 +9,19 @@ from sqlalchemy import Select, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.errors import AppError, NotFound
+from app.core.errors import AppError, Conflict, NotFound
 from app.engine.periods import month_start
 from app.jobs.queue import enqueue_index, enqueue_monthly_summary, enqueue_unindex
-from app.models import Account, Category, Merchant, Tag, Transaction, TransactionItem, transaction_tags
+from app.models import (
+    Account,
+    Category,
+    Merchant,
+    RecurringPayment,
+    Tag,
+    Transaction,
+    TransactionItem,
+    transaction_tags,
+)
 from app.models.enums import CategoryKind, TransactionSource, TransactionType
 from app.schemas.ledger import ItemOut, TransactionIn, TransactionList, TransactionOut
 from app.services.categories import resolve_category_pair
@@ -65,7 +74,7 @@ def to_out(t: Transaction) -> TransactionOut:
         subcategory_id=t.subcategory_id, subcategory_name=t.subcategory.name if t.subcategory else None,
         payment_method=t.payment_method, notes=t.notes, tags=sorted(tag.name for tag in t.tags),
         items=[ItemOut.model_validate(i) for i in t.items], source=t.source,
-        recurring_payment_id=t.recurring_payment_id, created_at=t.created_at, updated_at=t.updated_at,
+        recurring_payment_id=t.recurring_payment_id, debt_id=t.debt_id, created_at=t.created_at, updated_at=t.updated_at,
     )
 
 
@@ -223,6 +232,8 @@ async def _validate_refs(db: AsyncSession, user_id: uuid.UUID, data: Transaction
     account = await get_owned(db, Account, data.account_id, user_id, "Account")
     if data.to_account_id:
         await get_owned(db, Account, data.to_account_id, user_id, "Destination account")
+    if data.recurring_payment_id:
+        await get_owned(db, RecurringPayment, data.recurring_payment_id, user_id, "Recurring payment")
     category, sub = await resolve_category_pair(db, user_id, data.category_id, data.subcategory_id)
     if data.type == TransactionType.transfer:
         category, sub = None, None
@@ -255,10 +266,16 @@ async def create_transaction(
     return await get_transaction(db, user_id, txn.id)
 
 
+def _ensure_not_money_owed(txn: Transaction) -> None:
+    if txn.debt_id is not None:
+        raise Conflict("This is part of a money owed record. Change or delete it from Money owed.")
+
+
 async def update_transaction(
     db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionIn
 ) -> Transaction:
     txn = await get_transaction(db, user_id, transaction_id)
+    _ensure_not_money_owed(txn)
     previous_date = txn.occurred_on
     account, category, sub = await _validate_refs(db, user_id, data)
     merchant = await get_or_create_merchant(
@@ -287,6 +304,7 @@ async def update_transaction(
 
 async def delete_transaction(db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID) -> None:
     txn = await get_transaction(db, user_id, transaction_id)
+    _ensure_not_money_owed(txn)
     occurred = txn.occurred_on
     item_ids = [i.id for i in txn.items]
     await db.delete(txn)

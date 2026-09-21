@@ -9,6 +9,7 @@ import { ForecastChart } from "@/components/charts/charts"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CalculationCard, RiskBadge } from "@/components/finance/calculation-card"
 import { EmptyState } from "@/components/finance/empty-state"
+import { untilPhrase } from "@/components/home/safe-to-spend"
 import { Money } from "@/components/finance/money"
 import { PageHeader, SectionCard } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
@@ -23,17 +24,24 @@ import { useCategories, useForecast } from "@/lib/queries"
 import type { ScenarioResult } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-type AdjustmentKind = "one_time_expense" | "one_time_income" | "extra_savings" | "reduce_savings"
-interface Draft { kind: AdjustmentKind; amount: string; date: string; label: string; categoryId: string }
+type AdjustmentKind = "one_time_expense" | "one_time_income" | "extra_savings" | "reduce_savings" | "income_decrease"
+type Repeat = "once" | "daily" | "weekly" | "monthly"
+type Horizon = "end_of_month" | "90_days" | "6_months" | "12_months"
+interface Draft { kind: AdjustmentKind; amount: string; date: string; label: string; categoryId: string; repeat: Repeat }
 
 const KIND_LABELS: Record<AdjustmentKind, string> = {
   one_time_expense: "I spend", one_time_income: "I receive", extra_savings: "I save extra", reduce_savings: "I save less",
+  income_decrease: "I earn less",
 }
-const PRESETS: { label: string; draft: Partial<Draft> }[] = [
-  { label: "Spend ₱5,000 this weekend", draft: { kind: "one_time_expense", amount: "5000", label: "Weekend spending" } },
-  { label: "Buy a ₱10,000 phone", draft: { kind: "one_time_expense", amount: "10000", label: "New phone" } },
-  { label: "Save ₱2,000 more", draft: { kind: "extra_savings", amount: "2000", label: "Extra savings" } },
+const REPEAT_LABELS: Record<Repeat, string> = { once: "Once", daily: "Every day", weekly: "Every week", monthly: "Every month" }
+const HORIZON_LABELS: Record<Horizon, string> = { end_of_month: "End of month", "90_days": "3 months", "6_months": "6 months", "12_months": "12 months" }
+const PRESETS: { label: string; draft: Partial<Draft>; horizon: Horizon }[] = [
+  { label: "Buy ₱5,999 headphones", draft: { kind: "one_time_expense", amount: "5999", label: "Headphones" }, horizon: "end_of_month" },
+  { label: "₱200 a day on food", draft: { kind: "one_time_expense", amount: "200", label: "Food", repeat: "daily" }, horizon: "end_of_month" },
+  { label: "Save ₱2,000 every month", draft: { kind: "extra_savings", amount: "2000", label: "Extra savings", repeat: "monthly" }, horizon: "12_months" },
+  { label: "Income drops ₱5,000", draft: { kind: "income_decrease", amount: "5000", label: "Less income", repeat: "monthly" }, horizon: "6_months" },
 ]
+const EMPTY: Draft = { kind: "one_time_expense", amount: "", date: "", label: "", categoryId: "__none__", repeat: "once" }
 const REASONS: Record<string, string> = {
   negative_balance: "Your spendable balance could go below zero.",
   below_buffer: "It leaves less than your safety buffer.",
@@ -45,12 +53,14 @@ const NONE = "__none__"
 
 function Simulator() {
   const { data: categories = [] } = useCategories()
-  const [drafts, setDrafts] = useState<Draft[]>([{ kind: "one_time_expense", amount: "5000", date: "", label: "Weekend spending", categoryId: NONE }])
+  const [drafts, setDrafts] = useState<Draft[]>([{ ...EMPTY, amount: "5999", label: "Headphones" }])
+  const [horizon, setHorizon] = useState<Horizon>("end_of_month")
   const run = useMutation({
     mutationFn: () => api.post<ScenarioResult>("/forecast/scenario", {
-      horizon: "end_of_month",
+      horizon,
       adjustments: drafts.filter((d) => toMinor(d.amount)).map((d) => ({
-        kind: d.kind, amount_minor: toMinor(d.amount), date: d.date || null, label: d.label || null, category_id: d.categoryId === NONE ? null : d.categoryId,
+        kind: d.kind, amount_minor: toMinor(d.amount), date: d.date || null, label: d.label || null, repeat: d.repeat,
+        category_id: d.categoryId === NONE ? null : d.categoryId,
       })),
     }),
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Simulation failed."),
@@ -65,7 +75,7 @@ function Simulator() {
         <div className="space-y-4">
           <div className="flex flex-wrap gap-1.5">
             {PRESETS.map((p) => (
-              <button key={p.label} type="button" onClick={() => setDrafts([{ kind: "one_time_expense", amount: "", date: "", label: "", categoryId: NONE, ...p.draft } as Draft])}
+              <button key={p.label} type="button" onClick={() => { setDrafts([{ ...EMPTY, ...p.draft }]); setHorizon(p.horizon); run.reset() }}
                 className="rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:border-primary/30 hover:text-foreground">{p.label}</button>
             ))}
           </div>
@@ -80,9 +90,15 @@ function Simulator() {
                 {drafts.length > 1 && <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => setDrafts(drafts.filter((_, idx) => idx !== i))}><Minus /></Button>}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">When</Label><Input type="date" min={todayISO()} value={d.date} onChange={(e) => update(i, { date: e.target.value })} className="bg-card" /></div>
-                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Label</Label><Input value={d.label} maxLength={60} onChange={(e) => update(i, { label: e.target.value })} className="bg-card" placeholder="Optional" /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">How often</Label>
+                  <Select value={d.repeat} onValueChange={(v) => update(i, { repeat: v as Repeat })}>
+                    <SelectTrigger className="w-full bg-card"><SelectValue /></SelectTrigger>
+                    <SelectContent>{Object.entries(REPEAT_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">{d.repeat === "once" ? "When" : "Starting"}</Label><Input type="date" min={todayISO()} value={d.date} onChange={(e) => update(i, { date: e.target.value })} className="bg-card" /></div>
               </div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Label</Label><Input value={d.label} maxLength={60} onChange={(e) => update(i, { label: e.target.value })} className="bg-card" placeholder="Optional" /></div>
               {d.kind === "one_time_expense" && (
                 <Select value={d.categoryId} onValueChange={(v) => update(i, { categoryId: v })}>
                   <SelectTrigger className="w-full bg-card"><SelectValue placeholder="Budget category" /></SelectTrigger>
@@ -92,7 +108,11 @@ function Simulator() {
             </div>
           ))}
           <div className="flex gap-2">
-            {drafts.length < 5 && <Button variant="ghost" onClick={() => setDrafts([...drafts, { kind: "one_time_expense", amount: "", date: "", label: "", categoryId: NONE }])}><Plus /> Add change</Button>}
+            <Select value={horizon} onValueChange={(v) => setHorizon(v as Horizon)}>
+              <SelectTrigger className="w-36" aria-label="Look ahead to"><SelectValue /></SelectTrigger>
+              <SelectContent>{Object.entries(HORIZON_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+            </Select>
+            {drafts.length < 5 && <Button variant="ghost" onClick={() => setDrafts([...drafts, { ...EMPTY }])}><Plus /> Add change</Button>}
             <Button className="ml-auto" onClick={() => run.mutate()} disabled={run.isPending || !drafts.some((d) => toMinor(d.amount))}>{run.isPending ? "Simulating…" : "Run simulation"}</Button>
           </div>
         </div>
@@ -102,7 +122,7 @@ function Simulator() {
             <div className="flex h-full min-h-72 flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center">
               <FlaskConical className="size-6 text-muted-foreground" />
               <p className="text-sm font-medium">Run a scenario to see its impact</p>
-              <p className="max-w-xs text-xs text-muted-foreground">Faldo recalculates your projected month-end balance, budget impact and savings risk.</p>
+              <p className="max-w-xs text-xs text-muted-foreground">Faldo recalculates your projected balance, budget impact and savings risk. Repeating changes add up over the period you pick.</p>
             </div>
           ) : (
             <div className="animate-rise space-y-4">
@@ -167,7 +187,7 @@ export default function ForecastPage() {
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Spendable now</p><Money minor={data.start_balance_minor} className="text-2xl font-semibold tracking-[-0.025em]" /></div>
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Projected {formatDate(data.horizon_end, "MMM d")}</p><Money minor={data.end_balance.p50} className="block text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">Likely {formatMoney(data.end_balance.p10)} to {formatMoney(data.end_balance.p90)}</p></div>
             <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Lowest point</p><Money minor={data.lowest_point.p50_minor} className={cn("text-2xl font-semibold tracking-[-0.025em]", data.lowest_point.p50_minor < data.buffer_minor && "text-warning")} /><p className="text-xs text-muted-foreground">around {formatDate(data.lowest_point.date, "MMM d")}</p></div>
-            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Safe to spend</p><Money minor={data.safe_to_spend.amount_minor} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">≈{formatMoney(data.safe_to_spend.per_day_minor)}/day this month</p></div>
+            <div className="card-surface p-5"><p className="text-sm text-muted-foreground">Safe to spend</p><Money minor={data.safe_to_spend.amount_minor} className="text-2xl font-semibold tracking-[-0.025em]" /><p className="text-xs text-muted-foreground">≈{formatMoney(data.safe_to_spend.per_day_minor)}/day {untilPhrase(data.safe_to_spend)}</p></div>
           </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_22rem]">
             <SectionCard title="Projected spendable balance" description={data.sufficiency === "low" ? "Limited history. Treat this range with caution." : `Based on ${data.history_days} days of history`}>
@@ -180,7 +200,7 @@ export default function ForecastPage() {
               </div>
             </SectionCard>
             <div className="space-y-4">
-              <CalculationCard title="Safe to spend" lines={data.safe_to_spend.lines} resultLabel="Safe to spend" resultMinor={data.safe_to_spend.raw_minor} note={data.safe_to_spend.note} />
+              <CalculationCard title={`Safe to spend ${untilPhrase(data.safe_to_spend)}`} lines={data.safe_to_spend.lines} resultLabel="Safe to spend" resultMinor={data.safe_to_spend.raw_minor} note={data.safe_to_spend.note} />
               <SectionCard title="Scheduled" description="Bills, income and savings in the window" bodyClassName="pt-2">
                 <ul className="max-h-72 space-y-2 overflow-y-auto">
                   {data.events.length === 0 && <li className="text-sm text-muted-foreground">Nothing scheduled.</li>}

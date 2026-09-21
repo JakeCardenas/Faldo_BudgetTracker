@@ -12,6 +12,17 @@ import { markWelcome } from "@/components/brand/welcome-splash"
 import { api, ApiError } from "@/lib/api"
 import type { Me } from "@/lib/types"
 
+/** Only same-origin paths. Browsers treat "/\evil.com" like "//evil.com", so resolve before trusting it. */
+function safeNext(next: string | null) {
+  if (!next) return "/"
+  try {
+    const url = new URL(next, window.location.origin)
+    return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : "/"
+  } catch {
+    return "/"
+  }
+}
+
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter()
   const params = useSearchParams()
@@ -33,8 +44,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         : await api.post<Me>("/auth/register", { email, password, display_name: name })
       qc.setQueryData(["me"], me)
       if (me.settings.onboarding_completed_at) markWelcome()
-      const next = params.get("next")
-      router.replace(!me.settings.onboarding_completed_at ? "/onboarding" : next?.startsWith("/") && !next.startsWith("//") ? next : "/")
+      router.replace(!me.settings.onboarding_completed_at ? "/onboarding" : safeNext(params.get("next")))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
       setBusy(false)
