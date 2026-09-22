@@ -9,6 +9,7 @@ import { ArrowDownRight, ArrowUpRight, ArrowUpDown, ChevronDown, ChevronRight, C
 import { toast } from "sonner"
 import { BambooDecor, environmentStyle } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
+import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { EmptyState } from "@/components/finance/empty-state"
 import { HideAmountsButton } from "@/components/finance/hide-amounts"
@@ -20,7 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ACCOUNT_GROUPS } from "@/lib/account-templates"
 import { api } from "@/lib/api"
-import { poseFor } from "@/lib/catalog"
+import { environmentFor, poseFor } from "@/lib/catalog"
 import { formatMoney } from "@/lib/format"
 import { maskAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights, useMe } from "@/lib/queries"
@@ -203,6 +204,7 @@ export default function AccountsPage() {
     <div className="space-y-6 pb-2">
       <section aria-label="Wallet" style={environmentStyle(me?.settings.home_background)}
         className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
+        <StatusBarTint from={environmentFor(me?.settings.home_background).from} to={environmentFor(me?.settings.home_background).to} />
         <BambooDecor className="absolute top-0 -right-8 -z-10 h-[18rem] lg:h-[24rem]" />
         <div className="flex items-center justify-between gap-2">
           {arranging ? <span /> : (
@@ -275,7 +277,7 @@ export default function AccountsPage() {
         </section>
       ) : (
         <>
-          <div className="grid grid-cols-[1.4fr_1fr] gap-3 lg:grid-cols-[2fr_1fr]">
+          <div className="cascade grid grid-cols-[1.4fr_1fr] gap-3 lg:grid-cols-[2fr_1fr]">
             <InsightCard />
             <DailyBalance view={view} />
           </div>
@@ -298,7 +300,7 @@ export default function AccountsPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="cascade space-y-6">
             {groups.map((group) => {
               const total = group.accounts.reduce((s, a) => s + a.balance_minor, 0)
               const isCollapsed = collapsed.has(group.type)

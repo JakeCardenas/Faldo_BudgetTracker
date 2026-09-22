@@ -448,7 +448,8 @@
 
 /*
   First visit to a page: the header settles first (180ms), then each group below it follows at 60ms steps
-  (260ms each). Returning to a page skips this, so going back feels instant.
+  (260ms each), and anything marked .cascade (rows, cards, tiles) flows in one after another at 45ms steps.
+  Coming back to a page plays only a quick fade, so it still feels fast.
 */
 .page-enter > * > * {
   animation: page-in 260ms var(--ease-out-quint) backwards;
@@ -458,6 +459,22 @@
 .page-enter > * > *:nth-child(3) { animation-delay: 120ms; }
 .page-enter > * > *:nth-child(4) { animation-delay: 180ms; }
 .page-enter > * > *:nth-child(n + 5) { animation-delay: 240ms; }
+
+.page-enter .cascade > * { animation: page-in 300ms var(--ease-out-quint) backwards; }
+.page-enter .cascade > :nth-child(1) { animation-delay: 90ms; }
+.page-enter .cascade > :nth-child(2) { animation-delay: 135ms; }
+.page-enter .cascade > :nth-child(3) { animation-delay: 180ms; }
+.page-enter .cascade > :nth-child(4) { animation-delay: 225ms; }
+.page-enter .cascade > :nth-child(5) { animation-delay: 270ms; }
+.page-enter .cascade > :nth-child(6) { animation-delay: 315ms; }
+.page-enter .cascade > :nth-child(7) { animation-delay: 360ms; }
+.page-enter .cascade > :nth-child(8) { animation-delay: 405ms; }
+.page-enter .cascade > :nth-child(n + 9) { animation-delay: 450ms; }
+
+@keyframes page-fade {
+  from { opacity: 0; }
+}
+.page-return > * { animation: page-fade 180ms ease-out backwards; }
 
 /* Theme changes crossfade instead of snapping. */
 ::view-transition-old(root),

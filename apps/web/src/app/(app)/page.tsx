@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Plus, Wallet } from "lucide-react"
 import { BambooDecor, environmentStyle } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
+import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { BalanceCard, HomeBand } from "@/components/home/hero"
 import { SafeToSpendCard } from "@/components/home/safe-to-spend"
@@ -12,6 +13,7 @@ import { MoneyInOut, QuickActions, SpendingRing } from "@/components/home/widget
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { environmentFor } from "@/lib/catalog"
 import { greeting } from "@/lib/format"
 import { useDashboard, useMe } from "@/lib/queries"
 
@@ -41,6 +43,7 @@ function Welcome() {
   return (
     <section style={environmentStyle(me?.settings.home_background)}
       className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(env(safe-area-inset-top)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
+      <StatusBarTint from={environmentFor(me?.settings.home_background).from} to={environmentFor(me?.settings.home_background).to} />
       <BambooDecor className="absolute -right-8 -bottom-10 -z-10 h-[26rem]" />
       <Panda pose="wave" priority sizes="192px" className="w-44 drop-shadow-[0_18px_28px_rgb(0_0_0/0.28)] sm:w-48" />
       <h1 className="mt-6 text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">{greeting()}{name ? `, ${name}` : ""}</h1>
@@ -78,7 +81,7 @@ export default function HomePage() {
     <div className="pb-4">
       <HomeBand data={data} />
       <div className="mt-5 grid grid-cols-1 gap-7 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-x-10 lg:gap-y-8">
-        <div className="contents lg:flex lg:flex-col lg:gap-8">
+        <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
           <QuickActions className="order-1 lg:order-none" />
           <BalanceCard data={data} className="order-2 lg:order-none" />
           <div className="order-4 grid grid-cols-[1.12fr_1fr] gap-3 lg:order-none">
@@ -88,7 +91,7 @@ export default function HomePage() {
           <div className="order-5 lg:order-none"><PaymentsDue data={data} /></div>
           <div className="order-6 lg:order-none"><AccountsRail data={data} /></div>
         </div>
-        <div className="contents lg:flex lg:flex-col lg:gap-8">
+        <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
           <SafeToSpendCard sts={data.safe_to_spend} className="order-3 lg:order-none" />
           <div className="order-7 lg:order-none"><RecentActivity data={data} /></div>
         </div>

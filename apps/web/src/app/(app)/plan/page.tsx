@@ -135,12 +135,12 @@ export default function PlanPage() {
           <HeaderButton onClick={() => router.push("/reports")} aria-label="Statistics"><BarChart3 /></HeaderButton>
         </div>} />
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-10">
-        <ul className="space-y-2.5">
+        <ul className="cascade space-y-2.5">
           {items.map((item) => <PlanRow key={item.title} item={item} />)}
         </ul>
         <div className="space-y-6">
           <AffordCheck />
-          <ul className="grid grid-cols-2 gap-2.5">
+          <ul className="cascade grid grid-cols-2 gap-2.5">
             {MORE.map(({ href, label, icon: Icon }) => (
               <li key={href}>
                 <Link href={href} onClick={() => play("tap")}

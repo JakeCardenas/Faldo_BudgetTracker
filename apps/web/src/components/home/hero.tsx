@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns"
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleUserRound, Flame, Search } from "lucide-react"
 import { BambooDecor, environmentStyle } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
+import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { BalanceLine, type BalancePointValue } from "@/components/charts/charts"
 import { HideAmountsButton } from "@/components/finance/hide-amounts"
 import { AnimatedMoney } from "@/components/finance/money"
@@ -13,7 +14,7 @@ import { useFaldoNote } from "@/components/home/sections"
 import { useAppActions } from "@/components/layout/app-context"
 import { Notifications } from "@/components/layout/notifications"
 import { Skeleton } from "@/components/ui/skeleton"
-import { poseFor } from "@/lib/catalog"
+import { environmentFor, poseFor } from "@/lib/catalog"
 import { formatDate, formatMoney, greeting } from "@/lib/format"
 import { maskAmounts } from "@/lib/privacy"
 import { useBalanceHistory, useEngagement, useMe } from "@/lib/queries"
@@ -69,6 +70,7 @@ export function HomeBand({ data }: { data: Dashboard }) {
   return (
     <section aria-label="Welcome" style={environmentStyle(me?.settings.home_background)}
       className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
+      <StatusBarTint from={environmentFor(me?.settings.home_background).from} to={environmentFor(me?.settings.home_background).to} />
       <BambooDecor className="absolute top-0 -right-8 -z-10 h-[18rem] lg:top-auto lg:right-2 lg:-bottom-12 lg:h-[26rem]" />
 
       <div className="flex items-center justify-between lg:hidden">

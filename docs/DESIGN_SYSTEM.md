@@ -17,7 +17,7 @@ The **+** (its own circle beside the tab bar on phones, "Add" on desktop) opens 
 
 ## Navigation
 
-Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle to its right, both on the page's 20px margins and above the home indicator. The selected tab sits in a green lens that feels set into the glass. Pressing a tab springs the lens to it (440ms, about 2% overshoot) and swells it slightly while the finger is down (150ms), so the tap answers immediately. Scrolling down folds the capsule into one circle showing the current tab; scrolling up, reaching the top, tapping it or focusing it opens it again. The + never hides.
+Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle (dark + icon) to its right, both on the page's 20px margins and above the home indicator. The selected tab sits in a grey lens set into the glass. Pressing another tab lifts the lens into a clear glass bubble that swells past the bar's top and bottom (the bar grows about 3.5% with it and the icon under it is magnified), glides to that tab on a spring (460ms, about 2% overshoot) and settles back into a grey lens once the finger lifts (after about 260ms). Scrolling down folds the capsule into one circle showing the current tab; scrolling up, reaching the top, tapping it or focusing it opens it again. The + never hides.
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
@@ -51,7 +51,7 @@ Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts
 
 The Home hero, its loading state and the empty Home use `environmentStyle()` from `components/brand/environment.tsx`: a clean diagonal green from the chosen theme with a little depth at the bottom, and no glow at the top. White text, a white balance line and a quiet `BambooDecor` (white, about 10%) sit on it. The content below rises over it on a rounded sheet on phones. Bamboo never sits behind text or money.
 
-On phones, Search and notifications sit in a small pill on their own row under the status bar, then the date and greeting, then the balance with Faldo beside it, the balance line and the range chips.
+While a green band is on screen, `StatusBarTint` paints the strip under the iPhone status bar (and sets theme-color) in the band's green, so the phone doesn't lay its pale, blurred page tint over it; once the band scrolls away the normal page colour returns.
 
 Sign-in uses the light mint version (`LIGHT_ENVIRONMENT` with the `faldo-env` class), with the bamboo motif in faint green.
 
@@ -128,7 +128,7 @@ Every chart answers one question, written as its section title.
 Fast and ordered, using transforms and opacity only.
 
 - **Tabs:** lens swell on press (150ms), spring glide to the new tab (440ms, `--ease-spring`, a `linear()` spring with a smooth fallback).
-- **Pages:** the first visit plays `page-enter`: the header settles in 180ms, then each group below follows at 60ms steps (260ms each: fade, a 6px rise, 3px blur to sharp). Coming back to a page is instant.
+- **Pages:** the first visit plays `page-enter`: the header settles in 180ms, then each group below follows at 60ms steps (260ms each: fade, a 6px rise, 3px blur to sharp), and anything marked `.cascade` (Plan rows, History days, Wallet groups, quick actions, Home cards) flows in one after another at 45ms steps. Coming back to a page plays a quick 180ms fade (`page-return`).
 - **Scroll:** the tab bar folds to a circle on scroll down and opens on scroll up.
 - **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
 - **Everything else:** sheets rise, money counts up, buttons press to 97%.

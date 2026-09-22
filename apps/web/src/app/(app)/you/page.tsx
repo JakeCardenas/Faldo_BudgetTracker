@@ -38,7 +38,7 @@ export default function YouPage() {
           </div>
         </section>
 
-        <div className="space-y-6">
+        <div className="cascade space-y-6">
           {YOU_GROUPS.map((group) => (
             <ListGroup key={group.label} title={group.label}>
               {group.items.map((item) => (

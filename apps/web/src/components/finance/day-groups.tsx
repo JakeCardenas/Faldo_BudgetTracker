@@ -43,7 +43,7 @@ export function DayGroups({ items, onOpen }: { items: Transaction[]; onOpen: (id
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const toggle = (date: string) => setCollapsed((c) => { const n = new Set(c); if (n.has(date)) n.delete(date); else n.add(date); return n })
   return (
-    <div className="space-y-6">
+    <div className="cascade space-y-6">
       {groupByDay(items).map((group) => {
         const open = !collapsed.has(group.date)
         return (

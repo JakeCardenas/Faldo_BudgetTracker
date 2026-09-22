@@ -33,7 +33,7 @@ export function QuickActions({ className }: { className?: string }) {
   const { openCheck } = useAppActions()
   return (
     <Section title="Quick actions" className={className}>
-      <ul className="rail -my-2 gap-3.5 py-2 lg:mx-0 lg:grid lg:grid-cols-8 lg:gap-3 lg:overflow-visible lg:px-0">
+      <ul className="rail cascade -my-2 gap-3.5 py-2 lg:mx-0 lg:grid lg:grid-cols-8 lg:gap-3 lg:overflow-visible lg:px-0">
         {QUICK_ACTIONS.map((q) => {
           const Icon = q.icon
           const body = (

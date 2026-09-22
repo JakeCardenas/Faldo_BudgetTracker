@@ -26,11 +26,11 @@ const WelcomeSplash = dynamic(() => import("@/components/brand/welcome-splash"),
 
 const visited = new Set<string>()
 
-/** The page area. The first visit to a page plays a short entrance; coming back to it is instant. */
+/** The page area. The first visit to a page plays the full entrance; coming back to it is a quick fade. */
 function PageMain({ pathname, className, children }: { pathname: string; className: string; children: React.ReactNode }) {
   const [firstVisit] = useState(() => !visited.has(pathname))
   useEffect(() => { visited.add(pathname) }, [pathname])
-  return <main id="main" className={cn(className, firstVisit && "page-enter")}>{children}</main>
+  return <main id="main" className={cn(className, firstVisit ? "page-enter" : "page-return")}>{children}</main>
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
