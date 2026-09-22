@@ -17,7 +17,7 @@ The **+** (its own circle beside the tab bar on phones, "Add" on desktop) opens 
 
 ## Navigation
 
-Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle (dark + icon) to its right, both on the page's 20px margins and above the home indicator. The selected tab sits in a grey lens set into the glass. Pressing another tab lifts the lens into a clear glass bubble that swells past the bar's top and bottom (the bar grows about 3.5% with it and the icon under it is magnified), glides to that tab on a spring (460ms, about 2% overshoot) and settles back into a grey lens once the finger lifts (after about 260ms). Scrolling down folds the capsule into one circle showing the current tab; scrolling up, reaching the top, tapping it or focusing it opens it again. The + never hides.
+Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle (dark + icon) to its right, both on the page's 20px margins and above the home indicator. The selected tab sits in a grey lens set into the glass. Touching the bar lifts the lens into a clear glass bubble that swells past the bar's top and bottom (the bar grows about 3.5% with it). The bubble follows the finger across the tabs, magnifying and greening the one beneath it; letting go opens that tab, springs the lens onto it (460ms, about 2% overshoot) and settles it back into a grey lens after about 240ms. A plain tap does the same in one motion. The links stay in place for keyboard and screen readers. Scrolling down folds the capsule into one circle showing the current tab; scrolling up, reaching the top, tapping it or focusing it opens it again. The + never hides.
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
@@ -51,7 +51,7 @@ Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts
 
 The Home hero, its loading state and the empty Home use `environmentStyle()` from `components/brand/environment.tsx`: a clean diagonal green from the chosen theme with a little depth at the bottom, and no glow at the top. White text, a white balance line and a quiet `BambooDecor` (white, about 10%) sit on it. The content below rises over it on a rounded sheet on phones. Bamboo never sits behind text or money.
 
-While a green band is on screen, `StatusBarTint` paints the strip under the iPhone status bar (and sets theme-color) in the band's green, so the phone doesn't lay its pale, blurred page tint over it; once the band scrolls away the normal page colour returns.
+While a green band is on screen, `StatusBarTint` sets the body's background to the band's green (and theme-color for older browsers). iOS 26 ignores theme-color and paints the strip under the status bar, with its soft blurred edge, from the body's background colour; the app draws its own canvas above the body, so the green only shows there and in overscroll. Once the band scrolls away the page colour returns.
 
 Sign-in uses the light mint version (`LIGHT_ENVIRONMENT` with the `faldo-env` class), with the bamboo motif in faint green.
 

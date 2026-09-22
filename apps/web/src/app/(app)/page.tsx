@@ -43,7 +43,7 @@ function Welcome() {
   return (
     <section style={environmentStyle(me?.settings.home_background)}
       className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(env(safe-area-inset-top)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
-      <StatusBarTint from={environmentFor(me?.settings.home_background).from} to={environmentFor(me?.settings.home_background).to} />
+      <StatusBarTint color={`color-mix(in oklab, ${environmentFor(me?.settings.home_background).from} 88%, ${environmentFor(me?.settings.home_background).to})`} />
       <BambooDecor className="absolute -right-8 -bottom-10 -z-10 h-[26rem]" />
       <Panda pose="wave" priority sizes="192px" className="w-44 drop-shadow-[0_18px_28px_rgb(0_0_0/0.28)] sm:w-48" />
       <h1 className="mt-6 text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">{greeting()}{name ? `, ${name}` : ""}</h1>

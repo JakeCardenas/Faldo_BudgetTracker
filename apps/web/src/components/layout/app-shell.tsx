@@ -103,7 +103,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : (
         <AppActionsContext.Provider value={actions}>
           <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
-          <div className="flex min-h-dvh flex-col">
+          {/* The app paints its own canvas, so the body's colour only shows under the status bar and in overscroll. */}
+          <div className="flex min-h-dvh flex-col bg-background">
             {!fullBleed && <TopNav />}
             <PageMain key={`${pathname}:${hideAmounts ? "hidden" : "shown"}`} pathname={pathname} className={fullBleed
               ? "w-full flex-1"

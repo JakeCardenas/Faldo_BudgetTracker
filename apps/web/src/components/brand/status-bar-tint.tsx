@@ -8,27 +8,31 @@ function subscribe(callback: () => void) {
 }
 
 /**
- * Paints the strip under the iPhone status bar in the green band's colour while the band is on screen,
- * so the phone doesn't draw its pale, blurred page-colour tint over the green. Safari reads the colour
- * from a fixed element at the top edge (and from theme-color on older versions). Once the band has
- * scrolled away the strip goes, and the normal page colour returns.
+ * Tints the strip under the iPhone status bar in the green band's colour while the band is on screen.
+ *
+ * iOS 26 Safari and home screen web apps ignore theme-color and paint that strip (with its soft blurred
+ * edge) from the body's background colour, repainting live when it changes. The app draws its own
+ * canvas above the body, so this colour only shows in the strip and in overscroll. theme-color is still
+ * set for older Safari and Android. Once the band scrolls away, both return to the page colour.
  */
-export function StatusBarTint({ from, to }: { from: string; to: string }) {
+export function StatusBarTint({ color }: { color: string }) {
   const atTop = useSyncExternalStore(subscribe, () => window.scrollY < 180, () => true)
 
   useEffect(() => {
     if (!atTop) return
+    const body = document.body
+    const previous = body.style.backgroundColor
+    body.style.backgroundColor = color
     // Our own tag goes first in <head>, so it wins over the app-wide ones even when Next.js re-renders them.
     const meta = document.createElement("meta")
     meta.name = "theme-color"
-    meta.content = from
+    meta.content = color
     document.head.prepend(meta)
-    return () => meta.remove()
-  }, [from, atTop])
+    return () => {
+      body.style.backgroundColor = previous
+      meta.remove()
+    }
+  }, [color, atTop])
 
-  if (!atTop) return null
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top)] lg:hidden"
-      style={{ background: `linear-gradient(90deg, ${from}, color-mix(in oklab, ${from} 75%, ${to}))` }} />
-  )
+  return null
 }
