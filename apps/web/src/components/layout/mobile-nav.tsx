@@ -36,8 +36,17 @@ interface SpringConfig { stiffness: number; damping: number }
 const GLIDE: SpringConfig = { stiffness: 300, damping: 28 }
 /** Following a finger: tight enough to stay under it, soft enough never to jitter. */
 const FOLLOW: SpringConfig = { stiffness: 1200, damping: 69 }
-/** The bar sliding away and back: quick (about 0.12s), with a hair of give as it lands. */
-const SLIDE: SpringConfig = { stiffness: 1100, damping: 54 }
+/* The scroll transition, timed against the reference frame by frame. Every one is critically damped. */
+/** The bar sinking below the screen: a quick start that eases out (about 90% gone at 0.1s). */
+const SINK: SpringConfig = { stiffness: 1225, damping: 70 }
+/** The bar coming back: launched fast and easing out on a pure exponential, no bounce (about 0.15s). */
+const RISE: SpringConfig = { stiffness: 784, damping: 56 }
+/** The corner + rising into place as it appears, and sinking as it fades back into the bar. */
+const PLUS: SpringConfig = { stiffness: 484, damping: 44 }
+/** The corner + appearing: almost at once, so it seems to come out of the bar's end as the bar sinks. */
+const PLUS_IN: SpringConfig = { stiffness: 3600, damping: 120 }
+/** How far the corner + travels as it appears and fades. */
+const PLUS_TRAVEL = 13
 
 /** A damped spring. Physics rather than keyframes, so a new target mid-motion keeps its speed. */
 class Spring {
@@ -61,6 +70,16 @@ class Spring {
   snap(value = this.target) {
     this.value = this.target = value
     this.velocity = 0
+  }
+  /**
+   * Head for a target on a pure exponential: a critically damped spring launched at exactly the speed
+   * that makes it ease out from the first frame, never overshooting or lingering. A smaller launch
+   * starts it gentler.
+   */
+  approach(target: number, config: SpringConfig, launch = 1) {
+    this.config = config
+    this.target = target
+    this.velocity = -launch * Math.sqrt(config.stiffness) * (this.value - target)
   }
 }
 
@@ -105,8 +124,8 @@ function IconRow({ filled }: { filled?: boolean }) {
  * The selected tab sits in a darker lens set into the glass, and whatever the lens covers is drawn
  * filled: slide a finger along the bar and the lens follows it, filling each icon as it passes (half
  * an icon when it is half over one); let go and it settles on that tab and opens it. Scroll down a page
- * and the bar slides away below the screen, leaving a glass + in the corner; scroll back up and it
- * springs back. Everything moves on springs, frame by frame, writing styles directly so the motion
+ * and the bar sinks below the screen as a glass + comes out of its right end and stays in the corner;
+ * scroll back up and the bar rises under the +, which fades back into it. Everything moves on springs, frame by frame, writing styles directly so the motion
  * stays smooth while the next page renders.
  */
 export function MobileNav() {
@@ -124,7 +143,9 @@ export function MobileNav() {
   const fill = useRef<HTMLDivElement>(null)
   const fab = useRef<HTMLButtonElement>(null)
   const x = useRef(new Spring(PAD, GLIDE))
-  const away = useRef(new Spring(0, SLIDE))
+  const away = useRef(new Spring(0, SINK))
+  const plus = useRef(new Spring(0, PLUS))
+  const glow = useRef(new Spring(0, PLUS))
   const geo = useRef({ width: 0, lens: LENS_MAX, step: 0, travel: 0 })
   const box = useRef<DOMRect | null>(null)
   const press = useRef<{ startX: number; dragging: boolean } | null>(null)
@@ -150,34 +171,33 @@ export function MobileNav() {
       bar.current.style.transform = `translate3d(0,${gone * travel}px,0)`
       bar.current.style.pointerEvents = gone < 0.5 ? "" : "none"
     }
-    // The corner + appears while the bar is on its way out and leaves as it comes back.
-    const shown = clamp((gone - 0.25) / 0.5, 0, 1)
+    // The corner + sits over the bar's right end: it shows the moment the bar starts to sink and rises
+    // the last few points into place; coming back, the bar slides up under it as it fades and sinks.
     if (fab.current) {
+      const shown = clamp(glow.current.value, 0, 1)
       fab.current.style.opacity = String(shown)
-      fab.current.style.transform = `scale(${0.7 + 0.3 * shown})`
-      fab.current.style.pointerEvents = shown > 0.5 ? "auto" : "none"
+      fab.current.style.transform = `translate3d(0,${(1 - plus.current.value) * PLUS_TRAVEL}px,0)`
+      fab.current.style.pointerEvents = collapsed.current && shown > 0.5 ? "auto" : "none"
     }
   }, [])
 
   const run = useCallback(() => {
     if (frame.current) return
+    const springs = [x.current, away.current, plus.current, glow.current]
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      x.current.snap()
-      away.current.snap()
+      springs.forEach((s) => s.snap())
       paint()
       return
     }
     let last = performance.now()
     const tick = (now: number) => {
-      const dt = Math.min(0.034, (now - last) / 1000)
-      last = now
-      for (let i = 0; i < 4; i++) {
-        x.current.step(dt / 4)
-        away.current.step(dt / 4)
-      }
-      if (x.current.resting(0.1) && away.current.resting(0.001) && !press.current?.dragging) {
-        x.current.snap()
-        away.current.snap()
+      // A frame's timestamp can be a little earlier than the moment the motion started (when it starts
+      // from a scroll or pointer event in that same frame); never step backwards.
+      const dt = Math.min(0.034, Math.max(0, now - last) / 1000)
+      last = Math.max(last, now)
+      for (let i = 0; i < 4; i++) springs.forEach((s) => s.step(dt / 4))
+      if (x.current.resting(0.1) && springs.slice(1).every((s) => s.resting(0.001)) && !press.current?.dragging) {
+        springs.forEach((s) => s.snap())
         paint()
         frame.current = 0
         return
@@ -217,7 +237,15 @@ export function MobileNav() {
       fab.current.tabIndex = on ? 0 : -1
       fab.current.setAttribute("aria-hidden", String(!on))
     }
-    away.current.target = on ? 1 : 0
+    if (on) {
+      away.current.approach(1, SINK, 0.5)
+      plus.current.approach(1, PLUS)
+      glow.current.approach(1, PLUS_IN)
+    } else {
+      away.current.approach(0, RISE)
+      plus.current.approach(0, PLUS)
+      glow.current.approach(0, PLUS)
+    }
     run()
   }, [run])
 
@@ -229,7 +257,7 @@ export function MobileNav() {
       const width = node.clientWidth
       const size = Math.min(LENS_MAX, ((width - PAD * 2) / SLOTS) * 1.3)
       const step = (width - PAD * 2 - size) / (SLOTS - 1)
-      geo.current = { width, lens: size, step, travel: (nav.current?.offsetHeight ?? node.offsetHeight) + 24 }
+      geo.current = { width, lens: size, step, travel: (nav.current?.offsetHeight ?? node.offsetHeight) + 8 }
       node.style.setProperty("--lens", `${size}px`)
       node.style.setProperty("--step", `${step}px`)
       if (press.current?.dragging) { paint(); return }

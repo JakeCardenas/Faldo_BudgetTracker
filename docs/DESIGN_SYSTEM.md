@@ -21,10 +21,10 @@ Phones: modelled on the Threads tab bar. One floating glass capsule, icons only:
 
 - **Tap** a tab: the lens glides to it and the page opens. Tap **+**: the Add menu opens and the lens stays put.
 - **Drag** along the bar: the lens follows the finger (after 6px of travel), filling each icon it passes; let go and it settles on the nearest tab and opens it (on **+**, it glides back and the Add menu opens).
-- **Scroll down** 72px: the bar slides down off the screen and a glass **+** circle (62px) appears in the bottom-right corner in its place. **Scroll up** 28px, reach the top of the page, change page or tab onto the bar with the keyboard: the bar springs back and the circle fades out. The bounce past the end of a page does not count as scrolling up.
+- **Scroll down** 72px: the bar turns into the **+**. A glass + circle (62px) comes out of the bar's right end the moment the bar starts to sink, rising the last 13px into place in the bottom-right corner, while the bar sinks off the bottom of the screen. **Scroll up** 28px, reach the top of the page, change page or tab onto the bar with the keyboard: the bar rises back up under the +, which fades and sinks into its right end. The bounce past the end of a page does not count as scrolling up.
 - On pages that belong to no tab (Profile and its pages) the lens fades out and every icon is outlined.
 
-The motion is physics, not keyframes: damped springs stepped every frame, writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted. Glide: 90% in 175ms, about 1% overshoot. Follow: critically damped. Slide (bar away and back): 90% in about 90ms, settled by 120ms, a hair of overshoot as it lands. The links stay in the bar for keyboard and screen readers.
+The motion is physics, not keyframes: damped springs stepped every frame, writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted. Glide: 90% in 175ms, about 1% overshoot. Follow: critically damped. Scroll transition, timed against the reference frame by frame, all critically damped: the bar sinks about 90% of the way in 100ms and rises on a pure exponential (90% in about 80ms, no bounce); the + shows within about 30ms and settles its 13px rise in about 150ms, and fades out over about 150ms as the bar comes back. The links stay in the bar for keyboard and screen readers.
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
@@ -136,7 +136,7 @@ Fast and ordered, using transforms and opacity only.
 
 - **Tabs:** the lens glides to the new tab on a spring, filling the icons it passes over (see Navigation).
 - **Pages:** the first visit plays `page-enter`: the header settles in 180ms, then each group below follows at 60ms steps (260ms each: fade, a 6px rise, 3px blur to sharp), and anything marked `.cascade` (Plan rows, History days, Wallet groups, quick actions, Home cards) flows in one after another at 45ms steps. Coming back to a page plays a quick 180ms fade (`page-return`).
-- **Scroll:** the tab bar slides off the screen on scroll down, leaving a glass + in the corner, and springs back on scroll up.
+- **Scroll:** on scroll down the tab bar sinks away and turns into a glass + in the corner; on scroll up it rises back under the +, which fades into it.
 - **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
 - **Everything else:** sheets rise, money counts up, buttons press to 97%.
 
