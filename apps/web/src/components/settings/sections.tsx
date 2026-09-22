@@ -4,7 +4,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Brain, Database, Download, EyeOff, KeyRound, Monitor, Moon, Palette, Plus, SlidersHorizontal, Smartphone, Sun, Tags, Trash2, Volume2, type LucideIcon } from "lucide-react"
+import { Brain, Database, Download, EyeOff, KeyRound, Monitor, Moon, Palette, Plus, SlidersHorizontal, Smartphone, Sun, Tags, Trash2, Volume2, Wind, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { setBubbleShown, useBubbleShown } from "@/lib/bubble"
 import { FREQUENCY_LABELS, minorToInput, timeAgo, toMinor } from "@/lib/format"
+import { setMotionReduced, useMotionReduced } from "@/lib/motion"
 import { setAmountsHidden, useAmountsHidden } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useCategories, useUpdateSettings } from "@/lib/queries"
 import { setSoundsEnabled, soundsEnabled } from "@/lib/sound"
@@ -36,6 +37,7 @@ function Appearance({ me }: { me: Me }) {
   const [sounds, setSounds] = useState(soundsEnabled)
   const hideAmounts = useAmountsHidden()
   const bubble = useBubbleShown()
+  const reduced = useMotionReduced()
   return (
     <div className="space-y-5">
       <Segmented label="Theme" className="w-full" value={me.settings.theme} onChange={(theme) => {
@@ -49,6 +51,7 @@ function Appearance({ me }: { me: Me }) {
       <ListGroup>
         <ListRow icon={EyeOff} title="Hide amounts" toggle trailing={<Switch checked={hideAmounts} onCheckedChange={setAmountsHidden} aria-label="Hide amounts" />} />
         <ListRow icon={Volume2} title="Sounds" toggle trailing={<Switch checked={sounds} onCheckedChange={(next) => { setSoundsEnabled(next); setSounds(next) }} aria-label="Sounds" />} />
+        <ListRow icon={Wind} title="Reduce motion" toggle trailing={<Switch checked={reduced} onCheckedChange={setMotionReduced} aria-label="Reduce motion" />} />
         <ListRow className="lg:hidden" title="Faldo bubble" toggle
           leading={<span className="size-6 shrink-0 overflow-hidden rounded-full bg-[linear-gradient(160deg,#6cbf86_0%,#3c8d5c_55%,#2c6a45_100%)]"><Image src="/brand/panda/chat-head.png" alt="" width={210} height={210} sizes="24px" quality={90} className="size-full" /></span>}
           trailing={<Switch checked={bubble} onCheckedChange={setBubbleShown} aria-label="Faldo bubble" />} />

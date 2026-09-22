@@ -4,13 +4,13 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { ArrowDownUp, ChevronRight, Download, Loader2, Plus, Receipt as ReceiptIcon, ScanLine, Search, SlidersHorizontal, X } from "lucide-react"
+import { ArrowDownUp, Download, Loader2, PieChart, Plus, Receipt as ReceiptIcon, ScanLine, Search, SlidersHorizontal, X } from "lucide-react"
 import { DayGroups } from "@/components/finance/day-groups"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
-import { TransactionRow } from "@/components/finance/transaction-row"
+import { TransactionRow, TransactionRows } from "@/components/finance/transaction-row"
 import { HeaderButton, LargeTitle } from "@/components/ios/nav-header"
-import { Chip, Segmented } from "@/components/ios/segmented"
+import { Chip, UnderlineTabs } from "@/components/ios/segmented"
 import { IosSheet } from "@/components/ios/sheet"
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
@@ -112,9 +112,9 @@ function HistoryView() {
       )}
 
       {/* Search and filters step aside with the header while you scroll down (phones only). */}
-      <div data-away={away} data-motion="always" onFocus={() => setChromeAway(false)} className="glass chrome-hide sticky top-[calc(2.75rem+var(--top-inset))] z-20 -mx-5 space-y-2.5 px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
+      <div data-away={away} onFocus={() => setChromeAway(false)} className="glass chrome-hide sticky top-[calc(2.75rem+var(--top-inset))] z-20 -mx-5 space-y-2.5 px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
         <div className="flex gap-2">
-          <label className="flex h-11 flex-1 items-center gap-2 rounded-full bg-card px-4 shadow-[inset_0_0_0_1px_var(--border)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_var(--ring)] focus-within:ring-3 focus-within:ring-ring/20">
+          <label className="flex h-10 flex-1 items-center gap-2 rounded-full bg-muted px-4 transition-shadow focus-within:ring-2 focus-within:ring-ring/40">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <span className="sr-only">Search transactions</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search transactions"
@@ -122,16 +122,16 @@ function HistoryView() {
             {q && <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/25 text-foreground/70"><X className="size-3" /></button>}
           </label>
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-11! w-11 justify-center rounded-full border-0 px-0 shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort"><ArrowDownUp className="size-4 text-foreground/80" /></SelectTrigger>
+            <SelectTrigger className="h-10! w-10 justify-center rounded-full border-0 bg-transparent px-0 shadow-none hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort"><ArrowDownUp className="size-5 text-foreground" strokeWidth={1.8} /></SelectTrigger>
             <SelectContent align="end">{SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
           </Select>
           <button type="button" onClick={() => setFiltersOpen(true)} aria-label="Filters"
-            className="pressable relative flex size-11 items-center justify-center rounded-full bg-card shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent">
-            <SlidersHorizontal className="size-4 text-foreground/80" />
+            className="pressable relative flex size-10 items-center justify-center rounded-full hover:bg-accent">
+            <SlidersHorizontal className="size-5 text-foreground" strokeWidth={1.8} />
             {activeFilters > 0 && <span className="tabular absolute -top-1.5 -right-1.5 flex size-4.5 items-center justify-center rounded-full bg-primary text-[0.625rem] font-semibold text-primary-foreground">{activeFilters}</span>}
           </button>
         </div>
-        <Segmented label="Transaction type" className="w-full" size="sm" value={kind} onChange={setKind}
+        <UnderlineTabs label="Transaction type" value={kind} onChange={setKind}
           options={[{ value: "all", label: "All" }, { value: "expense", label: "Expenses" }, { value: "income", label: "Income" }, { value: "transfer", label: "Transfers" }]} />
         {activeFilters > 0 && (
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
@@ -144,13 +144,13 @@ function HistoryView() {
       </div>
 
       {summary && summary.total_count > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-[0.8125rem] text-muted-foreground">
             <span className="tabular">{summary.total_count}</span> {summary.total_count === 1 ? "transaction" : "transactions"},{" "}
             <Money minor={summary.total_income_minor} className={cn("font-medium", summary.total_income_minor > 0 ? "text-income" : "text-foreground")} /> in,{" "}
             <Money minor={summary.total_expense_minor} className="font-medium text-foreground" /> out
           </p>
-          <Link href="/reports" className="inline-flex items-center gap-0.5 text-sm font-medium text-primary hover:opacity-80">Where it went <ChevronRight className="size-3.5" /></Link>
+          <Link href="/reports" aria-label="Where it went" className="pressable flex size-9 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"><PieChart className="size-5" strokeWidth={1.8} /></Link>
         </div>
       )}
 
@@ -169,9 +169,9 @@ function HistoryView() {
       ) : sort.startsWith("date") ? (
         <DayGroups items={items} onOpen={openTransaction} />
       ) : (
-        <div className="ios-group divide-y divide-border/60">
+        <TransactionRows className="cascade">
           {items.map((t) => <TransactionRow key={t.id} transaction={t} showDate onClick={() => openTransaction(t.id)} />)}
-        </div>
+        </TransactionRows>
       )}
 
       {list.hasNextPage && (

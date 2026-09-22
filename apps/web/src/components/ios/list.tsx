@@ -47,8 +47,8 @@ export function ListRow({ icon: Icon, leading, title, href, external, onClick, t
       {trailing}
     </>
   )
-  const classes = cn("flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-2 text-left text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-    (href || onClick) && "hover:bg-accent/60 active:bg-accent", className)
+  const classes = cn("flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-2 text-left text-foreground transition-[background-color,scale] duration-200 ease-(--ease-spring) outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+    (href || onClick) && "hover:bg-accent/60 active:scale-[0.985] active:bg-accent", className)
   if (href && external) return <a href={href} className={classes}>{body}</a>
   if (href) return <Link href={href} className={classes}>{body}</Link>
   if (onClick) return <button type="button" onClick={onClick} className={classes}>{body}</button>

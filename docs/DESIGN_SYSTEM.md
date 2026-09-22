@@ -44,10 +44,10 @@ On phones and tablets, a floating chat head like Messenger's: Faldo waving (`cha
 
 ## Page layouts
 
-- **Home:** Faldo's green bamboo band at the top: the streak button and a glass pill (search, notifications, Profile) under the status bar, the date in small caps, the greeting with the name in bold, and Faldo standing on the band's edge beside his note in a speech bubble. Then quick action tiles, the total balance card with its balance line, Safe to Spend, a spending ring beside a money in and out card (Day, Week, Month), payments due on a date timeline, account cards and recent activity. Add to Home only by removing something.
+- **Home:** Faldo's green bamboo band at the top: the streak button and a glass pill (search, notifications, Profile) under the status bar, the date in small caps, the greeting with the name in bold, and Faldo standing on the band's edge beside his note in a speech bubble. Then quick actions as eight round buttons in a 4 by 2 grid (all in view, a springy press), the total balance card with its balance line, Safe to Spend, a spending ring beside a money in and out card (Day, Week, Month), payments due on a date timeline, account cards and recent activity. Add to Home only by removing something.
 - **Wallet:** the same band with the title, Faldo beside a white net worth card, and All, Assets and Liabilities pills. Then an insight and the last seven days of balance as bars, type filters, and accounts grouped by type (collapsible, with totals) as two-column tiles or a list.
 - **Plan:** one row per planning tool (budgets, goals, money plan, bills, money owed, planned purchases, installments, forecast, what if), each with a tinted icon and a live summary, then "Can I afford it?" and quick links.
-- **History:** search and filters, then each day as a collapsible header (the date in small caps, money out and in as pills) over a timeline: the time each entry was logged, a red or green dot, and the entry on its own card with its account in a small tag.
+- **History:** a soft search pill with plain sort and filter icons, Threads-style underline tabs (All, Expenses, Income, Transfers) whose underline glides on a spring, a one-line summary with a chart icon to Statistics, then each day as a quiet header ("Yesterday Sep 21", money in green, money out muted) over flat rows.
 
 ## Faldo, the panda
 
@@ -140,7 +140,7 @@ Menus (Profile, Settings, Plan, Tools) are `ListRow`s straight on the canvas: a 
 
 ## Lists before cards
 
-Transactions, bills, goals and budgets are rows in one grouped surface with inset dividers, not a card per item. Section titles sit on the canvas above the surface, with one "See all" link.
+Transactions (Recent activity, History, an account's page) are flat rows straight on the canvas with hairlines between them: the category icon, the name, a quiet line with the category and account, and the amount (money in green); pressing one dips it slightly. Bills, goals and budgets are rows in one grouped surface, not a card per item. Section titles sit on the canvas above, with one "See all" link.
 
 ## Charts
 
@@ -161,11 +161,13 @@ Fast and ordered, using transforms and opacity only.
 - **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
 - **Everything else:** sheets rise, money counts up, buttons press to 97%.
 
-`prefers-reduced-motion` turns all of it into instant state changes, except the phone tab bar and the page header's scroll transition (`data-motion="always"`), which keep moving by the owner's choice.
+Headline money (balance, net worth, Safe to Spend) counts up from zero when it appears. Faldo animates fully by default, whatever the device's own Reduce Motion setting says (the owner's choice); "Reduce motion" in Settings > Appearance turns every animation into an instant change (`html[data-motion="reduced"]`, set before first paint). The green bands (`data-band`) never fade in, so switching pages never flashes white at the top.
 
 ## Top of the screen on iPhone
 
 iOS 26 blurs a band from the status bar down about 40pt (the Liquid Glass scroll edge effect); there is no CSS or meta switch to turn it off. A tiny script marks `html.ios` before first paint, and `--top-inset` (the safe area plus 2.5rem on iOS) is where crisp content may start: page headers, the green bands, sticky filters, sign-in, onboarding and toasts all use it. Only the band's green or the page colour sits in the blur.
+
+iOS 26 also tints the status bar strip from whatever fixed or sticky layer touches the top of the screen, falling back to the body's colour. So nothing see-through may be fixed at the top: overlays (like the Faldo bubble's) are built from small fixed pieces away from the top edge, and the sticky page header always paints its page-coloured backdrop.
 
 ## Data integrity
 

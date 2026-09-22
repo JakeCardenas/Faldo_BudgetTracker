@@ -8,7 +8,7 @@ import { ChevronRight, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { AccountDialog } from "@/components/finance/account-dialog"
 import { Money } from "@/components/finance/money"
-import { TransactionRow } from "@/components/finance/transaction-row"
+import { TransactionRow, TransactionRows } from "@/components/finance/transaction-row"
 import { Section } from "@/components/ios/panel"
 import { useAppActions } from "@/components/layout/app-context"
 import { AccountCard } from "@/components/wallet/account-card"
@@ -225,9 +225,9 @@ export function RecentActivity({ data }: { data: Dashboard }) {
       {items.length === 0 ? (
         <p className="card-surface px-4 py-6 text-center text-sm text-muted-foreground">Nothing logged yet. Tap + to add your first.</p>
       ) : (
-        <div className="ios-group divide-y divide-border/60">
+        <TransactionRows className="cascade">
           {items.map((t) => <TransactionRow key={t.id} transaction={t} showDate onClick={() => openTransaction(t.id)} />)}
-        </div>
+        </TransactionRows>
       )}
     </Section>
   )

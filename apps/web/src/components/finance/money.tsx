@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react"
+import { useEffect, useRef, useState } from "react"
 import { currencySymbol, formatMoney } from "@/lib/format"
+import { useMotionReduced } from "@/lib/motion"
 import { amountsHidden } from "@/lib/privacy"
 import { cn } from "@/lib/utils"
 
@@ -20,24 +21,11 @@ export function Money({ minor, currency = "PHP", signed, cents, compact, classNa
   return <span className={cn("tabular whitespace-nowrap", toneClass, className)}>{formatMoney(minor, currency, { signed, cents, compact })}</span>
 }
 
-function subscribeReducedMotion(callback: () => void) {
-  const query = window.matchMedia("(prefers-reduced-motion: reduce)")
-  query.addEventListener("change", callback)
-  return () => query.removeEventListener("change", callback)
-}
-
-function usePrefersReducedMotion() {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    () => false,
-  )
-}
-
+/** A headline amount that counts up from zero when it appears, and rolls to each new value after. */
 export function AnimatedMoney({ minor, currency = "PHP", className, symbolClassName }: { minor: number; currency?: string; className?: string; symbolClassName?: string }) {
-  const reduced = usePrefersReducedMotion()
-  const [display, setDisplay] = useState(minor)
-  const previous = useRef(minor)
+  const reduced = useMotionReduced()
+  const [display, setDisplay] = useState(0)
+  const previous = useRef(0)
   useEffect(() => {
     if (reduced) {
       previous.current = minor
@@ -45,7 +33,8 @@ export function AnimatedMoney({ minor, currency = "PHP", className, symbolClassN
     }
     const from = previous.current
     const start = performance.now()
-    const duration = 650
+    // The first count, from zero, takes a little longer so it reads as the money arriving.
+    const duration = from === 0 ? 900 : 650
     let frame = 0
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration)

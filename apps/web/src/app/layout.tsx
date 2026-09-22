@@ -40,6 +40,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 }
 
+/** "Reduce motion" from Settings, applied before first paint (see lib/motion). */
+const MOTION = `try{if(localStorage.getItem("faldo:motion")==="reduced")document.documentElement.dataset.motion="reduced"}catch(e){}`
+
 const IOS_EDGE = `if(/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))document.documentElement.classList.add("ios")`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -49,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: SPLASH_GATE }} />
         {/* iPhone and iPad blur the top ~40pt under the status bar (iOS 26 scroll edge effect); mark them before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: IOS_EDGE }} />
+        <script dangerouslySetInnerHTML={{ __html: MOTION }} />
       </head>
       <body className="min-h-dvh">
         <Splash />

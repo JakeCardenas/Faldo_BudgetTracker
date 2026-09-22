@@ -3,6 +3,7 @@
 import { useCallback } from "react"
 import { flushSync } from "react-dom"
 import { useTheme } from "next-themes"
+import { motionReduced } from "@/lib/motion"
 
 let crossfading = false
 
@@ -15,7 +16,7 @@ export function useSmoothTheme() {
   const { theme, setTheme } = useTheme()
   const set = useCallback((next: string) => {
     if (next === theme) return
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const reduced = motionReduced()
     if (reduced || crossfading || !("startViewTransition" in document)) {
       setTheme(next)
       return

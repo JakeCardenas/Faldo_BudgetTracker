@@ -202,7 +202,7 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6 pb-2">
-      <section aria-label="Wallet" style={environmentStyle(me?.settings.home_background)}
+      <section data-band aria-label="Wallet" style={environmentStyle(me?.settings.home_background)}
         className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
         <StatusBarTint color={`color-mix(in oklab, ${environmentFor(me?.settings.home_background).from} 88%, ${environmentFor(me?.settings.home_background).to})`} />
         <BambooDecor className="absolute top-0 -right-8 -z-10 h-[18rem] lg:h-[24rem]" />

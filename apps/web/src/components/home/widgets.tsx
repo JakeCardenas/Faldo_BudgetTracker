@@ -26,28 +26,30 @@ const QUICK_ACTIONS: QuickAction[] = [
   { label: "Ask Faldo", icon: MessageCircle, href: "/assistant" },
 ]
 
-const tile = "flex size-16 items-center justify-center rounded-[1.125rem] bg-card text-primary shadow-(--shadow-card) transition-transform group-active:scale-[0.96] [&_svg]:size-6"
+/** A round button that dips on a spring when pressed. */
+const tile = "flex size-14 items-center justify-center rounded-full bg-card text-foreground shadow-(--shadow-card) transition-[scale,background-color] duration-300 ease-(--ease-spring) group-hover:bg-accent group-active:scale-[0.88] [&_svg]:size-6"
 
-/** Shortcuts to the places people open most, as a row of tiles that scrolls sideways on phones. */
+/** Shortcuts to the places people open most: round buttons in a 4 by 2 grid, every one in view. */
 export function QuickActions({ className }: { className?: string }) {
   const { openCheck } = useAppActions()
   return (
     <Section title="Quick actions" className={className}>
-      <ul className="rail cascade -my-2 gap-3.5 py-2 lg:mx-0 lg:grid lg:grid-cols-8 lg:gap-3 lg:overflow-visible lg:px-0">
+      <ul className="cascade grid grid-cols-4 gap-x-2 gap-y-4 lg:grid-cols-8">
         {QUICK_ACTIONS.map((q) => {
           const Icon = q.icon
           const body = (
             <>
               <span className={tile}><Icon strokeWidth={1.7} /></span>
-              <span className="-mx-2 mt-1.5 block w-20 truncate text-center text-[0.71875rem] font-medium text-foreground/75">{q.label}</span>
+              <span className="mt-1.5 block w-full truncate text-center text-[0.75rem] font-medium text-foreground/70">{q.label}</span>
             </>
           )
+          const classes = "group flex flex-col items-center rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           return (
-            <li key={q.label} className="shrink-0 lg:flex lg:justify-center">
+            <li key={q.label} className="min-w-0">
               {"href" in q ? (
-                <Link href={q.href} onClick={() => play("tap")} className="group block rounded-xl">{body}</Link>
+                <Link href={q.href} onClick={() => play("tap")} className={classes}>{body}</Link>
               ) : (
-                <button type="button" onClick={() => openCheck()} className="group block rounded-xl">{body}</button>
+                <button type="button" onClick={() => { play("tap"); openCheck() }} className={cn(classes, "w-full")}>{body}</button>
               )}
             </li>
           )

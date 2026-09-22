@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { BookText, Landmark, Plus, ShoppingBag, Sparkles, Store, Tag, Target } from "lucide-react"
-import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { ALL_NAV } from "@/components/layout/nav"
 import { api } from "@/lib/api"
 import { formatDate, formatMoney } from "@/lib/format"
@@ -51,6 +51,8 @@ export function CommandSearch({ open, onOpenChange, onAddTransaction, onOpenTran
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} title="Search Faldo" description="Search transactions, items, goals and more" className="sm:max-w-xl">
+      {/* The input and list need their Command root; the results come filtered from the server. */}
+      <Command shouldFilter={false} className="rounded-none! p-0">
       <CommandInput value={query} onValueChange={setQuery} placeholder="Search transactions, merchants, items, goals…" />
       <CommandList className="max-h-[60vh]">
         {debounced.length > 1 && !isFetching && !hasResults && <CommandEmpty>No matches in your data.</CommandEmpty>}
@@ -115,16 +117,28 @@ export function CommandSearch({ open, onOpenChange, onAddTransaction, onOpenTran
             ))}
           </CommandGroup>
         )}
-        <CommandSeparator />
-        <CommandGroup heading="Quick actions">
-          <CommandItem value="add transaction" onSelect={() => go(onAddTransaction)}><Plus /> Add transaction</CommandItem>
-          {ALL_NAV.map((item) => (
-            <CommandItem key={item.href} value={`go ${item.label}`} onSelect={() => go(() => router.push(item.href))}>
-              <item.icon /> Go to {item.label}
-            </CommandItem>
-          ))}
-        </CommandGroup>
+        {(() => {
+          // Shortcuts are filtered here (the list's own filtering is off, since results come from the server).
+          const q = query.trim().toLowerCase()
+          const pages = q ? ALL_NAV.filter((item) => item.label.toLowerCase().includes(q)) : ALL_NAV
+          const add = !q || "add transaction".includes(q)
+          if (!pages.length && !add) return null
+          return (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="Quick actions">
+                {add && <CommandItem value="add transaction" onSelect={() => go(onAddTransaction)}><Plus /> Add transaction</CommandItem>}
+                {pages.map((item) => (
+                  <CommandItem key={item.href} value={`go ${item.label}`} onSelect={() => go(() => router.push(item.href))}>
+                    <item.icon /> Go to {item.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )
+        })()}
       </CommandList>
+      </Command>
     </CommandDialog>
   )
 }

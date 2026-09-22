@@ -39,3 +39,33 @@ export function Chip({ active, className, children, onClick, ...props }: React.C
     </button>
   )
 }
+
+/**
+ * Threads-style tabs: words on a hairline, the chosen one in full colour with an underline that glides
+ * to it on a spring. For switching what a list shows (All, Expenses, Income, Transfers).
+ */
+export function UnderlineTabs<T extends string>({ value, onChange, options, label, className }: {
+  value: T
+  onChange: (value: T) => void
+  options: { value: T; label: React.ReactNode }[]
+  label: string
+  className?: string
+}) {
+  const index = Math.max(0, options.findIndex((o) => o.value === value))
+  return (
+    <div role="radiogroup" aria-label={label} className={cn("relative flex border-b border-border/70", className)}>
+      {options.map((option) => {
+        const active = option.value === value
+        return (
+          <button key={option.value} type="button" role="radio" aria-checked={active} onClick={() => { if (!active) play("select"); onChange(option.value) }}
+            className={cn("h-10 flex-1 text-[0.875rem] font-semibold tracking-[-0.005em] whitespace-nowrap transition-colors duration-200 outline-none focus-visible:text-foreground",
+              active ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
+            {option.label}
+          </button>
+        )
+      })}
+      <span aria-hidden className="absolute -bottom-px left-0 h-0.5 rounded-full bg-foreground transition-transform duration-[380ms] ease-(--ease-spring)"
+        style={{ width: `${100 / options.length}%`, transform: `translateX(${index * 100}%)` }} />
+    </div>
+  )
+}

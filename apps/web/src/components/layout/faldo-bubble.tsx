@@ -62,7 +62,9 @@ export function FaldoBubble() {
   const lastTick = useRef(0)
 
   const paint = useCallback(() => {
-    if (holder.current) holder.current.style.transform = `translate3d(${x.current.value}px,${y.current.value}px,0)`
+    // The holder rests in the bottom-left corner; y counts from the top of the screen.
+    const fromBottom = y.current.value - (document.documentElement.clientHeight - SIZE)
+    if (holder.current) holder.current.style.transform = `translate3d(${x.current.value}px,${fromBottom}px,0)`
     if (head.current) head.current.style.transform = `scale(${Math.max(0, scale.current.value)})`
   }, [])
 
@@ -255,22 +257,24 @@ export function FaldoBubble() {
   }
 
   return (
-    // The bubble keeps its motion with Reduce Motion on (data-motion="always"), like the tab bar.
-    <div data-motion="always" className="pointer-events-none fixed inset-0 z-[45] lg:hidden">
-      {/* Probes that measure the free band in CSS terms (safe areas, the tab bar's height). */}
-      <div ref={topProbe} aria-hidden className="invisible absolute top-0 h-(--top-inset) w-px" />
-      <div ref={bottomProbe} aria-hidden className="invisible absolute bottom-0 h-[calc(3.8125rem+max(1.25rem,env(safe-area-inset-bottom)-0.75rem)+0.75rem)] w-px" />
+    // Each piece is fixed on its own and none touches the top of the screen: iOS 26 tints the status bar
+    // from whatever fixed layer sits at the top, and a full-screen overlay turned it grey.
+    <div className="lg:hidden">
+      {/* Probes that measure the free band in CSS terms (safe areas, the tab bar's height), kept off screen. */}
+      <div ref={topProbe} aria-hidden className="invisible absolute -top-[9999px] left-0 h-(--top-inset) w-px" />
+      <div ref={bottomProbe} aria-hidden className="invisible absolute -top-[9999px] left-0 h-[calc(3.8125rem+max(1.25rem,env(safe-area-inset-bottom)-0.75rem)+0.75rem)] w-px" />
 
       {/* While you drag, the bottom of the screen darkens and the × rises above the tab bar. */}
-      <div aria-hidden className={cn("absolute inset-x-0 bottom-0 h-64 bg-linear-to-t from-black/35 to-transparent transition-opacity duration-200",
+      <div aria-hidden className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-[44] h-64 bg-linear-to-t from-black/35 to-transparent transition-opacity duration-200",
         dragging ? "opacity-100" : "opacity-0")} />
       <div ref={target} aria-hidden
-        className={cn("absolute bottom-[calc(3.8125rem+max(1.25rem,env(safe-area-inset-bottom)-0.75rem)+1rem)] left-1/2 flex size-[3.75rem] -translate-x-1/2 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur-md transition-[opacity,translate,scale] duration-200 ease-(--ease-spring)",
+        className={cn("pointer-events-none fixed bottom-[calc(3.8125rem+max(1.25rem,env(safe-area-inset-bottom)-0.75rem)+1rem)] left-1/2 z-[44] flex size-[3.75rem] -translate-x-1/2 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur-md transition-[opacity,translate,scale] duration-200 ease-(--ease-spring)",
           dragging ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0", over ? "scale-[1.2]" : "scale-100")}>
         <X className="size-6" strokeWidth={2.2} />
       </div>
 
-      <div ref={holder} className="absolute top-0 left-0 will-change-transform">
+      {/* Anchored to the bottom-left corner and moved from there (see paint). */}
+      <div ref={holder} className="pointer-events-none fixed bottom-0 left-0 z-[45] size-14 will-change-transform">
         {/* The first time, Faldo says what the bubble is for. */}
         <p aria-hidden={!hint} className={cn("absolute top-1/2 w-max max-w-[13rem] -translate-y-1/2 rounded-2xl bg-primary px-3.5 py-2.5 text-[0.875rem] leading-snug font-semibold text-primary-foreground shadow-[0_10px_24px_-10px_rgb(16_36_24/0.5)] transition-[opacity,scale] duration-300 ease-(--ease-spring)",
           side === "right" ? "right-[calc(100%+0.75rem)] origin-right" : "left-[calc(100%+0.75rem)] origin-left",

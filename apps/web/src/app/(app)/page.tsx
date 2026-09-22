@@ -41,7 +41,7 @@ function Welcome() {
   const [adding, setAdding] = useState(false)
   const name = me?.display_name?.split(" ")[0]
   return (
-    <section style={environmentStyle(me?.settings.home_background)}
+    <section data-band style={environmentStyle(me?.settings.home_background)}
       className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(var(--top-inset)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
       <StatusBarTint color={`color-mix(in oklab, ${environmentFor(me?.settings.home_background).from} 88%, ${environmentFor(me?.settings.home_background).to})`} />
       <BambooDecor className="absolute -right-8 -bottom-10 -z-10 h-[26rem]" />

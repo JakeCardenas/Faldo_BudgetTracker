@@ -348,7 +348,6 @@ html.ios {
     frame. Scrolling down (.nav-away), the + circle comes out of the bar's right end and rises its last
     13px into place while the bar sinks below the screen; scrolling up, the bar rises back under the +,
     which fades and sinks into it. CSS transitions, so the system animates them off the main thread.
-    They keep moving with Reduce Motion on (data-motion="always"), as the owner chose.
   */
   .nav-bar {
     transition: transform 222ms var(--ease-out-exp);
@@ -549,6 +548,9 @@ html.ios {
 .page-enter > * > *:nth-child(3) { animation-delay: 120ms; }
 .page-enter > * > *:nth-child(4) { animation-delay: 180ms; }
 .page-enter > * > *:nth-child(n + 5) { animation-delay: 240ms; }
+/* The green bands (data-band) are the page's own backdrop: they are there at once, never faded in from white. */
+.page-enter > * > [data-band],
+.page-enter > * > * > [data-band] { animation: none; }
 
 .page-enter .cascade > * { animation: page-in 300ms var(--ease-out-quint) backwards; }
 .page-enter .cascade > :nth-child(1) { animation-delay: 90ms; }
@@ -564,7 +566,8 @@ html.ios {
 @keyframes page-fade {
   from { opacity: 0; }
 }
-.page-return > * { animation: page-fade 180ms ease-out backwards; }
+.page-return > * > *:not([data-band]):not(:has(> [data-band])) { animation: page-fade 180ms ease-out backwards; }
+.page-return > * > :has(> [data-band]) > :not([data-band]) { animation: page-fade 180ms ease-out backwards; }
 
 /* Theme changes crossfade instead of snapping. */
 ::view-transition-old(root),
@@ -685,21 +688,22 @@ html:not([data-splash="skip"]) .boot-quiet {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none;
-  }
-  /*
-    Everything goes still, except the phone tab bar and the page header's scroll transition
-    (data-motion="always"), which the owner chose to keep moving like Threads.
-  */
-  :not([data-motion="always"], [data-motion="always"] *),
-  :not([data-motion="always"], [data-motion="always"] *)::before,
-  :not([data-motion="always"], [data-motion="always"] *)::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+/*
+  "Reduce motion" in Settings > Appearance (lib/motion): everything goes still. Faldo animates fully
+  otherwise, whatever the device's own Reduce Motion setting says, by the owner's choice.
+*/
+html[data-motion="reduced"] {
+  scroll-behavior: auto;
+}
+html[data-motion="reduced"]::view-transition-old(root),
+html[data-motion="reduced"]::view-transition-new(root) {
+  animation: none;
+}
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

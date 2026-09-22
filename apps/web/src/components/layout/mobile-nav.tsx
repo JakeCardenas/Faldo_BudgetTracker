@@ -287,8 +287,7 @@ export function MobileNav() {
   }
 
   return (
-    // The bar keeps its motion with Reduce Motion on (data-motion="always"), as the owner chose.
-    <nav aria-label="Main" data-motion="always"
+    <nav aria-label="Main"
       className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden", away && "nav-away")}>
       <div className="relative mx-auto max-w-[30rem]">
         <div ref={bar} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
