@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
+import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader, SectionCard } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -186,7 +187,7 @@ export default function BillsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Bills & recurring" description="Rent, utilities, subscriptions, loans and expected income." actions={<Button onClick={() => setDialog({ mode: "new" })}><Plus /> Add recurring</Button>} />
+      <PageHeader title="Bills & recurring" description="Rent, utilities, subscriptions, loans and expected income." actions={<HeaderButton onClick={() => setDialog({ mode: "new" })} aria-label="Add recurring"><Plus /><span className="max-lg:sr-only">Add recurring</span></HeaderButton>} />
       {isLoading ? <Skeleton className="h-96 rounded-xl" /> : !items?.length ? (
         <div className="card-surface"><EmptyState icon={CalendarClock} title="No recurring payments yet" description="Add rent, Meralco, internet or Netflix so Faldo can forecast your month accurately." action={<Button onClick={() => setDialog({ mode: "new" })}><Plus /> Add your first bill</Button>} /></div>
       ) : (

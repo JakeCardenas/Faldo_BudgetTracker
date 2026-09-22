@@ -5,8 +5,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Lightbulb, RefreshCw, Sparkles } from "lucide-react"
 import { EmptyState } from "@/components/finance/empty-state"
 import { InsightCard } from "@/components/finance/insight-card"
+import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader } from "@/components/layout/page-header"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import { useInsights, usePulse } from "@/lib/queries"
@@ -41,7 +41,7 @@ export default function InsightsPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Insights" description="Patterns Faldo detected in your actual data. Every insight is backed by specific numbers."
-        actions={<Button variant="outline" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? "animate-spin" : ""} /> Refresh</Button>} />
+        actions={<HeaderButton onClick={() => refetch()} disabled={isFetching} aria-label="Refresh"><RefreshCw className={isFetching ? "animate-spin" : ""} /><span className="max-lg:sr-only">Refresh</span></HeaderButton>} />
       {pulse && (
         <div className="card-surface p-5">
           <p className="text-[0.8125rem] font-medium text-muted-foreground">Financial pulse</p>

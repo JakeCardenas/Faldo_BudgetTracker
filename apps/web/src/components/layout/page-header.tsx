@@ -8,11 +8,13 @@ const PLAN_CHILDREN = ["/budgets", "/goals", "/bills", "/debts", "/forecast"]
 const HISTORY_CHILDREN = ["/insights"]
 const PROFILE_CHILDREN = ["/settings", "/streaks", "/learn", "/tools"]
 
-export function PageHeader({ title, description, actions, className }: {
+export function PageHeader({ title, description, actions, className, mobileActions = "bar" }: {
   title: string
   description?: React.ReactNode
+  /** On phones these sit in the header bar as icons; pass "below" for controls that need room. */
   actions?: React.ReactNode
   className?: string
+  mobileActions?: "bar" | "below"
 }) {
   const pathname = usePathname()
   const back = PLAN_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/plan", label: "Plan" }
@@ -21,7 +23,7 @@ export function PageHeader({ title, description, actions, className }: {
         : pathname.startsWith("/learn/") ? { href: "/learn", label: "Learn" }
           : PROFILE_CHILDREN.some((p) => pathname.startsWith(p)) ? { href: "/you", label: "Profile" }
             : pathname === "/" ? undefined : { href: "/", label: "Home" }
-  return <LargeTitle title={title} subtitle={description} actions={actions} back={back} className={className} mobileActions="below" />
+  return <LargeTitle title={title} subtitle={description} actions={actions} back={back} className={className} mobileActions={mobileActions} />
 }
 
 export function SectionCard({ title, description, action, children, className, bodyClassName }: {

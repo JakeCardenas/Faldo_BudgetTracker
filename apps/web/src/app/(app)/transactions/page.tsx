@@ -95,7 +95,7 @@ function HistoryView() {
       <LargeTitle title="History"
         actions={<>
           <a href="/api/v1/me/export" className="glass-control pressable hidden h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold lg:flex"><Download className="size-[1.05rem] text-foreground/75" /> Export</a>
-          <HeaderButton onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Add</HeaderButton>
+          <HeaderButton onClick={() => openAddTransaction({ mode: "expense" })} aria-label="Add"><Plus /><span className="max-lg:sr-only">Add</span></HeaderButton>
         </>} />
 
       {pendingReceipts.length > 0 && (

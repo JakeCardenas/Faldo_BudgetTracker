@@ -31,7 +31,7 @@ export const TAB_ITEMS: TabItem[] = [
 
 export const PROFILE_ITEM: NavItem = { href: "/you", label: "Profile", icon: CircleUserRound }
 
-/** Everything that lives under Profile, in the order the Profile page lists it. */
+/** Everything reachable from Profile and the pages around it, for search. The Profile menu itself is shorter (see you/page.tsx). */
 export const YOU_GROUPS: { label: string; items: (NavItem & { description: string })[] }[] = [
   {
     label: "Money",

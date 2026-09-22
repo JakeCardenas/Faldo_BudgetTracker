@@ -6,6 +6,12 @@ import { ChevronLeft } from "lucide-react"
 import { setChromeAway, useChromeAway } from "@/lib/chrome"
 import { cn } from "@/lib/utils"
 
+/**
+ * The page header. On phones it is a Threads-style bar: a plain back chevron, the title centred, and any
+ * actions as icons on the right. Pages you reach from somewhere else (with `back`) carry their title in
+ * that bar; top-level pages keep a large title that the bar picks up once you scroll. Descriptions show
+ * on larger screens only. On desktop it is a large title with the description and a back link.
+ */
 export function LargeTitle({ title, subtitle, back, actions, className, mobileActions = "bar" }: {
   title: string
   subtitle?: React.ReactNode
@@ -35,24 +41,24 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
           away ? "h-(--top-inset)" : "h-full", compact || away ? "opacity-100" : "opacity-0")} />
         <div data-away={away} className="chrome-hide relative flex h-11 items-center gap-2">
           {back ? (
-            <Link href={back.href} className="pressable -ml-1.5 flex h-9 items-center gap-0.5 rounded-full pr-2 text-[0.9375rem] text-primary">
-              <ChevronLeft className="size-5" strokeWidth={2} />{back.label}
+            <Link href={back.href} aria-label={`Back to ${back.label}`} className="pressable -ml-2.5 flex size-11 items-center justify-center rounded-full text-foreground">
+              <ChevronLeft className="size-7" strokeWidth={1.9} />
             </Link>
           ) : <span className="w-2" />}
-          <p className={cn("pointer-events-none absolute inset-x-24 truncate text-center text-[0.9375rem] font-semibold transition-opacity duration-200",
-            compact ? "opacity-100" : "opacity-0")} aria-hidden={!compact}>{title}</p>
+          <p className={cn("pointer-events-none absolute inset-x-24 truncate text-center text-[1.0625rem] font-bold tracking-[-0.01em] transition-opacity duration-200",
+            back || compact ? "opacity-100" : "opacity-0")} aria-hidden={!(back || compact)}>{title}</p>
           <div className="ml-auto flex items-center gap-1">{mobileActions === "bar" && actions}</div>
         </div>
       </div>
-      <header className={cn("flex flex-col gap-3 pt-1 pb-2 sm:flex-row sm:items-end sm:justify-between lg:pt-9 lg:pb-3", className)}>
+      <header className={cn("flex flex-col gap-3 pt-1 pb-2 sm:flex-row sm:items-end sm:justify-between lg:pt-9 lg:pb-3", back && (mobileActions === "below" && actions ? "max-lg:pt-0 max-lg:pb-1" : "max-lg:sr-only"), className)}>
         <div className="min-w-0">
           {back && back.href !== "/" && (
             <Link href={back.href} className="mb-2 hidden items-center gap-0.5 text-[0.8125rem] font-medium text-muted-foreground transition-colors hover:text-foreground lg:inline-flex">
               <ChevronLeft className="size-4" />{back.label}
             </Link>
           )}
-          <h1 className="page-title lg:text-[1.875rem]">{title}</h1>
-          {subtitle && <p className="mt-1 max-w-[60ch] text-sm text-muted-foreground">{subtitle}</p>}
+          <h1 className={cn("page-title lg:text-[1.875rem]", back && "max-lg:sr-only")}>{title}</h1>
+          {subtitle && <p className="mt-1 max-w-[60ch] text-sm text-muted-foreground max-lg:hidden">{subtitle}</p>}
         </div>
         {actions && <div className={cn("flex-wrap items-center gap-2 lg:flex", mobileActions === "below" ? "flex" : "hidden")}>{actions}</div>}
       </header>

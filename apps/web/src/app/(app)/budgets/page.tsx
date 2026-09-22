@@ -13,6 +13,7 @@ import { CategoryIcon } from "@/components/finance/category-icon"
 import { Money } from "@/components/finance/money"
 import { ProgressBar } from "@/components/finance/progress-bar"
 import { IosSheet } from "@/components/ios/sheet"
+import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -101,14 +102,14 @@ export default function BudgetsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Budgets" description="How you intend to spend this month."
+      <PageHeader title="Budgets" description="How you intend to spend this month." mobileActions="below"
         actions={<>
           <div className="flex h-9 items-center rounded-full bg-card shadow-[inset_0_0_0_1px_var(--border)]">
             <button type="button" className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Previous month" onClick={() => setMonth(monthKey(addMonths(monthDate, -1)))}><ChevronLeft className="size-4" /></button>
             <span className="tabular w-24 text-center text-[0.8125rem] font-medium">{format(monthDate, "MMM yyyy")}</span>
             <button type="button" className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30" aria-label="Next month" disabled={isFuture} onClick={() => setMonth(monthKey(addMonths(monthDate, 1)))}><ChevronRight className="size-4" /></button>
           </div>
-          {budget && budget.lines.length > 0 && <Button variant="secondary" onClick={() => setEditing(true)}><Pencil /> Edit</Button>}
+          {budget && budget.lines.length > 0 && <HeaderButton onClick={() => setEditing(true)} aria-label="Edit budget"><Pencil /><span className="max-lg:sr-only">Edit</span></HeaderButton>}
         </>} />
 
       {isLoading || !budget ? <Skeleton className="h-96 rounded-2xl" /> : budget.lines.length === 0 ? (

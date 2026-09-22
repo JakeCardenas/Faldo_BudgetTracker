@@ -11,6 +11,7 @@ import { Money } from "@/components/finance/money"
 import { ProgressBar } from "@/components/finance/progress-bar"
 import { Segmented } from "@/components/ios/segmented"
 import { IosSheet } from "@/components/ios/sheet"
+import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -241,7 +242,7 @@ export default function GoalsPage() {
       <PageHeader title="Goals" description="What you're saving toward."
         actions={<>
           <Button variant="secondary" asChild className="hidden sm:inline-flex"><Link href="/assistant?q=When%20can%20I%20reach%20my%20goals%3F"><MessageCircle /> Ask Faldo</Link></Button>
-          <Button onClick={() => setCreating(true)}><Plus /> New goal</Button>
+          <HeaderButton onClick={() => setCreating(true)} aria-label="New goal"><Plus /><span className="max-lg:sr-only">New goal</span></HeaderButton>
         </>} />
       {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-80 rounded-2xl" />)}</div> : !goals?.length ? (
         <section className="card-surface flex flex-col items-center px-6 py-10 text-center">

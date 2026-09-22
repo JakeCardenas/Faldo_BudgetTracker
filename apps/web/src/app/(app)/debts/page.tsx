@@ -8,6 +8,7 @@ import { AmountInput } from "@/components/finance/amount-input"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
 import { ProgressBar } from "@/components/finance/progress-bar"
+import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -172,7 +173,7 @@ export default function DebtsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Money owed" description="Utang, loans and split bills. Only real money movements change your balances." actions={<Button onClick={() => setCreating(true)}><Plus /> Add record</Button>} />
+      <PageHeader title="Money owed" description="Utang, loans and split bills. Only real money movements change your balances." actions={<HeaderButton onClick={() => setCreating(true)} aria-label="Add record"><Plus /><span className="max-lg:sr-only">Add record</span></HeaderButton>} />
       <div className="card-surface grid grid-cols-2 divide-x divide-border/60 py-4 [&>div]:min-w-0 [&>div]:px-4 sm:[&>div]:px-5">
         <div><p className="text-xs text-muted-foreground sm:text-sm">You owe</p><Money minor={iOwe} className="block text-[1.375rem] font-semibold tracking-[-0.025em] sm:text-2xl" /></div>
         <div><p className="text-xs text-muted-foreground sm:text-sm">Owed to you</p><Money minor={owedToMe} className="block text-[1.375rem] font-semibold tracking-[-0.025em] text-income sm:text-2xl" /></div>

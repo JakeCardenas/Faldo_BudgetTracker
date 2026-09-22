@@ -11,7 +11,9 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 | Plan | What's ahead? | `/plan`, `/plan/money`, `/bills`, `/budgets`, `/goals`, `/debts`, `/forecast` |
 | History | What happened? | `/transactions`, `/reports`, `/insights` |
 
-**Profile** (`/you`, with `/settings`, `/learn`, `/streaks`, `/tools`, `/assistant`) is not a tab. It opens from the avatar on Home (phones) and the avatar menu (desktop); its pages select no tab.
+**Profile** (`/you`, with `/settings`, `/learn`, `/streaks`, `/tools`, `/assistant`) is not a tab. It opens from the avatar on Home (phones) and the avatar menu (desktop); its pages select no tab. Its menu is five rows (Streaks and rewards, Insights, Learn, Tools, Settings) and Sign out; Import, Statistics and Talk to Faldo are not repeated there because Wallet, History and the Faldo bubble carry them.
+
+**Settings** is a short list, each row its own screen (`/settings/[section]`): Appearance (theme, hide amounts, sounds, Faldo bubble), Preferences (name, pay frequency, monthly income, safety buffer, default account, timezone), Categories, Faldo's memory, Password and devices, and Your data (download, delete account).
 
 The **+** (the middle of the tab bar on phones, and a glass circle in the corner while the bar is away; "Add" on desktop) opens one menu: type it like a text, Expense, Income, Transfer, then receipt (photo or camera), goal, money owed, planned purchase, Faldo Check and import.
 
@@ -129,6 +131,12 @@ Content is solid; controls float. `nav-glass` (the tab bar and its corner +) is 
 ## Spacing and alignment
 
 Phones use 20px page margins; tablets 24px; desktop 32px. The scale is 4, 8, 12, 16, 20, 24, 32, 40, 48. Section titles sit 12px above their content, sections are 24 to 32px apart, and cards pad 16 to 20px. Page titles, section titles, cards, the tab bar and the + share the same left and right edges; nothing is inset by a few pixels.
+
+## Headers and menu rows (Threads style)
+
+On phones, a page reached from somewhere else has a Threads bar: a plain back chevron (no label), its title centred in bold, and its actions as icon circles on the right (Add, New goal, Edit and Refresh show their words on desktop only). Top-level pages keep a large title that the bar picks up on scroll. Descriptions under titles show on desktop only.
+
+Menus (Profile, Settings, Plan, Tools) are `ListRow`s straight on the canvas: a 24px outline icon and a short label, 52px tall. No descriptions, chevrons, icon tiles or card around them; groups are separated by a hairline, and a destructive action (Sign out, Delete account) is red text on its own. A row with a switch is its label, so tapping anywhere flips it.
 
 ## Lists before cards
 
