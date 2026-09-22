@@ -172,7 +172,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between px-5 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-5 sm:px-10">
+      <header className="flex items-center justify-between px-5 pt-[calc(1.25rem+var(--top-inset))] pb-5 sm:px-10">
         <Logo />
         {step > 0 && step < STEPS.length - 1 && <button onClick={() => finish("/")} className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">Skip setup</button>}
       </header>

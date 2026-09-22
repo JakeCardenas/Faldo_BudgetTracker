@@ -27,7 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <TooltipProvider delayDuration={250}>
           {children}
           <SoundEffects />
-          <Toaster position="top-center" offset={{ top: "calc(env(safe-area-inset-top) + 12px)" }} mobileOffset={{ top: "calc(env(safe-area-inset-top) + 8px)" }} />
+          <Toaster position="top-center" offset={{ top: "calc(var(--top-inset) + 12px)" }} mobileOffset={{ top: "calc(var(--top-inset) + 8px)" }} />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

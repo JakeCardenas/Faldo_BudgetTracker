@@ -40,11 +40,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 }
 
+const IOS_EDGE = `if(/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))document.documentElement.classList.add("ios")`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geist.variable} ${jakarta.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: SPLASH_GATE }} />
+        {/* iPhone and iPad blur the top ~40pt under the status bar (iOS 26 scroll edge effect); mark them before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: IOS_EDGE }} />
       </head>
       <body className="min-h-dvh">
         <Splash />

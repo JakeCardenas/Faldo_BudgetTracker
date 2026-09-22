@@ -16,7 +16,7 @@ const POINTS = [
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-6 lg:p-5">
-      <aside className="faldo-env relative isolate flex flex-col overflow-hidden px-6 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-6 lg:rounded-[2rem] lg:p-12"
+      <aside className="faldo-env relative isolate flex flex-col overflow-hidden px-6 pt-[calc(1.25rem+var(--top-inset))] pb-6 lg:rounded-[2rem] lg:p-12"
         style={LIGHT_ENVIRONMENT}>
         <BambooDecor tone="onLight" className="absolute -right-6 -bottom-14 -z-10 hidden h-[28rem] lg:block" />
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-16 bg-linear-to-b from-transparent to-background lg:hidden" />

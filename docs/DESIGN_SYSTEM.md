@@ -17,7 +17,7 @@ The **+** (its own circle beside the tab bar on phones, "Add" on desktop) opens 
 
 ## Navigation
 
-Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle (dark + icon) to its right, both on the page's 20px margins and above the home indicator. The selected tab sits in a grey lens set into the glass. Touching the bar lifts the lens into a clear glass bubble that swells past the bar's top and bottom (the bar grows about 3.5% with it). The bubble follows the finger across the tabs, magnifying and greening the one beneath it; letting go opens that tab, springs the lens onto it (460ms, about 2% overshoot) and settles it back into a grey lens after about 240ms. A plain tap does the same in one motion. The links stay in place for keyboard and screen readers. Scrolling down folds the capsule into one circle showing the current tab; scrolling up, reaching the top, tapping it or focusing it opens it again. The + never hides.
+Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle (dark + icon) to its right, fixed above the home indicator on the page's 20px margins (it never folds or hides on scroll). The selected tab sits in a grey lens set into the glass. Touching the bar lifts the lens into a clear bubble that swells past the bar's top and bottom; it follows the finger across the tabs, magnifying whatever it passes over, and on release glides onto that tab and settles back into a grey lens. The motion is physics, not keyframes: damped springs stepped every frame (glide: 90% in 175ms, settled by ~550ms, about 1% overshoot; follow: critically damped; lift: a small pop; settle: ~250ms), writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted. A plain tap does the same in one motion; the links stay in place for keyboard and screen readers.
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
@@ -134,6 +134,10 @@ Fast and ordered, using transforms and opacity only.
 - **Everything else:** sheets rise, money counts up, buttons press to 97%.
 
 `prefers-reduced-motion` turns all of it into instant state changes.
+
+## Top of the screen on iPhone
+
+iOS 26 blurs a band from the status bar down about 40pt (the Liquid Glass scroll edge effect); there is no CSS or meta switch to turn it off. A tiny script marks `html.ios` before first paint, and `--top-inset` (the safe area plus 2.5rem on iOS) is where crisp content may start: page headers, the green bands, sticky filters, sign-in, onboarding and toasts all use it. Only the band's green or the page colour sits in the blur.
 
 ## Data integrity
 

@@ -69,7 +69,7 @@ export function HomeBand({ data }: { data: Dashboard }) {
 
   return (
     <section aria-label="Welcome" style={environmentStyle(me?.settings.home_background)}
-      className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
+      className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
       <StatusBarTint color={`color-mix(in oklab, ${environmentFor(me?.settings.home_background).from} 88%, ${environmentFor(me?.settings.home_background).to})`} />
       <BambooDecor className="absolute top-0 -right-8 -z-10 h-[18rem] lg:top-auto lg:right-2 lg:-bottom-12 lg:h-[26rem]" />
 

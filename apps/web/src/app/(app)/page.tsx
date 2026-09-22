@@ -21,7 +21,7 @@ function HomeSkeleton() {
   const { data: me } = useMe()
   return (
     <div aria-busy="true" aria-label="Loading your home screen">
-      <div style={environmentStyle(me?.settings.home_background)} className="-mx-5 h-[20rem] px-5 pt-[calc(env(safe-area-inset-top)+0.625rem)] sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:h-[16rem] lg:rounded-[2rem] lg:px-10 lg:pt-8">
+      <div style={environmentStyle(me?.settings.home_background)} className="-mx-5 h-[20rem] px-5 pt-[calc(var(--top-inset)+0.625rem)] sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:h-[16rem] lg:rounded-[2rem] lg:px-10 lg:pt-8">
         <div className="flex justify-between lg:hidden"><Skeleton className="size-11 rounded-full bg-white/12" /><Skeleton className="h-11 w-32 rounded-full bg-white/12" /></div>
         <Skeleton className="mt-5 h-3 w-40 bg-white/15 lg:mt-0" /><Skeleton className="mt-2 h-7 w-56 bg-white/15" />
         <Skeleton className="mt-6 ml-36 h-24 rounded-[1.25rem] bg-white/15 lg:ml-0 lg:w-96" />
@@ -42,7 +42,7 @@ function Welcome() {
   const name = me?.display_name?.split(" ")[0]
   return (
     <section style={environmentStyle(me?.settings.home_background)}
-      className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(env(safe-area-inset-top)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
+      className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(var(--top-inset)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
       <StatusBarTint color={`color-mix(in oklab, ${environmentFor(me?.settings.home_background).from} 88%, ${environmentFor(me?.settings.home_background).to})`} />
       <BambooDecor className="absolute -right-8 -bottom-10 -z-10 h-[26rem]" />
       <Panda pose="wave" priority sizes="192px" className="w-44 drop-shadow-[0_18px_28px_rgb(0_0_0/0.28)] sm:w-48" />
@@ -68,7 +68,7 @@ export default function HomePage() {
 
   if (error) {
     return (
-      <div role="alert" className="mt-[calc(env(safe-area-inset-top)+1rem)] flex flex-wrap items-center gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive lg:mt-8">
+      <div role="alert" className="mt-[calc(var(--top-inset)+1rem)] flex flex-wrap items-center gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive lg:mt-8">
         <span className="flex-1">Couldn&apos;t load your home screen. {error.message}</span>
         <Button size="sm" variant="outline" onClick={() => refetch()}>Try again</Button>
       </div>
