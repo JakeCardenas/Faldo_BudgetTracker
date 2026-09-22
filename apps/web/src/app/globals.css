@@ -500,6 +500,258 @@ html.ios {
   }
 }
 
+/* Faldo changes pose: a small squash and bounce, like a sticker being swapped. */
+@keyframes faldo-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.82) translateY(6%);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.06) translateY(-2%);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+.faldo-pop {
+  transform-origin: 50% 90%;
+  animation: faldo-pop 0.5s var(--ease-out-exp, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+/* Faldo's motions in Ask Faldo: the body's gesture and, on their own layer, the pose's effects. */
+[data-body] > .faldo-body {
+  transform-origin: 50% 100%;
+}
+[data-body="breathe"] > .faldo-body {
+  animation: faldo-breathe 3.2s ease-in-out infinite;
+}
+[data-body="doze"] > .faldo-body {
+  animation: faldo-doze 3.6s ease-in-out infinite;
+}
+[data-body="sway"] > .faldo-body {
+  animation: faldo-sway 1.8s ease-in-out infinite;
+}
+[data-body="tilt"] > .faldo-body {
+  animation: faldo-tilt 2.8s ease-in-out infinite;
+}
+[data-body="bounce"] > .faldo-body {
+  animation: faldo-bounce 1.6s ease-in-out infinite;
+}
+[data-body="shake"] > .faldo-body {
+  animation: faldo-shake 2.4s ease-in-out infinite;
+}
+[data-body="jump"] > .faldo-body {
+  animation: faldo-jump 2.2s ease-out infinite;
+}
+[data-fx="bob"] > .faldo-fx {
+  animation: fx-bob 1.8s ease-in-out infinite;
+}
+[data-fx="float"] > .faldo-fx {
+  animation: fx-float 2.6s ease-in infinite;
+}
+[data-fx="twinkle"] > .faldo-fx {
+  animation: fx-twinkle 1.6s ease-in-out infinite;
+}
+[data-fx="burst"] > .faldo-fx {
+  animation: fx-twinkle 0.9s ease-in-out infinite;
+}
+[data-fx="pulse"] > .faldo-fx {
+  animation: fx-pulse 1.3s ease-in-out infinite;
+}
+[data-fx="flash"] > .faldo-fx {
+  animation: fx-flash 1.3s ease-in-out infinite;
+}
+[data-fx="rise"] > .faldo-fx {
+  animation: fx-rise 1.8s ease-out infinite;
+}
+[data-fx="pop"] > .faldo-fx {
+  animation: fx-pop 2.2s ease-out infinite;
+}
+
+@keyframes faldo-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.02, 0.982);
+  }
+}
+@keyframes faldo-doze {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.012, 0.96);
+  }
+}
+@keyframes faldo-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes faldo-tilt {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-3.5deg);
+  }
+  65% {
+    transform: rotate(1.5deg);
+  }
+}
+@keyframes faldo-bounce {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  12% {
+    transform: translateY(0) scale(1.05, 0.94);
+  }
+  32% {
+    transform: translateY(-7%) scale(0.97, 1.04);
+  }
+  52% {
+    transform: translateY(0) scale(1.03, 0.97);
+  }
+}
+@keyframes faldo-shake {
+  0%,
+  45%,
+  100% {
+    transform: rotate(0deg);
+  }
+  8% {
+    transform: rotate(-4deg);
+  }
+  16% {
+    transform: rotate(4deg);
+  }
+  24% {
+    transform: rotate(-3deg);
+  }
+  32% {
+    transform: rotate(2deg);
+  }
+}
+@keyframes faldo-jump {
+  0%,
+  55%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  8% {
+    transform: translateY(0) scale(1.06, 0.92);
+  }
+  20% {
+    transform: translateY(-8%) scale(0.96, 1.05);
+  }
+  34% {
+    transform: translateY(0) scale(1.03, 0.97);
+  }
+}
+@keyframes fx-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(-5%) rotate(10deg);
+  }
+}
+@keyframes fx-float {
+  0% {
+    opacity: 0;
+    transform: translate(-3%, 5%) scale(0.8);
+  }
+  25%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(4%, -9%) scale(1.08);
+  }
+}
+@keyframes fx-twinkle {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.93);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+@keyframes fx-pulse {
+  0%,
+  35%,
+  100% {
+    transform: scale(1);
+  }
+  10% {
+    transform: scale(1.14);
+  }
+  22% {
+    transform: scale(1.06);
+  }
+}
+@keyframes fx-flash {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+@keyframes fx-rise {
+  0% {
+    opacity: 0.5;
+    transform: scaleY(0.15);
+  }
+  45%,
+  85% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0.5;
+    transform: scaleY(1);
+  }
+}
+@keyframes fx-pop {
+  0%,
+  55%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  8% {
+    opacity: 0.4;
+    transform: scale(0.5);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+  36% {
+    transform: scale(1);
+  }
+}
+
 @keyframes caret-blink {
   50% {
     opacity: 0;

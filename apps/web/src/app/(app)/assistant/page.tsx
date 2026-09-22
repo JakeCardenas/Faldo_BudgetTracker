@@ -8,8 +8,7 @@ import {
   ArrowUp, BookText, Check, ChevronDown, ChevronLeft, CircleAlert, History, Loader2, Mic, MicOff, PenSquare, ShieldCheck, Square, Trash2, Wrench,
 } from "lucide-react"
 import { toast } from "sonner"
-import { LogoMark } from "@/components/brand/logo"
-import { Panda } from "@/components/brand/panda"
+import { Faldo, FaldoAvatar } from "@/components/brand/faldo"
 import { BlockView } from "@/components/assistant/blocks"
 import { LoggedCard, ReviewCard, draftToInput, looksLikeLogging } from "@/components/assistant/logged-card"
 import { useAppActions } from "@/components/layout/app-context"
@@ -17,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { api, streamPost } from "@/lib/api"
 import { formatDate, timeAgo } from "@/lib/format"
+import { replyMood, toolNames } from "@/lib/mood"
 import { invalidateFinancialData, useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Block, CaptureDraft, CaptureResult, ChatMessage, Source, ToolCallRecord, Transaction } from "@/lib/types"
@@ -120,16 +120,22 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
   )
 }
 
-function AssistantMessage({ message, onFollowUp, onOpenTransaction, onDraftsLogged }: {
+function AssistantMessage({ message, latest, onFollowUp, onOpenTransaction, onDraftsLogged }: {
   message: LiveMessage
+  /** The newest reply: its Faldo keeps moving; older ones rest. */
+  latest: boolean
   onFollowUp: (q: string) => void
   onOpenTransaction: (id: string) => void
   onDraftsLogged: (transactions: Transaction[]) => void
 }) {
   const runningStep = message.steps?.find((s) => s.state === "running")
+  const mood = replyMood({
+    streaming: message.streaming, hasText: Boolean(message.content), error: Boolean(message.error), logged: Boolean(message.logged || message.drafts),
+    tools: toolNames(message.tool_calls, message.steps), blocks: message.blocks ?? [],
+  })
   return (
     <div className="flex gap-3">
-      <LogoMark className="size-8 drop-shadow-none" />
+      <FaldoAvatar mood={mood} animated={latest} className="size-10" />
       <div className="min-w-0 flex-1 space-y-3 pt-1">
         {message.logged && <LoggedCard transactions={message.logged} onOpen={onOpenTransaction} />}
         {message.drafts && <ReviewCard drafts={message.drafts} onLogged={onDraftsLogged} />}
@@ -255,6 +261,8 @@ function AssistantView() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [messages])
+
+  const latestReplyId = messages.findLast((m) => m.role === "assistant")?.id
 
   const tryLog = useCallback(async (text: string): Promise<boolean> => {
     if (!looksLikeLogging(text)) return false
@@ -391,7 +399,7 @@ function AssistantView() {
             {messages.length === 0 ? (
               <div className="animate-rise space-y-6">
                 <div className="flex flex-col items-center pt-4 text-center sm:pt-10">
-                  <Panda pose="wave" priority sizes="112px" className="w-24" />
+                  <Faldo mood="wave" priority sizes="112px" className="w-24" />
                   <h2 className="mt-4 text-xl font-semibold tracking-[-0.02em]">Hi {me?.display_name?.split(" ")[0] ?? "there"}, how can I help?</h2>
                   <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">Ask about your balances, spending or goals. You can also log money the way you&apos;d text it, like &ldquo;Spent 250 on food&rdquo;.</p>
                 </div>
@@ -415,7 +423,7 @@ function AssistantView() {
                   <p className="rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground">{m.content}</p>
                 </div>
               ) : (
-                <AssistantMessage key={m.id} message={m} onFollowUp={ask} onOpenTransaction={openTransaction}
+                <AssistantMessage key={m.id} message={m} latest={m.id === latestReplyId} onFollowUp={ask} onOpenTransaction={openTransaction}
                   onDraftsLogged={(logged) => setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, drafts: undefined, logged } : x)))} />
               ))
             )}

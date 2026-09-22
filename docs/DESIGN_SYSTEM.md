@@ -67,6 +67,28 @@ The panda artworks in `apps/web/public/brand/panda/` are the canonical mascot, o
 
 One panda per view. It never sits inside transaction rows, cards or charts. The app icon (`faldo-panda-*.png`) is the same character and stays as the logo mark.
 
+### Faldo's reactions in Ask Faldo
+
+Only in the chat, Faldo's face on each reply is the mascot, not the app icon; everywhere else keeps the logo. The 20 reaction poses in `apps/web/public/brand/faldo/` are cut from the designer's transparent reaction sheet with its own alpha, only cropped and with the caption pills removed. Poses with effects (the ?, zzz, !!, sparkles, confetti, hearts, chart bars, motion lines) come as `<mood>-body.png` and `<mood>-fx.png` on the same canvas, so the effects move on their own layer. Use `<Faldo mood="…" />` or `<FaldoAvatar mood="…" />` from `components/brand/faldo.tsx`.
+
+`replyMood` in `lib/mood.ts` picks the pose from what the answer found:
+
+| Answer | Pose and motion |
+|---|---|
+| Working on it | `thinking`: tilts, the ? bobs |
+| Budgets with plenty left | `money`: bounces, sparkles twinkle |
+| A budget near its limit or at risk | `warning`: shakes the sign, lines flash |
+| A budget over, high risk, or an error | `surprised`: jumps, the !! pops |
+| A purchase that fits (low risk) | `money` |
+| Goals on track / one behind / one reached | `goal` sways / `motivated` bounces / `celebrate` with confetti |
+| Balances | `wallet`, or `warning` when nothing is safe to spend |
+| Spending, comparisons, forecasts | `chart`: the bars rise |
+| Bills, transactions, logging money | `receipt` |
+| Plans to buy something later | `shopping` |
+| Insights, health | `idea`: the bulb's rays flash |
+
+Only the newest reply keeps moving; older ones rest. The empty chat shows `wave`. Reduce motion stops all of it.
+
 Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts`) and its background ids unlock green environment themes (`BACKGROUND_INFO`). The chosen pose and theme appear in the Home hero.
 
 ## Green environment
