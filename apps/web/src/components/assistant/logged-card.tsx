@@ -15,10 +15,14 @@ import { cn } from "@/lib/utils"
 
 const QUESTION_START = /^(what|how|why|when|where|who|which|can|could|should|would|will|do|does|did|is|am|are|was|were|show|list|compare|give|tell|help|explain|summari[sz]e|analy[sz]e|forecast|predict|any|have|has)\b/i
 
+// Plans and wishes ("I want to buy a ₱150,000 motorcycle in 6 months", "balak kong bumili ng laptop sa 2027") are
+// questions for Faldo, not spending to log.
+const PLAN_WORDS = /\b(want(?:s|ed)? to|wanna|plan(?:s|ning)?|going to|gonna|will|i'll|i'd like|someday|afford|save (?:up )?for|saving (?:up )?for|ipon|mag-?ipon|magkano|balak|plano|gusto|bibili|mabibili|next (?:week|month|year)|sa susunod|(?:in|within|after) \d+ (?:days?|weeks?|months?|years?)|\d+ buwan|(?:in|by|sa|before|until) 20\d\d)\b/i
+
 export function looksLikeLogging(text: string) {
   const value = text.trim()
   if (!/\d/.test(value) || value.endsWith("?")) return false
-  return !QUESTION_START.test(value)
+  return !QUESTION_START.test(value) && !PLAN_WORDS.test(value)
 }
 
 export function draftToInput(draft: CaptureDraft): TransactionInput {

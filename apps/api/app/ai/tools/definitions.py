@@ -1,3 +1,4 @@
+import math
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -9,7 +10,8 @@ from sqlalchemy import func, select
 from app.ai.rag.retriever import search_memory
 from app.ai.tools.registry import ToolContext, ToolOutput, tool
 from app.engine.calculator import evaluate
-from app.engine.money import format_money, percent, percent_change, to_minor
+from app.engine.check import affordable_on
+from app.engine.money import format_money, minor_factor, percent, percent_change, to_minor
 from app.engine.periods import (
     Period,
     add_months,
@@ -24,6 +26,7 @@ from app.models import Category, Transaction, TransactionItem
 from app.models.enums import TransactionType
 from app.services import analytics, budgets, debts, forecast, goals, health, insights, money_plan, recurring
 from app.services import check as check_service
+from app.services import planned as planned_service
 from app.services.accounts import account_balances
 from app.services.transactions import TransactionFilters, list_transactions
 
@@ -399,6 +402,94 @@ async def get_goal_progress(ctx: ToolContext, args: GoalArgs) -> ToolOutput:
              "hint": (f"Est. {g.projected_completion_on:%b %Y}" if g.projected_completion_on else "No projection yet")}
             for g in selected]}],
     )
+
+
+class FuturePurchaseArgs(BaseModel):
+    item: str = Field(..., description="What the user wants to buy, e.g. 'iPhone 18 Pro' or 'MacBook'")
+    price: float | None = Field(None, description="Price in major units. Use the user's figure. If they gave none, give your "
+                                "best rough estimate of the price in the user's currency and set price_is_estimate to true. "
+                                "Null only if you cannot estimate it (a matching savings goal's target is then used).")
+    price_is_estimate: bool = Field(False, description="True when the price is your estimate rather than the user's figure")
+    target_date: str | None = Field(None, description="YYYY-MM-DD when they want it; for a month use its first day "
+                                     "(July 2028 → 2028-07-01); null when they gave no date")
+    months_from_now: int | None = Field(None, description="Instead of a date: in how many months (e.g. 'in 8 months' → 8)")
+
+
+def _months_between(start: date, end: date) -> int:
+    return max(1, (end.year - start.year) * 12 + end.month - start.month)
+
+
+@tool("plan_future_purchase", "Savings prediction for something the user wants to buy later, even with no goal set up: "
+      "months until the target date, how much to save each month and week, how that compares with their usual monthly "
+      "surplus (average income minus spending over recent full months), and when they would have it at their current "
+      "pace. Uses a matching savings goal's saved amount (and its target when no price is given). Use for 'I plan to buy "
+      "X in <month/year>, how much should I save?', 'magkano ipon ko?' and 'when can I afford my X?'. Always estimates.",
+      FuturePurchaseArgs, "Planning your savings")
+async def plan_future_purchase(ctx: ToolContext, args: FuturePurchaseArgs) -> ToolOutput:
+    item = args.item.strip()[:60] or "This purchase"
+    wanted = item.lower()
+    goal = next((g for g in await goals.list_goals(ctx.db, ctx.user_id, ctx.today) if g.status.value == "active" and (
+        wanted in g.name.lower() or g.name.lower() in wanted)), None)
+    target: date | None = None
+    if args.target_date:
+        target = date.fromisoformat(args.target_date[:10])
+    elif args.months_from_now:
+        target = add_months(ctx.today, min(max(1, args.months_from_now), 600))
+    if target is not None and target <= ctx.today:
+        return ToolOutput({"error": "That date has already passed. Ask for a future date."})
+    if target is None and goal is not None and goal.target_date:
+        target = goal.target_date
+    months = _months_between(ctx.today, target) if target else None
+    surplus = await planned_service.monthly_surplus(ctx.db, ctx.user_id, ctx.today)
+    common: dict[str, Any] = {
+        "item": item, "today": ctx.today.isoformat(), "target_date": target.isoformat() if target else None,
+        "months_left": months,
+        "usual_monthly_surplus": _fmt(ctx, surplus) if surplus is not None else None, "usual_monthly_surplus_minor": surplus,
+        "usual_monthly_overspend": _fmt(ctx, -surplus) if surplus is not None and surplus < 0 else None,
+        "surplus_basis": "average income minus spending over the last 3 full months" if surplus is not None
+        else "not enough full months of income and spending yet",
+    }
+
+    if args.price:
+        price, source = to_minor(args.price, ctx.currency), ("estimate" if args.price_is_estimate else "you")
+    elif goal is not None:
+        price, source = goal.target_minor, "goal"
+    else:
+        return ToolOutput({**common, "needs_price": True,
+                           "note": "No price and no matching goal. Estimate the price (price_is_estimate) or ask for it."})
+
+    saved = goal.saved_minor if goal is not None else 0
+    remaining = max(0, price - saved)
+    unit = minor_factor(ctx.currency)  # savings targets round up to whole pesos
+    monthly = math.ceil(remaining / months / unit) * unit if months else None
+    weekly = math.ceil(monthly * 12 / 52 / unit) * unit if monthly is not None else None
+    ready = affordable_on(remaining, 0, surplus, ctx.today) if remaining else ctx.today
+    result = {
+        **common,
+        "price": _fmt(ctx, price), "price_minor": price, "price_source": source,
+        "matching_goal": goal.name if goal is not None else None,
+        "saved_so_far": _fmt(ctx, saved), "saved_so_far_minor": saved,
+        "still_needed": _fmt(ctx, remaining), "still_needed_minor": remaining,
+        "save_per_month": _fmt(ctx, monthly) if monthly is not None else None, "save_per_month_minor": monthly,
+        "save_per_week": _fmt(ctx, weekly) if weekly is not None else None, "save_per_week_minor": weekly,
+        "share_of_usual_surplus_pct": round(monthly / surplus * 100) if monthly and surplus and surplus > 0 else None,
+        "ready_at_current_pace": ready.isoformat() if ready else None,
+        "on_track_for_target": (ready <= target) if ready and target else None,
+        "is_estimate": True,
+        "note": "Projections assume the usual monthly surplus keeps coming in and all of it goes to this purchase.",
+    }
+    title = f"{item} by {target:%b %Y}" if target else item
+    stats: list[dict[str, Any]] = [{"label": "Price" + (" (estimate)" if source == "estimate" else ""), "amount_minor": price}]
+    if saved:
+        stats.append({"label": "Saved so far", "amount_minor": saved, "hint": goal.name if goal is not None else None})
+    if monthly is not None:
+        stats.append({"label": "Save each month", "amount_minor": monthly, "hint": f"for {months} months · ≈ {_fmt(ctx, weekly or 0)}/week"})
+    if surplus is not None and surplus > 0:
+        stats.append({"label": "You usually save", "amount_minor": surplus,
+                      "hint": f"a month · ready ≈ {ready:%b %Y}" if ready else "a month"})
+    elif surplus is not None:
+        stats.append({"label": "You usually overspend", "amount_minor": -surplus, "hint": "a month, last 3 months"})
+    return ToolOutput(result, [{"type": "stats", "title": title, "items": stats}])
 
 
 class UpcomingArgs(BaseModel):

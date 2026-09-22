@@ -62,6 +62,13 @@ Rules:
 11. Be concise and calm: lead with the direct answer in 1–3 short sentences, then at most 3 short supporting points.
     No headings, tables, links or images. The app shows calculation cards separately, so don't repeat every number.
 12. Figures from the snapshot count as tool results: copy them exactly as written there.
+13. Plans to buy something later ("plano ko bumili ng iPhone sa July 2028, magkano ipon ko?", "when can I afford a
+    MacBook?", "how much should I save for a laptop?") are predictions, not lookups: call plan_future_purchase even when
+    no goal matches. Pass the user's price; if they gave none, pass your best rough estimate in their currency with
+    price_is_estimate true, and say it is an estimate they can correct. Lead with how much to save each month (and week),
+    compare it with what they usually save, and say when they'd have it at their current pace. If the pace falls short,
+    name the gap and one realistic way to close it. Suggest making it a goal in Faldo to track it. (For one of their
+    existing goals with no new price or date, get_goal_progress is enough.)
 {page_context}"""
 
 REPAIR_PROMPT = (
@@ -77,6 +84,7 @@ FOLLOW_UPS = {
     "calculate_affordability": ["What if I wait until next month?", "How would this affect my goals?"],
     "simulate_scenario": ["What's my projected month-end balance?", "What if I save ₱2,000 more instead?"],
     "get_goal_progress": ["How can I reach my goal sooner?", "How much am I saving each month?"],
+    "plan_future_purchase": ["How can I save faster for this?", "What if I buy it 6 months later?"],
     "get_budget_status": ["Which budget is most at risk?", "Where did my money go this month?"],
     "get_recurring_payments": ["What bills are due this week?", "How much do subscriptions cost per year?"],
     "get_upcoming_payments": ["Can I afford these bills with my current balance?", "What's my forecast for month-end?"],
@@ -262,7 +270,7 @@ async def stream_answer(
         sources = [{"ref": ref, **ctx.refs[ref], "cited": True} for ref in cited if ref in ctx.refs]
         sources += [{"ref": ref, **info, "cited": False} for ref, info in ctx.refs.items()
                     if ref not in cited and info.get("type") != "transaction"][:6]
-        used = [r["name"] for r in records]
+        used = [r["name"] for r in records if r["ok"]]  # a lookup that found nothing shouldn't steer the next question
         follow_ups: list[str] = []
         for name in used:
             for suggestion in FOLLOW_UPS.get(name, []):

@@ -125,7 +125,7 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 
 ## AI tools
 
-`get_current_balance` (includes Safe to Spend and what's left this week), `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `get_upcoming_payments`, `get_recurring_payments`, `get_money_plan`, `calculate_affordability` (Faldo Check plus a projected balance), `calculate_forecast`, `simulate_scenario` (one-off or repeating changes), `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
+`get_current_balance` (includes Safe to Spend and what's left this week), `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `plan_future_purchase` (savings prediction for something to buy later), `get_upcoming_payments`, `get_recurring_payments`, `get_money_plan`, `calculate_affordability` (Faldo Check plus a projected balance), `calculate_forecast`, `simulate_scenario` (one-off or repeating changes), `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
 
 - Pydantic argument models are converted to strict JSON schemas (all fields required, nullable where optional, no `$ref`).
 - `user_id` comes from the session, never from the model. Periods are resolved server-side in the user's timezone.
@@ -137,6 +137,8 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 **Providers:** `AI_PROVIDER=auto` uses **Claude** (`claude-sonnet-5` for answers and receipts, `claude-haiku-4-5` for quick capture and summaries) when `ANTHROPIC_API_KEY` is set, then OpenAI when `OPENAI_API_KEY` is set. Otherwise the **local development provider** runs: a rule-based planner that calls the same tools and writes templated answers from their results, hashed lexical embeddings for RAG, and no receipt vision. The UI labels this mode. Search embeddings come from OpenAI when its key is set (Anthropic has no embeddings) and from local hashing otherwise.
 
 **Speed:** answers stream token by token from Claude or OpenAI, so the reply appears as it is written. Each question also carries a compact snapshot of the user's money (balances, Safe to Spend, this month's spending, budgets, what's due in 7 days, goals), so everyday questions need no tool round-trip; the snapshot counts as evidence for the numeric guardrail. Claude's tool definitions and system prompt are prompt-cached. If checking changes an answer that already streamed (a repaired figure, cleaned formatting, the advice note), the final version replaces it.
+
+**Predictions:** plans to buy something later ("When can I afford a MacBook?", "plano ko bumili ng iPhone sa July 2028, magkano ipon ko?") are answered even without a goal. `plan_future_purchase` works out the months left, what to save each month and week (rounded up to whole pesos), the share of the usual monthly surplus (average over the last 3 full months) that takes, and when the user would have it at that pace. It uses the user's price, a matching goal's target and saved amount, or the model's labelled rough estimate. The rule-based fallback reads the same questions in English and Taglish and asks for the price when none is given.
 
 ## Environment variables
 
@@ -225,7 +227,7 @@ Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the
 ## Quality checks
 
 ```bash
-make test        # 142 backend tests
+make test        # 149 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build

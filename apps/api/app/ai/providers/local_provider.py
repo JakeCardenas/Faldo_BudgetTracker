@@ -27,6 +27,89 @@ TOPIC_RE = re.compile(
 GOAL_RE = re.compile(r"(?:afford|reach|hit|complete|finish|save for|saving for|buy)\s+(?:my|the|a|an)?\s*(.+?)(?:\s+goal)?(?:[?.!]|$)", re.IGNORECASE)
 STOP_TOPICS = {"it", "that", "this", "things", "stuff", "everything", "money", "anything", "food lately"}
 
+# Plans to buy something later, in English or Taglish: "plano ko bumili ng iPhone 18 Pro in 2028 July, magkano ipon ko?"
+MONTHS = {
+    "january": 1, "jan": 1, "enero": 1, "february": 2, "feb": 2, "pebrero": 2, "march": 3, "mar": 3, "marso": 3,
+    "april": 4, "apr": 4, "abril": 4, "may": 5, "mayo": 5, "june": 6, "jun": 6, "hunyo": 6, "july": 7, "jul": 7,
+    "hulyo": 7, "august": 8, "aug": 8, "agosto": 8, "september": 9, "sept": 9, "sep": 9, "setyembre": 9,
+    "october": 10, "oct": 10, "oktubre": 10, "november": 11, "nov": 11, "nobyembre": 11, "december": 12, "dec": 12,
+    "disyembre": 12,
+}
+_MONTH = "|".join(sorted(MONTHS, key=len, reverse=True))
+YEAR_MONTH_RE = re.compile(rf"\b(20\d{{2}})\s+({_MONTH})\b", re.IGNORECASE)
+MONTH_YEAR_RE = re.compile(rf"\b({_MONTH})\.?(?:\s*(?:of\s+|,\s*)?(20\d{{2}}))?\b", re.IGNORECASE)
+YEAR_RE = re.compile(r"\b(?:in|by|sa|before|until|bago|pagdating ng|this)\s+(20\d{2})\b", re.IGNORECASE)
+IN_MONTHS_RE = re.compile(r"\b(?:in|within|after|sa loob ng|pagkatapos ng)\s+(\d{1,3})\s+(?:months?|buwan)\b"
+                          r"|\b(\d{1,3})\s+(?:months?|buwan)\s+(?:from now|mula ngayon)\b", re.IGNORECASE)
+PURCHASE_RE = re.compile(
+    r"(?:buy|get(?=\s+(?:a|an|new|the|isang|bagong)\b)|afford|purchase|save up for|saving up for|save for|saving for|bumili ng|bibili ng|makabili ng|mabili ang|"
+    r"mabili yung|bilhin ang|bilhin yung|pambili ng|ipon para sa|mag-?ipon para sa|mag-?ipon ng pambili ng)\s+"
+    r"(?:(?:my|the|a|an|new|bagong|ng|yung|ang|isang)\s+)*(.+?)"
+    r"(?=\s+(?:in|by|on|sa|para|before|next|this|within|kapag|pag|when|at|for|worth|costing|that|na|nagkakahalaga|"
+    r"around|about|mga)\b|,(?!\d)|\.(?!\d)|[?!]|$)",
+    re.IGNORECASE,
+)
+FUTURE_WORDS = re.compile(r"\b(plano|plan(?:ning)? to|balak|gusto kong|i want to|want to|magkano (?:ang )?(?:ipon|dapat)|"
+                          r"how much (?:should|do|would) i (?:need to )?save|save up|save for|saving for|mag-?ipon|when (?:can|will|could) i)\b",
+                          re.IGNORECASE)
+GENERIC_ITEMS = {"it", "this", "that", "goal", "my goal", "goals", "one", "things", "stuff"}
+PAST_RE = re.compile(r"\b(did|bought|spent|was|were|last|nung|noong|binili ko|nabili ko)\b", re.IGNORECASE)
+
+
+def _when(text: str, today: date) -> tuple[str | None, int | None, str]:
+    """A target month from the text (as YYYY-MM-01) or a number of months, and the text without it."""
+    match = IN_MONTHS_RE.search(text)
+    if match:
+        return None, int(match.group(1) or match.group(2)), text[:match.start()] + " " + text[match.end():]
+    if re.search(r"\bnext year\b|\bsa susunod na taon\b", text, re.IGNORECASE):
+        return None, 12, text
+    found: tuple[int, int | None, re.Match[str]] | None = None
+    match = YEAR_MONTH_RE.search(text)
+    if match:
+        found = (MONTHS[match.group(2).lower()], int(match.group(1)), match)
+    else:
+        for match in MONTH_YEAR_RE.finditer(text):
+            if match.group(1).lower() == "may" and not match.group(2):
+                continue  # "may" is also everyday Filipino ("may ipon ba ako?")
+            found = (MONTHS[match.group(1).lower()], int(match.group(2)) if match.group(2) else None, match)
+            break
+    if found:
+        month, year, match = found
+        if year is None:
+            year = today.year if month > today.month else today.year + 1
+        return f"{year}-{month:02d}-01", None, text[:match.start()] + " " + text[match.end():]
+    match = YEAR_RE.search(text)
+    if match:
+        year = int(match.group(1))
+        return f"{year}-{12 if year == today.year else 1:02d}-01", None, text[:match.start()] + " " + text[match.end():]
+    return None, None, text
+
+
+def _purchase(question: str, today: date) -> dict[str, Any] | None:
+    """Item, price and timing for a plan to buy something later; None when the question isn't one."""
+    if PAST_RE.search(question):
+        return None
+    target, months, rest = _when(question, today)
+    item_match = PURCHASE_RE.search(rest)
+    if not item_match:
+        return None
+    item = re.sub(r"^(?:₱|php)?\s?\d[\d,]*(?:\.\d+)?\s?k?\s+", "", item_match.group(1).strip(), flags=re.IGNORECASE)
+    item = re.split(r"\s+(?:₱|php\b)|\s+\d{1,3}(?:,\d{3})+|\s+\d+(?:\.\d+)?k\b|\s+\d{4,}", item,
+                    flags=re.IGNORECASE)[0].strip(" '\"")
+    if not item or item.lower() in GENERIC_ITEMS or len(item) > 40 or item.split()[0].lower() in {"in", "on", "at", "sa", "by"}:
+        return None
+    has_time = target is not None or months is not None
+    if not (has_time or FUTURE_WORDS.search(question)):
+        return None
+    price = None
+    for match in AMOUNT_RE.finditer(rest.replace(item, " ", 1)):
+        whole = match.group(1).replace(",", "")
+        value = float(f"{whole}.{match.group(2) or '0'}") * (1000 if match.group(3) else 1)
+        if re.search(r"₱|php", match.group(0), re.IGNORECASE) or match.group(3) or "," in match.group(1) or value >= 1000:
+            price = value
+            break
+    return {"item": item, "price": price, "price_is_estimate": False, "target_date": target, "months_from_now": months}
+
 
 def _period(text: str, default: str = "this_month") -> str:
     lowered = text.lower()
@@ -59,11 +142,14 @@ def _call(name: str, **arguments: Any) -> ToolCall:
     return ToolCall(id=f"local_{name}", name=name, arguments=arguments)
 
 
-def plan(question: str) -> tuple[str, list[ToolCall]]:
+def plan(question: str, today: date | None = None) -> tuple[str, list[ToolCall]]:
     q = question.lower()
     period = _period(q)
-    amount = _amount(question)
     topic = _topic(question)
+    purchase = _purchase(question, today or date.today())
+    if purchase and (purchase["price"] or purchase["target_date"] or purchase["months_from_now"]):
+        return "future_purchase", [_call("plan_future_purchase", **purchase)]
+    amount = _amount(question)
 
     if re.search(r"what (happens|if)|if i (spend|save|buy|put|get)|if my (income|salary|allowance)", q) and amount:
         kind = "income_decrease" if re.search(r"(income|salary|allowance|pay) (drops|goes down|decreases|is cut)|earn less", q) \
@@ -126,6 +212,8 @@ def plan(question: str) -> tuple[str, list[ToolCall]]:
         return "topic", [_call("get_category_spending", period=period, category=topic, start_date=None, end_date=None)]
     if re.search(r"budget", q):
         return "budget", [_call("get_budget_status", month=None)]
+    if purchase:
+        return "goal", [_call("get_goal_progress", goal_name=purchase["item"])]
     if re.search(r"goal|save for|saving for|emergency fund|macbook", q):
         goal = GOAL_RE.search(question)
         name = goal.group(1).strip() if goal else None
@@ -201,10 +289,21 @@ class LocalDevelopmentProvider:
             if item.kind == "tool_result" and item.call and item.output is not None:
                 results[item.call.name] = item.output
 
-        intent, calls = plan(question)
+        stated = re.search(r"Today is (\d{4}-\d{2}-\d{2})", system)
+        today = date.fromisoformat(stated.group(1)) if stated else date.today()
+        intent, calls = plan(question, today)
         pending = [c for c in calls if c.name not in results]
         if pending:
             return ModelTurn(text=None, tool_calls=pending)
+
+        # "When can I afford my MacBook?" with no MacBook goal: plan it as a future purchase instead.
+        goal = results.get("get_goal_progress", {})
+        if intent == "goal" and "error" in goal and "plan_future_purchase" not in results:
+            purchase = _purchase(question, today)
+            if purchase:
+                return ModelTurn(text=None, tool_calls=[_call("plan_future_purchase", **purchase)])
+        if "plan_future_purchase" in results:
+            intent = "future_purchase"
 
         if intent == "topic":
             category = results.get("get_category_spending", {})
@@ -375,6 +474,40 @@ def compose_goal(question: str, r: dict[str, dict[str, Any]]) -> str:
             text += f" To hit your target date you'd need about {goal['required_monthly']} a month."
         parts.append(text)
     return " ".join(parts) + " Projections are estimates."
+
+
+def compose_future_purchase(question: str, r: dict[str, dict[str, Any]]) -> str:
+    p = r["plan_future_purchase"]
+    if "error" in p:
+        return f"I couldn't plan that: {p['error']}"
+    item = p["item"]
+    usual = p.get("usual_monthly_surplus")
+    saves = usual and (p.get("usual_monthly_surplus_minor") or 0) > 0
+    pace = (f" You usually save about {usual} a month." if saves else
+            f" Lately you've spent about {p['usual_monthly_overspend']} a month more than you earn."
+            if p.get("usual_monthly_overspend") else "")
+    if p.get("needs_price"):
+        when = f" You have {_plural(p['months_left'], 'month')} until {_d(p['target_date'], '%B %Y')}." if p.get("months_left") else ""
+        return (f"How much is the {item}? Tell me its price and I'll work out how much to save each month and week, "
+                f"and when you'd have it.{when}{pace}")
+    if not p["still_needed_minor"]:
+        return f"You've already saved the {p['price']} for the {item}{' in ' + p['matching_goal'] if p.get('matching_goal') else ''}."
+    saved = f" You've saved {p['saved_so_far']} in {p['matching_goal']}, so {p['still_needed']} to go." if p.get("saved_so_far_minor") else ""
+    lead = f"The {item} is {p['price']}.{saved}"
+    if p.get("save_per_month"):
+        text = (f"{lead} To have it by {_d(p['target_date'], '%B %Y')}, save about {p['save_per_month']} a month "
+                f"({p['save_per_week']} a week) for the next {_plural(p['months_left'], 'month')}.{pace}")
+        if p.get("share_of_usual_surplus_pct"):
+            share = p["share_of_usual_surplus_pct"]
+            text += (f" That's {share}% of what you usually save." if share <= 100 else
+                     " That's more than you usually save, so you'd need to cut spending or push the date back.")
+    else:
+        text = lead + pace
+    if p.get("ready_at_current_pace"):
+        text += f" At your current pace you'd have it around {_d(p['ready_at_current_pace'], '%B %Y')}."
+    elif not saves:
+        text += " Once you save a little each month, I can predict when you'll have it."
+    return text + " Tip: make it a goal in Faldo to track it. These are estimates based on your recent months."
 
 
 def compose_running_out(question: str, r: dict[str, dict[str, Any]]) -> str:
@@ -560,6 +693,7 @@ COMPOSERS = {
     "afford": compose_afford,
     "scenario": compose_scenario,
     "goal": compose_goal,
+    "future_purchase": compose_future_purchase,
     "running_out": compose_running_out,
     "recurring": compose_recurring,
     "upcoming": compose_upcoming,
