@@ -112,7 +112,7 @@ function HistoryView() {
       )}
 
       {/* Search and filters step aside with the header while you scroll down (phones only). */}
-      <div data-away={away} onFocus={() => setChromeAway(false)} className="glass chrome-hide sticky top-[calc(2.75rem+var(--top-inset))] z-20 -mx-5 space-y-2.5 px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
+      <div data-away={away} data-motion="always" onFocus={() => setChromeAway(false)} className="glass chrome-hide sticky top-[calc(2.75rem+var(--top-inset))] z-20 -mx-5 space-y-2.5 px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
         <div className="flex gap-2">
           <label className="flex h-11 flex-1 items-center gap-2 rounded-full bg-card px-4 shadow-[inset_0_0_0_1px_var(--border)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_var(--ring)] focus-within:ring-3 focus-within:ring-ring/20">
             <Search className="size-4 shrink-0 text-muted-foreground" />

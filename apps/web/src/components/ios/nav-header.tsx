@@ -30,8 +30,8 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
     <>
       {/* On phones the bar steps aside while you scroll down and comes back when you scroll up, with the
           tab bar (see lib/chrome); the soft edge behind it then shrinks to cover just the status bar. */}
-      <div onFocus={() => setChromeAway(false)} className="sticky top-0 isolate z-30 -mx-5 px-5 pt-safe sm:-mx-6 sm:px-6 lg:hidden">
-        <div aria-hidden className={cn("scroll-edge pointer-events-none absolute inset-x-0 top-0 -z-10 transition-[height,opacity] duration-200 motion-reduce:transition-none",
+      <div onFocus={() => setChromeAway(false)} data-motion="always" className="sticky top-0 isolate z-30 -mx-5 px-5 pt-safe sm:-mx-6 sm:px-6 lg:hidden">
+        <div aria-hidden className={cn("scroll-edge pointer-events-none absolute inset-x-0 top-0 -z-10 transition-[height,opacity] duration-200",
           away ? "h-(--top-inset)" : "h-full", compact || away ? "opacity-100" : "opacity-0")} />
         <div data-away={away} className="chrome-hide relative flex h-11 items-center gap-2">
           {back ? (

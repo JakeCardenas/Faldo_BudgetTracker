@@ -25,7 +25,7 @@ Phones: modelled on the Threads tab bar. One floating glass capsule, icons only:
 - The **page header** steps aside with the bar, as in Threads: the sticky header row (back, title, actions) and History's search and filters fade out drifting up 20px (about 0.24s) while the bar sinks, and come back sliding down, quicker (about 0.18s), when the bar rises. A soft strip stays under the status bar the whole time, so nothing reads crisp under the clock. Focusing anything in the header brings it back.
 - On pages that belong to no tab (Profile and its pages) the lens fades out and every icon is outlined.
 
-The lens moves on physics, not keyframes: damped springs stepped every frame, writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted (glide: 90% in 175ms, about 1% overshoot; follow: critically damped). The scroll transition is CSS, so the system runs it off the main thread, on curves fitted to the reference frame by frame: the bar sinks on a critically damped curve (about 90% gone in 100ms, 223ms in all) and rises on a pure exponential with no bounce (222ms); the + shows within about 30ms and settles its 13px rise in 283ms, and fades out over 283ms as the bar comes back. With Reduce Motion the bar and the + dissolve instead of sliding. The links stay in the bar for keyboard and screen readers.
+The lens moves on physics, not keyframes: damped springs stepped every frame, writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted (glide: 90% in 175ms, about 1% overshoot; follow: critically damped). The scroll transition is CSS, so the system runs it off the main thread, on curves fitted to the reference frame by frame: the bar sinks on a critically damped curve (about 90% gone in 100ms, 223ms in all) and rises on a pure exponential with no bounce (222ms); the + shows within about 30ms and settles its 13px rise in 283ms, and fades out over 283ms as the bar comes back. The bar, its lens and the page header keep this motion with Reduce Motion on (they carry `data-motion="always"`), by the owner's choice; everything else follows the setting. The links stay in the bar for keyboard and screen readers.
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
@@ -141,7 +141,7 @@ Fast and ordered, using transforms and opacity only.
 - **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
 - **Everything else:** sheets rise, money counts up, buttons press to 97%.
 
-`prefers-reduced-motion` turns all of it into instant state changes.
+`prefers-reduced-motion` turns all of it into instant state changes, except the phone tab bar and the page header's scroll transition (`data-motion="always"`), which keep moving by the owner's choice.
 
 ## Top of the screen on iPhone
 

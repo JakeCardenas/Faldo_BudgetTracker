@@ -348,6 +348,7 @@ html.ios {
     frame. Scrolling down (.nav-away), the + circle comes out of the bar's right end and rises its last
     13px into place while the bar sinks below the screen; scrolling up, the bar rises back under the +,
     which fades and sinks into it. CSS transitions, so the system animates them off the main thread.
+    They keep moving with Reduce Motion on (data-motion="always"), as the owner chose.
   */
   .nav-bar {
     transition: transform 222ms var(--ease-out-exp);
@@ -368,19 +369,6 @@ html.ios {
     transform: none;
     pointer-events: auto;
     transition: opacity 104ms var(--ease-out-exp), transform 283ms var(--ease-out-exp), scale 200ms var(--ease-spring);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    /* A dissolve instead of the slide. */
-    .nav-bar,
-    .nav-plus,
-    .nav-away .nav-bar,
-    .nav-away .nav-plus {
-      transform: none;
-      transition: opacity 200ms ease;
-    }
-    .nav-away .nav-bar {
-      opacity: 0;
-    }
   }
   /* The selected tab's lens: a darker pill set into the glass. */
   .nav-lens {
@@ -427,11 +415,6 @@ html.ios {
       pointer-events: none;
       transition-duration: 220ms, 240ms;
       transition-timing-function: cubic-bezier(0.33, 0, 0.67, 1);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .chrome-hide {
-      transition: none;
     }
   }
   .pressable {
@@ -707,9 +690,13 @@ html:not([data-splash="skip"]) .boot-quiet {
   ::view-transition-new(root) {
     animation: none;
   }
-  *,
-  *::before,
-  *::after {
+  /*
+    Everything goes still, except the phone tab bar and the page header's scroll transition
+    (data-motion="always"), which the owner chose to keep moving like Threads.
+  */
+  :not([data-motion="always"], [data-motion="always"] *),
+  :not([data-motion="always"], [data-motion="always"] *)::before,
+  :not([data-motion="always"], [data-motion="always"] *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

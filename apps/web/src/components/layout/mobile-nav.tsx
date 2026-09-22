@@ -151,12 +151,6 @@ export function MobileNav() {
     // A loop that has not ticked for a while was dropped (the page was suspended, say): start afresh.
     if (frame.current && performance.now() - lastTick.current < 250) return
     cancelAnimationFrame(frame.current)
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      x.current.snap()
-      paint()
-      frame.current = 0
-      return
-    }
     // Time comes only from the frames themselves, so no clock can disagree with them.
     let last = -1
     lastTick.current = performance.now()
@@ -319,7 +313,8 @@ export function MobileNav() {
   }
 
   return (
-    <nav aria-label="Main"
+    // The bar keeps its motion with Reduce Motion on (data-motion="always"), as the owner chose.
+    <nav aria-label="Main" data-motion="always"
       className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden", away && "nav-away")}>
       <div className="relative mx-auto max-w-[30rem]">
         <div ref={bar} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
