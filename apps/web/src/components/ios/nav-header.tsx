@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { ChevronLeft } from "lucide-react"
+import { setChromeAway, useChromeAway } from "@/lib/chrome"
 import { cn } from "@/lib/utils"
 
 export function LargeTitle({ title, subtitle, back, actions, className, mobileActions = "bar" }: {
@@ -15,6 +16,7 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
 }) {
   const sentinel = useRef<HTMLDivElement>(null)
   const [compact, setCompact] = useState(false)
+  const away = useChromeAway()
 
   useEffect(() => {
     const node = sentinel.current
@@ -26,8 +28,12 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
 
   return (
     <>
-      <div className={cn("sticky top-0 isolate z-30 -mx-5 px-5 pt-safe sm:-mx-6 sm:px-6 lg:hidden", compact && "scroll-edge")}>
-        <div className="relative flex h-11 items-center gap-2">
+      {/* On phones the bar steps aside while you scroll down and comes back when you scroll up, with the
+          tab bar (see lib/chrome); the soft edge behind it then shrinks to cover just the status bar. */}
+      <div onFocus={() => setChromeAway(false)} className="sticky top-0 isolate z-30 -mx-5 px-5 pt-safe sm:-mx-6 sm:px-6 lg:hidden">
+        <div aria-hidden className={cn("scroll-edge pointer-events-none absolute inset-x-0 top-0 -z-10 transition-[height,opacity] duration-200 motion-reduce:transition-none",
+          away ? "h-(--top-inset)" : "h-full", compact || away ? "opacity-100" : "opacity-0")} />
+        <div data-away={away} className="chrome-hide relative flex h-11 items-center gap-2">
           {back ? (
             <Link href={back.href} className="pressable -ml-1.5 flex h-9 items-center gap-0.5 rounded-full pr-2 text-[0.9375rem] text-primary">
               <ChevronLeft className="size-5" strokeWidth={2} />{back.label}

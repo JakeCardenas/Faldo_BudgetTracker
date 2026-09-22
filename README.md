@@ -214,6 +214,8 @@ Faldo deploys as **two Vercel projects from the same GitHub repository** plus a 
 4. **Order.** Deploy the API first, copy its URL into the web project's `API_ORIGIN`, deploy the web project, then set the API's `PUBLIC_APP_URL` to the web URL and redeploy the API.
 5. **Demo data (optional).** From your machine: `cd apps/api && DATABASE_URL="<production url>" uv run python -m app.seed.demo`.
 
+Open copies of the web app keep themselves current: each build carries its commit (`VERCEL_GIT_COMMIT_SHA`), `/version` reports the live one, and when the app comes back to the front after a newer deploy it reloads (or, if a sheet is open or you are typing, loads the new version on your next page change). This matters most for Faldo added to an iPhone home screen, which resumes instead of reloading.
+
 Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the table owner as well. Roles with the `BYPASSRLS` attribute skip policies entirely; on hosts whose default owner role has it (Neon's project owner does), run the app as a separate role created with `NOBYPASSRLS` and keep the owner for migrations. Check with `SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user;`.
 
 ## Quality checks

@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   compress: false,
   // 90 keeps Faldo's fur and eyes crisp; everything else uses the default 75.
   images: { qualities: [75, 90] },
+  // Lets an open copy of the app notice a newer deploy (see UpdateCheck).
+  env: { NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA ?? "dev" },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiOrigin}/api/:path*` }]
   },

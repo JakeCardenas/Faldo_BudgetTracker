@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { useAppActions } from "@/components/layout/app-context"
 import { TAB_ITEMS, activeTabIndex, type TabItem } from "@/components/layout/nav"
+import { isChromeAway, setChromeAway, subscribeChrome } from "@/lib/chrome"
 import { play } from "@/lib/sound"
 
 export function initialsOf(name?: string | null) {
@@ -125,7 +126,8 @@ function IconRow({ filled }: { filled?: boolean }) {
  * filled: slide a finger along the bar and the lens follows it, filling each icon as it passes (half
  * an icon when it is half over one); let go and it settles on that tab and opens it. Scroll down a page
  * and the bar sinks below the screen as a glass + comes out of its right end and stays in the corner;
- * scroll back up and the bar rises under the +, which fades back into it. Everything moves on springs, frame by frame, writing styles directly so the motion
+ * scroll back up and the bar rises under the +, which fades back into it. The page header steps aside
+ * and back with it (see lib/chrome). Everything moves on springs, frame by frame, writing styles directly so the motion
  * stays smooth while the next page renders.
  */
 export function MobileNav() {
@@ -229,7 +231,7 @@ export function MobileNav() {
     run()
   }, [light, run])
 
-  /** Send the bar away (the corner + takes its place) or bring it back. */
+  /** Send the bar away (the corner + takes its place) or bring it back, following the shared chrome state. */
   const collapse = useCallback((on: boolean) => {
     if (collapsed.current === on) return
     collapsed.current = on
@@ -277,8 +279,14 @@ export function MobileNav() {
     glideTo(activeSlot)
   }, [activeSlot, glideTo])
 
-  // A new page starts with the bar in view.
-  useEffect(() => { collapse(false) }, [pathname, collapse])
+  // The bar (and the page header, which follows the same state) steps aside and comes back together.
+  useEffect(() => {
+    collapse(isChromeAway())
+    return subscribeChrome(() => collapse(isChromeAway()))
+  }, [collapse])
+
+  // A new page starts with the bar and header in view.
+  useEffect(() => { setChromeAway(false) }, [pathname])
 
   // Scrolling down sends the bar away; scrolling up, or reaching the top, brings it back.
   useEffect(() => {
@@ -292,7 +300,7 @@ export function MobileNav() {
       last = y
       if (y < TOP_ZONE) {
         down = up = 0
-        collapse(false)
+        setChromeAway(false)
         return
       }
       // The bounce past the end of a page is not the reader scrolling back up.
@@ -300,16 +308,16 @@ export function MobileNav() {
       if (dy > 0) {
         down += dy
         up = 0
-        if (down > HIDE_AFTER) collapse(true)
+        if (down > HIDE_AFTER) setChromeAway(true)
       } else if (dy < 0) {
         up -= dy
         down = 0
-        if (up > SHOW_AFTER) collapse(false)
+        if (up > SHOW_AFTER) setChromeAway(false)
       }
     }
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
-  }, [hidden, collapse])
+  }, [hidden])
 
   useEffect(() => () => {
     cancelAnimationFrame(frame.current)
@@ -374,7 +382,7 @@ export function MobileNav() {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden">
       <div className="relative mx-auto max-w-[30rem]">
         <div ref={bar} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
-          onFocus={() => collapse(false)}
+          onFocus={() => setChromeAway(false)}
           className="pointer-events-auto relative h-[3.8125rem] touch-none select-none will-change-transform [-webkit-touch-callout:none]">
           <span aria-hidden className="nav-glass absolute inset-0 rounded-full" />
           <span ref={lens} aria-hidden className="nav-lens pointer-events-none absolute inset-y-1 left-0 w-(--lens) rounded-full transition-opacity duration-200 will-change-transform" />
