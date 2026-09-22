@@ -117,9 +117,9 @@ export function HomeBand({ data }: { data: Dashboard }) {
 
 /** Long balances step down a size so they always fit their card. */
 function balanceSize(text: string) {
-  if (text.length <= 10) return "text-[2rem]"
-  if (text.length <= 12) return "text-[1.75rem]"
-  return "text-[1.5rem]"
+  if (text.length <= 10) return "text-[2.625rem]"
+  if (text.length <= 12) return "text-[2.25rem]"
+  return "text-[1.875rem]"
 }
 
 /**
@@ -139,7 +139,7 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
   const accounts = data.accounts.filter((a) => !a.archived).length
 
   return (
-    <section aria-labelledby="balance-title" className={cn("card-surface p-4 sm:p-5", className)}>
+    <section aria-labelledby="balance-title" className={cn("card-surface rounded-[1.5rem] p-5", className)}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <h2 id="balance-title" className="label-caps">Total balance</h2>
@@ -147,7 +147,7 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
         </div>
         <p className="text-xs text-muted-foreground">{accounts} {accounts === 1 ? "account" : "accounts"}</p>
       </div>
-      <AnimatedMoney minor={shown} className={cn("mt-1.5 block leading-none font-extrabold tracking-[-0.04em] lg:text-[2.5rem]", balanceSize(formatMoney(shown)))} />
+      <AnimatedMoney minor={shown} className={cn("mt-2 block leading-none font-extrabold tracking-[-0.045em] lg:text-[2.75rem]", balanceSize(formatMoney(shown)))} />
       <p className="mt-2 flex min-h-6 flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.8125rem] text-muted-foreground">
         {hover ? (
           <span className="font-semibold text-foreground">{format(parseISO(hover.date), "EEEE, MMM d")}</span>
@@ -163,19 +163,19 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
         ) : <>No change over the {range.phrase}</>}
       </p>
 
-      <div className="mt-3 h-36 lg:h-48">
+      <div className="mt-4 h-36 lg:h-48">
         {isLoading ? <Skeleton className="h-full rounded-xl" /> : series.length > 1 ? (
           <BalanceLine data={series} onHover={setHover} height="100%" />
         ) : (
           <p className="flex h-full items-center justify-center rounded-xl border border-dashed px-6 text-center text-sm text-muted-foreground">Your balance line appears after a few days of activity.</p>
         )}
       </div>
-      <div className="mt-3 flex justify-between gap-1 rounded-full bg-muted p-1" role="radiogroup" aria-label="Chart range">
+      <div className="mt-3 flex justify-between gap-1" role="radiogroup" aria-label="Chart range">
         {RANGES.map((r) => (
           <button key={r.label} type="button" role="radio" aria-checked={r.label === range.label}
             onClick={() => { play("select"); setRange(r); setHover(null) }}
-            className={cn("h-8 flex-1 rounded-full text-[0.8125rem] font-semibold transition-colors",
-              r.label === range.label ? "bg-primary text-primary-foreground shadow-[0_1px_3px_rgb(16_36_24/0.2)]" : "text-muted-foreground hover:text-foreground")}>
+            className={cn("pressable h-8 flex-1 rounded-full text-[0.8125rem] font-semibold transition-colors duration-200",
+              r.label === range.label ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
             {r.label}
           </button>
         ))}

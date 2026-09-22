@@ -29,12 +29,15 @@ const QUICK_ACTIONS: QuickAction[] = [
 /** A round button that dips on a spring when pressed. */
 const tile = "flex size-14 items-center justify-center rounded-full bg-card text-foreground shadow-(--shadow-card) transition-[scale,background-color] duration-300 ease-(--ease-spring) group-hover:bg-accent group-active:scale-[0.88] [&_svg]:size-6"
 
-/** Shortcuts to the places people open most: round buttons in a 4 by 2 grid, every one in view. */
+/**
+ * Shortcuts to the places people open most: round buttons in a 4 by 2 grid, every one in view. They sit
+ * right under the balance as its action row, so they need no heading.
+ */
 export function QuickActions({ className }: { className?: string }) {
   const { openCheck } = useAppActions()
   return (
-    <Section title="Quick actions" className={className}>
-      <ul className="cascade grid grid-cols-4 gap-x-2 gap-y-4 lg:grid-cols-8">
+    <Section className={className}>
+      <ul aria-label="Quick actions" className="cascade grid grid-cols-4 gap-x-2 gap-y-4 lg:grid-cols-8">
         {QUICK_ACTIONS.map((q) => {
           const Icon = q.icon
           const body = (
@@ -139,12 +142,12 @@ export function MoneyInOut({ className }: { className?: string }) {
           </>
         )}
       </div>
-      <div className="mt-auto flex gap-0.5 rounded-full bg-muted p-0.5" role="radiogroup" aria-label="Period">
+      <div className="mt-auto flex gap-0.5" role="radiogroup" aria-label="Period">
         {PERIODS.map((p) => (
           <button key={p.id} type="button" role="radio" aria-checked={p.id === period.id}
             onClick={() => { play("select"); setPeriod(p) }}
-            className={cn("h-7 flex-1 rounded-full text-[0.6875rem] font-semibold transition-colors",
-              p.id === period.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+            className={cn("pressable h-7 flex-1 rounded-full text-[0.6875rem] font-semibold transition-colors duration-200",
+              p.id === period.id ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
             {p.label}
           </button>
         ))}

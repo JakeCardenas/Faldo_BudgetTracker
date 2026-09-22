@@ -27,8 +27,8 @@ function HomeSkeleton() {
         <Skeleton className="mt-6 ml-36 h-24 rounded-[1.25rem] bg-white/15 lg:ml-0 lg:w-96" />
       </div>
       <div className="mt-5 space-y-5 lg:mt-8">
-        <div className="flex gap-3.5 overflow-hidden">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="size-16 shrink-0 rounded-[1.125rem]" />)}</div>
-        <Skeleton className="h-72 rounded-2xl" />
+        <Skeleton className="h-80 rounded-[1.5rem]" />
+        <div className="grid grid-cols-4 gap-x-2 gap-y-4">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="mx-auto size-14 rounded-full" />)}</div>
         <div className="grid grid-cols-[1.12fr_1fr] gap-3"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-40 rounded-2xl" /></div>
       </div>
     </div>
@@ -60,8 +60,9 @@ function Welcome() {
 }
 
 /**
- * Home: Faldo's green band with the greeting and his note, quick actions, the balance and how it moved,
- * what's safe to spend, spending and money in and out, payments due, accounts and recent activity.
+ * Home, in order of what matters: Faldo's green band with the greeting and his note, then the balance
+ * and how it moved (the hero), the quick actions under it, what's safe to spend, spending and money in
+ * and out, payments due, accounts and recent activity.
  */
 export default function HomePage() {
   const { data, isLoading, error, refetch } = useDashboard("this_month")
@@ -82,8 +83,8 @@ export default function HomePage() {
       <HomeBand data={data} />
       <div className="mt-5 grid grid-cols-1 gap-7 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-x-10 lg:gap-y-8">
         <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
-          <QuickActions className="order-1 lg:order-none" />
-          <BalanceCard data={data} className="order-2 lg:order-none" />
+          <BalanceCard data={data} className="order-1 lg:order-none" />
+          <QuickActions className="order-2 lg:order-none" />
           <div className="order-4 grid grid-cols-[1.12fr_1fr] gap-3 lg:order-none">
             <SpendingRing data={data} />
             <MoneyInOut />

@@ -2,12 +2,10 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { AlertTriangle, Calculator, CircleDashed, Scale, ShieldCheck } from "lucide-react"
+import { AlertTriangle, Calculator, CircleDashed, ShieldCheck } from "lucide-react"
 import { CalculationCard } from "@/components/finance/calculation-card"
 import { AnimatedMoney } from "@/components/finance/money"
 import { IosSheet } from "@/components/ios/sheet"
-import { useAppActions } from "@/components/layout/app-context"
-import { Button } from "@/components/ui/button"
 import { formatDate, formatMoney } from "@/lib/format"
 import type { SafeToSpend } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -42,7 +40,6 @@ export function SafeToSpendWhy({ sts, open, onOpenChange }: { sts: SafeToSpend; 
  * Amber when this week's share is used, red only when money is genuinely short. Figures come from the engine.
  */
 export function SafeToSpendCard({ sts, className }: { sts: SafeToSpend; className?: string }) {
-  const { openCheck } = useAppActions()
   const [why, setWhy] = useState(false)
   const week = sts.week
   const short = sts.status === "short"
@@ -51,7 +48,7 @@ export function SafeToSpendCard({ sts, className }: { sts: SafeToSpend; classNam
   const Icon = short ? AlertTriangle : tight ? CircleDashed : ShieldCheck
 
   return (
-    <section aria-labelledby="sts-title" className={cn("card-surface p-4 sm:p-5", short && "bg-danger-soft shadow-none", className)}>
+    <section aria-labelledby="sts-title" className={cn("card-surface rounded-[1.5rem] p-5", short && "bg-danger-soft shadow-none", className)}>
       <div className="flex items-start gap-3.5">
         <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-full",
           short ? "bg-card text-expense" : tight ? "bg-warning-soft text-warning" : "bg-secondary text-secondary-foreground")}>
@@ -88,9 +85,6 @@ export function SafeToSpendCard({ sts, className }: { sts: SafeToSpend; classNam
         )}
       </div>
 
-      <Button size="sm" variant={short ? "default" : "secondary"} className="mt-4" onClick={() => openCheck()}>
-        <Scale /> Can I afford it?
-      </Button>
       <SafeToSpendWhy sts={sts} open={why} onOpenChange={setWhy} />
     </section>
   )

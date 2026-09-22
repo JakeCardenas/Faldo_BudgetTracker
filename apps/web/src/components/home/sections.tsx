@@ -150,18 +150,19 @@ function statusOf(row: ComingRow, today: Date): { text: string; tone: "overdue" 
   return { text: `${days} ${days === 1 ? "day" : "days"} left`, tone: days <= 3 ? "soon" : "normal" }
 }
 
-const STATUS = {
-  overdue: "bg-danger-soft text-expense",
-  soon: "bg-warning-soft text-warning",
-  normal: "bg-muted text-muted-foreground",
-  income: "bg-income-soft text-income",
+/** The status line's colour: red when overdue, amber when close, green for money coming in. */
+const STATUS_TEXT = {
+  overdue: "text-expense",
+  soon: "text-warning",
+  normal: "text-muted-foreground",
+  income: "text-income",
 }
 
 /**
- * What's due: bills, installments and money owed on a date timeline, with how long is left (or how
- * overdue it is) and the total due. Overdue bills can be marked paid right in the row.
+ * What's due, compact: a date tile, the name, one coloured line with how long is left (or how overdue it
+ * is) and the amount, under a header with the total due. Overdue bills can be marked paid in the row.
  */
-export function PaymentsDue({ data, limit = 4 }: { data: Dashboard; limit?: number }) {
+export function PaymentsDue({ data, limit = 3 }: { data: Dashboard; limit?: number }) {
   const rows = comingRows(data, limit)
   const outgoing = data.upcoming.filter((u) => !u.is_income)
   const overdue = data.attention.filter((a) => a.kind === "bill_overdue")
@@ -170,44 +171,28 @@ export function PaymentsDue({ data, limit = 4 }: { data: Dashboard; limit?: numb
   const today = parseISO(formatDate(new Date().toISOString(), "yyyy-MM-dd"))
   return (
     <section aria-labelledby="payments-title" className="min-w-0">
-      <Link href="/bills" className="group mb-3 flex items-end justify-between gap-3">
-        <span className="min-w-0">
-          <h2 id="payments-title" className="section-title">Payments due</h2>
-          <span className="block text-[0.8125rem] text-muted-foreground">
-            {count ? `${count} ${count === 1 ? "payment" : "payments"} in the next three weeks` : "Nothing due in the next three weeks"}
-          </span>
+      <Link href="/bills" className="group mb-3 flex items-center justify-between gap-3">
+        <h2 id="payments-title" className="section-title">Payments due</h2>
+        <span className="flex items-center gap-1 text-[0.875rem] font-medium text-primary">
+          {count > 0 ? <><Money minor={total} className="font-bold" /> in 3 weeks</> : "Nothing due"}
+          <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.2} />
         </span>
-        {count > 0 && (
-          <span className="flex items-center gap-1.5 text-right">
-            <span>
-              <Money minor={total} className="block text-[1.0625rem] font-extrabold tracking-[-0.02em]" />
-              <span className="label-caps block text-[0.625rem]">Total due</span>
-            </span>
-            <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </span>
-        )}
       </Link>
       {rows.length > 0 && (
-        <ul className="ios-group">
-          {rows.map((row, i) => {
+        <ul className="ios-group cascade divide-y divide-border/60">
+          {rows.map((row) => {
             const status = statusOf(row, today)
             return (
-              <li key={row.key} className="relative px-4 py-3.5">
-                {/* The timeline joining the date tiles. */}
-                <span aria-hidden className={cn("absolute left-10 w-px bg-border", i === 0 ? "top-1/2" : "top-0", i === rows.length - 1 ? "bottom-1/2" : "bottom-0")} />
+              <li key={row.key} className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <DateTile date={row.date} tone={status.tone === "overdue" ? "overdue" : "normal"} />
                   <Link href={row.href} className="min-w-0 flex-1 rounded-md">
-                    <span className={cn("inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-bold", STATUS[status.tone])}>{status.text}</span>
-                    <span className="mt-0.5 block truncate text-[0.9375rem] font-bold tracking-[-0.01em]">{row.title}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{row.detail}</span>
+                    <span className="block truncate text-[0.96875rem] font-semibold tracking-[-0.01em]">{row.title}</span>
+                    <span className={cn("block truncate text-[0.8125rem] font-medium", STATUS_TEXT[status.tone])}>{status.text}</span>
                   </Link>
-                  <span className="text-right">
-                    <Money minor={row.amount} signed={row.income} className={cn("block text-[0.9375rem] font-extrabold tracking-[-0.01em]", row.income && "text-income")} />
-                    <span className="label-caps block text-[0.5625rem]">{row.income ? "Expected" : "Due"}</span>
-                  </span>
+                  <Money minor={row.amount} signed={row.income} className={cn("text-[0.96875rem] font-bold tracking-[-0.01em]", row.income && "text-income")} />
                 </div>
-                {row.attention && <div className="relative pl-15"><RecurringActions item={row.attention} /></div>}
+                {row.attention && <div className="pl-15"><RecurringActions item={row.attention} /></div>}
               </li>
             )
           })}
