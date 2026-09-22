@@ -14,6 +14,7 @@ from app.ai.factory import get_llm
 from app.ai.guardrails.numeric import check_numbers
 from app.ai.guardrails.output import ADVICE_NOTE, cited_refs, needs_advice_note, sanitize_markdown, strip_unknown_refs
 from app.ai.providers.base import ModelTurn, ProviderUnavailable, TextDelta, TranscriptItem
+from app.ai.providers.local_provider import LocalDevelopmentProvider
 from app.ai.tools.registry import TOOLS, ToolContext, run_tool, tool_specs
 from app.core.db import scoped_session
 from app.core.errors import NotFound
@@ -207,8 +208,24 @@ async def stream_answer(
             async for event in run_rounds(MAX_ROUNDS, live=True):
                 yield event
         except ProviderUnavailable as exc:
-            failed = True
-            final_text = str(exc)
+            if provider.is_development:
+                failed = True
+                final_text = str(exc)
+            else:
+                # The AI service refused or failed (no credits, a bad key, an outage): answer from Faldo's own
+                # calculations with the local provider instead, reusing any lookups already made.
+                logger.warning("%s unavailable; answering with the local provider", provider.name)
+                provider = LocalDevelopmentProvider()
+                stream = None
+                if shown:
+                    shown = ""
+                    yield _event("reset", {})
+                try:
+                    async for event in run_rounds(MAX_ROUNDS, live=True):
+                        yield event
+                except ProviderUnavailable as local_exc:
+                    failed = True
+                    final_text = str(local_exc)
 
         # The snapshot is evidence too: figures quoted from it are real.
         evidence = [snapshot, *tool_outputs] if snapshot else tool_outputs

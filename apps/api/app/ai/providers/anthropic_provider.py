@@ -27,6 +27,15 @@ CACHE = {"type": "ephemeral"}
 UNAVAILABLE = "The AI service is temporarily unavailable."
 
 
+def _reason(status: int, body: bytes) -> str:
+    """Anthropic's own reason for a refusal (no credits, bad key, unknown model), for the server log."""
+    try:
+        error = json.loads(body).get("error", {})
+        return f"{status} {error.get('type', 'error')}: {str(error.get('message', ''))[:200]}"
+    except (ValueError, AttributeError):
+        return str(status)
+
+
 def _tools(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Faldo's tool specs (OpenAI function format) as Claude tools; the last one carries the cache mark."""
     tools = [{"name": s["name"], "description": s["description"], "input_schema": s["parameters"]} for s in specs]
@@ -93,7 +102,7 @@ class AnthropicProvider:
             logger.warning("Anthropic request failed: %s", exc.__class__.__name__)
             raise ProviderUnavailable(UNAVAILABLE) from exc
         if response.status_code >= 400:
-            logger.warning("Anthropic request returned %s", response.status_code)
+            logger.warning("Anthropic request refused: %s", _reason(response.status_code, response.content))
             raise ProviderUnavailable(UNAVAILABLE)
         data: dict[str, Any] = response.json()
         return data
@@ -113,8 +122,8 @@ class AnthropicProvider:
         try:
             async with self._http().stream("POST", API_URL, headers=self._headers, json=body) as response:
                 if response.status_code >= 400:
-                    await response.aread()
-                    logger.warning("Anthropic assistant call returned %s", response.status_code)
+                    refusal = await response.aread()
+                    logger.warning("Anthropic assistant call refused: %s", _reason(response.status_code, refusal))
                     raise ProviderUnavailable(UNAVAILABLE)
                 async for line in response.aiter_lines():
                     if not line.startswith("data: "):
@@ -135,7 +144,8 @@ class AnthropicProvider:
                         elif delta.get("type") == "input_json_delta":
                             block["partial_json"] += delta.get("partial_json", "")
                     elif kind == "error":
-                        logger.warning("Anthropic stream error: %s", event.get("error", {}).get("type"))
+                        error = event.get("error", {})
+                        logger.warning("Anthropic stream error: %s: %s", error.get("type"), str(error.get("message", ""))[:200])
                         raise ProviderUnavailable(UNAVAILABLE)
         except httpx.HTTPError as exc:
             logger.warning("Anthropic stream failed: %s", exc.__class__.__name__)
