@@ -1,5 +1,5 @@
 import {
-  BarChart3, BookOpen, CalendarRange, CircleUserRound, Flame, FileUp, History, Home, Lightbulb, MessageCircle, Settings, Wallet, Wrench,
+  BarChart3, BookOpen, CalendarRange, CircleUserRound, Flame, FileUp, History, House, Lightbulb, MessageCircle, Settings, WalletMinimal, Wrench,
   type LucideIcon,
 } from "lucide-react"
 
@@ -9,15 +9,24 @@ export interface NavItem {
   icon: LucideIcon
 }
 
+export interface TabItem extends NavItem {
+  /**
+   * For the tab bar's filled icon: hides every shape of the icon except the details that are cut out
+   * of the solid version (a wallet's clasp, a calendar's lines, a clock's hands). Empty for icons that
+   * are simply solid when filled.
+   */
+  cutout: string
+}
+
 /**
  * The four places in Faldo's tab bar: today, where your money lives, what's ahead and what happened.
- * The + (record money) sits beside them, and Profile is reached from the avatar button.
+ * The + (record money) sits in the middle of them, and Profile is reached from the avatar button.
  */
-export const TAB_ITEMS: NavItem[] = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/accounts", label: "Wallet", icon: Wallet },
-  { href: "/plan", label: "Plan", icon: CalendarRange },
-  { href: "/transactions", label: "History", icon: History },
+export const TAB_ITEMS: TabItem[] = [
+  { href: "/", label: "Home", icon: House, cutout: "" },
+  { href: "/accounts", label: "Wallet", icon: WalletMinimal, cutout: "[&>:not(:nth-child(1))]:hidden" },
+  { href: "/plan", label: "Plan", icon: CalendarRange, cutout: "[&>:not(:nth-child(3),:nth-child(n+5))]:hidden" },
+  { href: "/transactions", label: "History", icon: History, cutout: "[&>:not(:nth-child(3))]:hidden" },
 ]
 
 export const PROFILE_ITEM: NavItem = { href: "/you", label: "Profile", icon: CircleUserRound }

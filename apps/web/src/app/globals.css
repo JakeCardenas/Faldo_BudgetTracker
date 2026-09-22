@@ -137,11 +137,20 @@
   --glass-border: rgb(255 255 255 / 0.8);
   --glass-edge: rgb(16 36 24 / 0.08);
   --glass-highlight: rgb(255 255 255 / 0.95);
-  --glass-shadow: 0 12px 32px -14px rgb(16 36 24 / 0.3), 0 1px 3px rgb(16 36 24 / 0.07);
   --glass-shadow-sm: 0 6px 16px -8px rgb(16 36 24 / 0.28), 0 1px 2px rgb(16 36 24 / 0.06);
   --glass-solid: #fbfbfa;
   --tab-indicator: rgb(16 36 24 / 0.07);
-  --tab-lens: rgb(16 24 20 / 0.075);
+  /* The phone tab bar: neutral frosted glass with a darker lens under the selected tab. */
+  --nav-glass: rgb(252 252 252 / 0.74);
+  --nav-glass-foot: rgb(255 255 255 / 0.22);
+  --nav-glass-rim: rgb(255 255 255 / 0.95);
+  --nav-glass-rim-low: rgb(255 255 255 / 0.45);
+  --nav-glass-edge: rgb(0 0 0 / 0.075);
+  --nav-glass-shadow: 0 10px 30px -12px rgb(16 24 20 / 0.32), 0 1px 3px rgb(16 24 20 / 0.08);
+  --nav-glass-solid: #f3f4f3;
+  --nav-lens-top: rgb(0 0 0 / 0.09);
+  --nav-lens-bottom: rgb(0 0 0 / 0.065);
+  --nav-lens-rim: rgb(255 255 255 / 0.55);
 }
 
 html.ios {
@@ -201,11 +210,19 @@ html.ios {
   --glass-border: rgb(255 255 255 / 0.13);
   --glass-edge: rgb(0 0 0 / 0.45);
   --glass-highlight: rgb(255 255 255 / 0.16);
-  --glass-shadow: 0 14px 36px -14px rgb(0 0 0 / 0.8), 0 1px 3px rgb(0 0 0 / 0.4);
   --glass-shadow-sm: 0 6px 16px -8px rgb(0 0 0 / 0.7), 0 1px 2px rgb(0 0 0 / 0.35);
   --glass-solid: #1a1e1b;
   --tab-indicator: rgb(255 255 255 / 0.1);
-  --tab-lens: rgb(255 255 255 / 0.12);
+  --nav-glass: rgb(60 60 60 / 0.62);
+  --nav-glass-foot: rgb(255 255 255 / 0.04);
+  --nav-glass-rim: rgb(255 255 255 / 0.2);
+  --nav-glass-rim-low: rgb(255 255 255 / 0.07);
+  --nav-glass-edge: rgb(255 255 255 / 0.07);
+  --nav-glass-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.75), 0 1px 3px rgb(0 0 0 / 0.4);
+  --nav-glass-solid: #2b2b2b;
+  --nav-lens-top: rgb(0 0 0 / 0.46);
+  --nav-lens-bottom: rgb(0 0 0 / 0.34);
+  --nav-lens-rim: rgb(255 255 255 / 0.06);
 }
 
 @layer base {
@@ -291,12 +308,10 @@ html.ios {
     @apply bg-background/80 backdrop-blur-xl backdrop-saturate-150;
   }
   /*
-    Liquid glass for floating controls only: the tab bar, the + button, the selected-tab lens and small
-    header buttons. A web approximation (clear backdrop blur with strong colour pickup, a bright thin
-    rim and a soft specular sheen), not Apple's native material. Never on cards, lists, charts or money.
-    Solid fallback below for reduced transparency.
+    Liquid glass for small floating controls (header buttons and pills). A web approximation (clear
+    backdrop blur with strong colour pickup, a bright thin rim and a soft specular sheen), not Apple's
+    native material. Never on cards, lists, charts or money. Solid fallback below for reduced transparency.
   */
-  .glass-float,
   .glass-control {
     isolation: isolate;
     background:
@@ -308,14 +323,27 @@ html.ios {
       inset 0 1px 0 var(--glass-highlight),
       inset 0 0 0 1px var(--glass-border),
       0 0 0 0.5px var(--glass-edge),
-      var(--glass-shadow);
-  }
-  .glass-control {
-    box-shadow:
-      inset 0 1px 0 var(--glass-highlight),
-      inset 0 0 0 1px var(--glass-border),
-      0 0 0 0.5px var(--glass-edge),
       var(--glass-shadow-sm);
+  }
+  /*
+    The phone tab bar's glass, and the + that stands in for the bar while it is away: a neutral frosted
+    capsule that picks up the colour of whatever scrolls beneath it, lit along its top edge.
+  */
+  .nav-glass {
+    isolation: isolate;
+    background: linear-gradient(180deg, transparent 40%, var(--nav-glass-foot)), var(--nav-glass);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    backdrop-filter: blur(14px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 var(--nav-glass-rim),
+      inset 0 -1px 0 var(--nav-glass-rim-low),
+      inset 0 0 0 0.5px var(--nav-glass-edge),
+      var(--nav-glass-shadow);
+  }
+  /* The selected tab's lens: a darker pill set into the glass. */
+  .nav-lens {
+    background: linear-gradient(180deg, var(--nav-lens-top), var(--nav-lens-bottom));
+    box-shadow: inset 0 -0.5px 0 var(--nav-lens-rim);
   }
   /* The same material on the green Home environment: white-tinted and see-through. */
   .glass-on-green {
@@ -399,7 +427,11 @@ html.ios {
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .glass-float,
+  .nav-glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--nav-glass-solid);
+  }
   .glass-control,
   .glass-on-green,
   .scroll-edge::before,

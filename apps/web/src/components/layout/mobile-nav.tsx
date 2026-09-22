@@ -1,30 +1,43 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useLayoutEffect, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { useAppActions } from "@/components/layout/app-context"
-import { TAB_ITEMS, activeTabIndex } from "@/components/layout/nav"
+import { TAB_ITEMS, activeTabIndex, type TabItem } from "@/components/layout/nav"
 import { play } from "@/lib/sound"
-import { cn } from "@/lib/utils"
 
 export function initialsOf(name?: string | null) {
   return (name ?? "?").split(" ").filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "?"
 }
 
-/** Inner padding of the capsule, matching p-1. */
+/** Inner padding of the capsule: the lens sits this far inside its edge. */
 const PAD = 4
+/** The lens at its widest (83pt on a 347pt bar). */
+const LENS_MAX = 83
+/** The bar's five places: the four tabs, with the + in the middle. */
+const SLOTS = 5
+const ADD_SLOT = 2
+/** How far a finger moves before a press becomes a drag. */
+const SLOP = 6
+/** Scrolling down this far sends the bar away; scrolling back up this far brings it back. */
+const HIDE_AFTER = 72
+const SHOW_AFTER = 28
+/** Near the top of a page the bar always shows. */
+const TOP_ZONE = 48
+
+const slotOf = (tab: number) => (tab < 0 ? -1 : tab < ADD_SLOT ? tab : tab + 1)
+const tabOf = (slot: number) => (slot < ADD_SLOT ? slot : slot === ADD_SLOT ? -1 : slot - 1)
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
 
 interface SpringConfig { stiffness: number; damping: number }
 /** Gliding to a tab: about a 0.38s response with a little give, like the system tab bar. */
 const GLIDE: SpringConfig = { stiffness: 300, damping: 28 }
 /** Following a finger: tight enough to stay under it, soft enough never to jitter. */
 const FOLLOW: SpringConfig = { stiffness: 1200, damping: 69 }
-/** Lifting into a bubble: quick and slightly springy. */
-const LIFT: SpringConfig = { stiffness: 520, damping: 30 }
-/** Settling back into the lens: calmer, no bounce you notice. */
-const SETTLE: SpringConfig = { stiffness: 320, damping: 30 }
+/** The bar sliding away and back: quick (about 0.12s), with a hair of give as it lands. */
+const SLIDE: SpringConfig = { stiffness: 1100, damping: 54 }
 
 /** A damped spring. Physics rather than keyframes, so a new target mid-motion keeps its speed. */
 class Spring {
@@ -51,16 +64,49 @@ class Spring {
   }
 }
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
+/** A tab's icon drawn solid, with its inner details cut out so they show the lens through them. */
+function FilledIcon({ item }: { item: TabItem }) {
+  const Icon = item.icon
+  const id = `tab-fill-${useId().replace(/[^\w-]/g, "")}`
+  return (
+    <svg viewBox="0 0 24 24" className="size-[1.625rem] overflow-visible">
+      <mask id={id} maskUnits="userSpaceOnUse" x="-4" y="-4" width="32" height="32">
+        <Icon size={24} color="#fff" fill="#fff" strokeWidth={2} />
+        {item.cutout && <Icon size={24} color="#000" strokeWidth={2} className={item.cutout} />}
+      </mask>
+      <rect x="-4" y="-4" width="32" height="32" fill="currentColor" mask={`url(#${id})`} />
+    </svg>
+  )
+}
+
+/** The icon row, laid out so each icon sits at the centre of the lens when the lens rests on it. */
+function IconRow({ filled }: { filled?: boolean }) {
+  return (
+    <div className="absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5 text-foreground">
+      {Array.from({ length: SLOTS }, (_, slot) => {
+        const item = TAB_ITEMS[tabOf(slot)]
+        const Icon = item?.icon
+        return (
+          <span key={slot} className="flex items-center justify-center">
+            {!item ? <Plus className="size-[1.625rem]" strokeWidth={2} />
+              : filled ? <FilledIcon item={item} />
+              : Icon && <Icon className="size-[1.625rem]" strokeWidth={2} />}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
 
 /**
- * Floating navigation for phones and tablets: the four tabs in one liquid-glass capsule, fixed above the
- * home indicator, with the + (record money) as its own glass circle beside it.
+ * Floating navigation for phones and tablets, after the Threads tab bar: one liquid-glass capsule with
+ * the four tabs and the + (record money) in the middle, icons only.
  *
- * The selected tab sits in a grey lens set into the glass. Touching the bar lifts the lens into a clear
- * bubble that swells past the bar's edges; it follows the finger across the tabs, magnifying whatever it
- * passes over, and on release glides onto that tab and settles back into a grey lens. A plain tap does
- * the same in one motion. The motion runs on springs, frame by frame, and writes styles directly so it
+ * The selected tab sits in a darker lens set into the glass, and whatever the lens covers is drawn
+ * filled: slide a finger along the bar and the lens follows it, filling each icon as it passes (half
+ * an icon when it is half over one); let go and it settles on that tab and opens it. Scroll down a page
+ * and the bar slides away below the screen, leaving a glass + in the corner; scroll back up and it
+ * springs back. Everything moves on springs, frame by frame, writing styles directly so the motion
  * stays smooth while the next page renders.
  */
 export function MobileNav() {
@@ -68,43 +114,56 @@ export function MobileNav() {
   const router = useRouter()
   const { openAddMenu } = useAppActions()
   const active = activeTabIndex(pathname)
-  const [choice, setChoice] = useState<{ index: number; from: string } | null>(null)
-
-  const bar = useRef<HTMLDivElement>(null)
-  const lens = useRef<HTMLSpanElement>(null)
-  const bubble = useRef<HTMLSpanElement>(null)
-  const rest = useRef<HTMLSpanElement>(null)
-  const clear = useRef<HTMLSpanElement>(null)
-  const icons = useRef<(HTMLSpanElement | null)[]>([])
-  const x = useRef(new Spring(0, GLIDE))
-  const lift = useRef(new Spring(0, LIFT))
-  const slot = useRef(0)
-  const box = useRef<DOMRect | null>(null)
-  const frame = useRef(0)
-  const dragging = useRef(false)
-  const landTimer = useRef<number | undefined>(undefined)
-  const activeRef = useRef(active)
+  const activeSlot = slotOf(active)
   const hidden = pathname.startsWith("/assistant")
 
+  const nav = useRef<HTMLElement>(null)
+  const bar = useRef<HTMLDivElement>(null)
+  const lens = useRef<HTMLSpanElement>(null)
+  const outline = useRef<HTMLDivElement>(null)
+  const fill = useRef<HTMLDivElement>(null)
+  const fab = useRef<HTMLButtonElement>(null)
+  const x = useRef(new Spring(PAD, GLIDE))
+  const away = useRef(new Spring(0, SLIDE))
+  const geo = useRef({ width: 0, lens: LENS_MAX, step: 0, travel: 0 })
+  const box = useRef<DOMRect | null>(null)
+  const press = useRef<{ startX: number; dragging: boolean } | null>(null)
+  const lit = useRef(activeSlot >= 0)
+  const collapsed = useRef(false)
+  const frame = useRef(0)
+  const activeRef = useRef(activeSlot)
+
   const paint = useCallback(() => {
-    const l = lift.current.value
-    const shown = clamp01(l)
-    if (lens.current) lens.current.style.transform = `translate3d(${x.current.value}px,0,0)`
-    if (bubble.current) bubble.current.style.transform = `scale(${1 + 0.16 * l},${1 + 0.34 * l})`
-    if (rest.current) rest.current.style.opacity = String(1 - shown)
-    if (clear.current) clear.current.style.opacity = String(shown)
-    icons.current.forEach((icon, i) => {
-      if (!icon || !slot.current) return
-      const nearness = Math.max(0, 1 - Math.abs(x.current.value - i * slot.current) / slot.current)
-      icon.style.transform = `scale(${1 + 0.14 * shown * nearness})`
-    })
+    const { width, lens: size, travel } = geo.current
+    const left = x.current.value
+    const right = left + size
+    if (lens.current) lens.current.style.transform = `translate3d(${left}px,0,0)`
+    // The filled icons show only inside the lens, the outlined ones only outside it.
+    if (fill.current) fill.current.style.clipPath = `inset(0 ${Math.max(0, width - right)}px 0 ${Math.max(0, left)}px)`
+    if (outline.current) {
+      const mask = lit.current ? `linear-gradient(90deg,#000 ${left}px,transparent ${left}px,transparent ${right}px,#000 ${right}px)` : "none"
+      outline.current.style.setProperty("mask-image", mask)
+      outline.current.style.setProperty("-webkit-mask-image", mask)
+    }
+    const gone = away.current.value
+    if (bar.current) {
+      bar.current.style.transform = `translate3d(0,${gone * travel}px,0)`
+      bar.current.style.pointerEvents = gone < 0.5 ? "" : "none"
+    }
+    // The corner + appears while the bar is on its way out and leaves as it comes back.
+    const shown = clamp((gone - 0.25) / 0.5, 0, 1)
+    if (fab.current) {
+      fab.current.style.opacity = String(shown)
+      fab.current.style.transform = `scale(${0.7 + 0.3 * shown})`
+      fab.current.style.pointerEvents = shown > 0.5 ? "auto" : "none"
+    }
   }, [])
 
   const run = useCallback(() => {
     if (frame.current) return
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       x.current.snap()
-      lift.current.snap()
+      away.current.snap()
       paint()
       return
     }
@@ -114,12 +173,11 @@ export function MobileNav() {
       last = now
       for (let i = 0; i < 4; i++) {
         x.current.step(dt / 4)
-        lift.current.step(dt / 4)
+        away.current.step(dt / 4)
       }
-      const settled = x.current.resting(0.1) && lift.current.resting(0.002)
-      if (settled && !dragging.current) {
+      if (x.current.resting(0.1) && away.current.resting(0.001) && !press.current?.dragging) {
         x.current.snap()
-        lift.current.snap()
+        away.current.snap()
         paint()
         frame.current = 0
         return
@@ -130,144 +188,199 @@ export function MobileNav() {
     frame.current = requestAnimationFrame(tick)
   }, [paint])
 
-  // Measure the tabs, place the lens before the first paint and keep it placed when the bar resizes.
+  /** Show or hide the lens (and the filled icons with it), fading. */
+  const light = useCallback((on: boolean) => {
+    lit.current = on
+    if (lens.current) lens.current.style.opacity = on ? "1" : "0"
+    if (fill.current) fill.current.style.opacity = on ? "1" : "0"
+    paint()
+  }, [paint])
+
+  const glideTo = useCallback((slot: number) => {
+    if (slot < 0) { light(false); return }
+    const target = PAD + slot * geo.current.step
+    if (!lit.current) {
+      x.current.snap(target)
+      light(true)
+      return
+    }
+    x.current.config = GLIDE
+    x.current.target = target
+    run()
+  }, [light, run])
+
+  /** Send the bar away (the corner + takes its place) or bring it back. */
+  const collapse = useCallback((on: boolean) => {
+    if (collapsed.current === on) return
+    collapsed.current = on
+    if (fab.current) {
+      fab.current.tabIndex = on ? 0 : -1
+      fab.current.setAttribute("aria-hidden", String(!on))
+    }
+    away.current.target = on ? 1 : 0
+    run()
+  }, [run])
+
+  // Measure the bar, lay out the lens and icons before the first paint, and again whenever it resizes.
   useLayoutEffect(() => {
     const node = bar.current
     if (!node) return
     const measure = () => {
-      slot.current = (node.clientWidth - PAD * 2) / TAB_ITEMS.length
-      if (!dragging.current) x.current.snap(Math.max(activeRef.current, 0) * slot.current)
-      paint()
+      const width = node.clientWidth
+      const size = Math.min(LENS_MAX, ((width - PAD * 2) / SLOTS) * 1.3)
+      const step = (width - PAD * 2 - size) / (SLOTS - 1)
+      geo.current = { width, lens: size, step, travel: (nav.current?.offsetHeight ?? node.offsetHeight) + 24 }
+      node.style.setProperty("--lens", `${size}px`)
+      node.style.setProperty("--step", `${step}px`)
+      if (press.current?.dragging) { paint(); return }
+      x.current.snap(PAD + Math.max(activeRef.current, 0) * step)
+      light(activeRef.current >= 0)
     }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(node)
     return () => observer.disconnect()
-  }, [paint, hidden])
+  }, [light, paint, hidden])
 
-  // When the page changes by any route (a link, back, a deep link), glide the lens to its tab.
+  // When the page changes by any route (a tab, a link, back, a deep link), move the lens to its tab.
   useEffect(() => {
-    activeRef.current = active
-    if (dragging.current || active < 0 || !slot.current) return
-    x.current.config = GLIDE
-    x.current.target = active * slot.current
-    run()
-  }, [active, run])
+    activeRef.current = activeSlot
+    if (press.current?.dragging || !geo.current.step) return
+    glideTo(activeSlot)
+  }, [activeSlot, glideTo])
+
+  // A new page starts with the bar in view.
+  useEffect(() => { collapse(false) }, [pathname, collapse])
+
+  // Scrolling down sends the bar away; scrolling up, or reaching the top, brings it back.
+  useEffect(() => {
+    if (hidden) return
+    let last = window.scrollY
+    let down = 0
+    let up = 0
+    const onScroll = () => {
+      const y = window.scrollY
+      const dy = y - last
+      last = y
+      if (y < TOP_ZONE) {
+        down = up = 0
+        collapse(false)
+        return
+      }
+      // The bounce past the end of a page is not the reader scrolling back up.
+      if (dy < 0 && y >= document.documentElement.scrollHeight - window.innerHeight - 1) return
+      if (dy > 0) {
+        down += dy
+        up = 0
+        if (down > HIDE_AFTER) collapse(true)
+      } else if (dy < 0) {
+        up -= dy
+        down = 0
+        if (up > SHOW_AFTER) collapse(false)
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [hidden, collapse])
 
   useEffect(() => () => {
     cancelAnimationFrame(frame.current)
-    window.clearTimeout(landTimer.current)
+    frame.current = 0
   }, [])
 
   if (hidden) return null
 
-  // The tab under the finger, or the one just chosen while its page loads; otherwise the current tab.
-  const selected = choice?.from === pathname ? choice.index : active
-
-  function under(clientX: number) {
-    const b = box.current!
-    const within = Math.min(Math.max(clientX - b.left - PAD, 0), b.width - PAD * 2 - 0.01)
-    return {
-      index: Math.floor(within / slot.current),
-      x: Math.min(Math.max(clientX - b.left - PAD - slot.current / 2, 0), b.width - PAD * 2 - slot.current),
-    }
+  function slotAt(clientX: number) {
+    const { step, lens: size } = geo.current
+    return clamp(Math.round((clientX - box.current!.left - PAD - size / 2) / step), 0, SLOTS - 1)
+  }
+  function lensAt(clientX: number) {
+    const { width, lens: size } = geo.current
+    return clamp(clientX - box.current!.left - size / 2, PAD, width - PAD - size)
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (e.button !== 0 || !slot.current) return
-    // Keep receiving the finger's moves even when it slides off a tab. Capture can fail for synthetic events.
+    if (e.button !== 0 || !geo.current.step) return
+    // Keep receiving the finger's moves even when it slides off the bar. Capture can fail for synthetic events.
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* moves still arrive while over the bar */ }
     box.current = e.currentTarget.getBoundingClientRect()
-    dragging.current = true
-    window.clearTimeout(landTimer.current)
-    const at = under(e.clientX)
-    x.current.config = FOLLOW
-    x.current.target = at.x
-    lift.current.config = LIFT
-    lift.current.target = 1
-    setChoice({ index: at.index, from: pathname })
-    run()
+    press.current = { startX: e.clientX, dragging: false }
   }
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragging.current) return
-    const at = under(e.clientX)
-    x.current.target = at.x
-    if (at.index !== choice?.index) setChoice({ index: at.index, from: pathname })
+    const p = press.current
+    if (!p) return
+    if (!p.dragging) {
+      if (Math.abs(e.clientX - p.startX) < SLOP) return
+      p.dragging = true
+      if (!lit.current) {
+        x.current.snap(lensAt(e.clientX))
+        light(true)
+      }
+      x.current.config = FOLLOW
+    }
+    x.current.target = lensAt(e.clientX)
     run()
   }
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragging.current) return
-    dragging.current = false
-    const { index } = under(e.clientX)
-    x.current.config = GLIDE
-    x.current.target = index * slot.current
-    landTimer.current = window.setTimeout(() => {
-      lift.current.config = SETTLE
-      lift.current.target = 0
-      run()
-    }, 110)
-    setChoice({ index, from: pathname })
+    if (!press.current) return
+    press.current = null
+    const slot = slotAt(e.clientX)
     play("tap")
-    if (index !== active) router.push(TAB_ITEMS[index].href)
-    run()
+    if (slot === ADD_SLOT) {
+      glideTo(activeRef.current)
+      openAddMenu()
+      return
+    }
+    glideTo(slot)
+    const tab = tabOf(slot)
+    if (tab !== active) router.push(TAB_ITEMS[tab].href)
   }
   function onPointerCancel() {
-    if (!dragging.current) return
-    dragging.current = false
-    x.current.config = GLIDE
-    x.current.target = Math.max(active, 0) * slot.current
-    lift.current.config = SETTLE
-    lift.current.target = 0
-    setChoice(null)
-    run()
+    if (!press.current) return
+    press.current = null
+    glideTo(activeRef.current)
   }
 
   return (
-    <nav aria-label="Main"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.625rem))] lg:hidden">
-      <div className="mx-auto flex max-w-[30rem] items-center gap-3">
+    <nav ref={nav} aria-label="Main"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden">
+      <div className="relative mx-auto max-w-[30rem]">
         <div ref={bar} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
-          className="pointer-events-auto relative h-[3.875rem] min-w-0 flex-1 touch-none select-none">
-          {/* The glass itself. */}
-          <span aria-hidden className="glass-float absolute inset-0 rounded-full" />
+          onFocus={() => collapse(false)}
+          className="pointer-events-auto relative h-[3.8125rem] touch-none select-none will-change-transform [-webkit-touch-callout:none]">
+          <span aria-hidden className="nav-glass absolute inset-0 rounded-full" />
+          <span ref={lens} aria-hidden className="nav-lens pointer-events-none absolute inset-y-1 left-0 w-(--lens) rounded-full transition-opacity duration-200 will-change-transform" />
+          <div ref={outline} aria-hidden className="pointer-events-none absolute inset-0"><IconRow /></div>
+          <div ref={fill} aria-hidden className="pointer-events-none absolute inset-0 transition-opacity duration-200"><IconRow filled /></div>
 
-          {/* The lens, moved and shaped frame by frame (see paint). */}
-          <span ref={lens} aria-hidden className={cn("pointer-events-none absolute inset-y-0 left-1 w-[calc((100%-0.5rem)/4)] transition-opacity duration-200 will-change-transform",
-            selected < 0 && "opacity-0")}>
-            <span ref={bubble} className="absolute inset-x-0 inset-y-1 will-change-transform">
-              <span ref={rest} className="absolute inset-0 rounded-full bg-(--tab-lens)" />
-              <span ref={clear} className="absolute inset-0 rounded-full bg-white/14 opacity-0 shadow-[inset_0_0_0_1.5px_rgb(255_255_255/0.95),inset_0_-3px_8px_rgb(255_255_255/0.45),inset_0_3px_6px_rgb(255_255_255/0.5),0_8px_22px_-8px_rgb(16_36_24/0.35)] dark:bg-white/10 dark:shadow-[inset_0_0_0_1.5px_rgb(255_255_255/0.4),inset_0_-3px_8px_rgb(255_255_255/0.12),0_8px_22px_-8px_rgb(0_0_0/0.6)]" />
-            </span>
-          </span>
-
-          <div className="absolute inset-0 grid grid-cols-4 p-1">
-            {TAB_ITEMS.map((item, i) => {
-              const Icon = item.icon
-              const on = i === selected
+          {/* Touch and mouse are handled by the bar above (so a finger can slide between tabs); these keep
+              keyboard and screen reader navigation working. */}
+          <div className="absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5">
+            {Array.from({ length: SLOTS }, (_, slot) => {
+              const tab = tabOf(slot)
+              const ring = "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset"
+              if (tab < 0) {
+                return (
+                  <button key="add" type="button" aria-label="Add money in or out" aria-haspopup="dialog" className={ring}
+                    onClick={(e) => { if (e.detail === 0) openAddMenu() }} />
+                )
+              }
+              const item = TAB_ITEMS[tab]
               return (
-                // Touch and mouse are handled by the bar above (so a finger can slide between tabs);
-                // the link itself keeps keyboard and screen reader navigation working.
-                <Link key={item.href} href={item.href} aria-current={i === active ? "page" : undefined} draggable={false}
+                <Link key={item.href} href={item.href} aria-label={item.label} aria-current={tab === active ? "page" : undefined} draggable={false}
                   onClick={(e) => {
                     if (e.detail > 0) { e.preventDefault(); return }
-                    setChoice({ index: i, from: pathname })
                     play("tap")
                   }}
-                  className={cn("relative flex min-w-0 flex-col items-center justify-center gap-[3px] rounded-full text-[0.6875rem] font-medium tracking-[-0.005em] transition-colors duration-200 outline-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-ring/50",
-                    on ? "text-primary" : "text-foreground/80")}>
-                  <span ref={(node) => { icons.current[i] = node }} className="flex flex-col items-center gap-[3px] will-change-transform">
-                    <Icon className="size-6" strokeWidth={on ? 2 : 1.7} />
-                    {item.label}
-                  </span>
-                </Link>
+                  className={ring} />
               )
             })}
           </div>
         </div>
 
-        <button type="button" onClick={openAddMenu} aria-label="Add money in or out" aria-haspopup="dialog"
-          className="glass-float pointer-events-auto flex size-[3.875rem] shrink-0 items-center justify-center rounded-full text-foreground transition-[scale] duration-300 ease-(--ease-spring) active:scale-[0.9]">
-          <Plus className="size-7" strokeWidth={2.4} />
+        <button ref={fab} type="button" onClick={openAddMenu} aria-label="Add money in or out" aria-haspopup="dialog" aria-hidden tabIndex={-1}
+          className="nav-glass pointer-events-none absolute right-0 bottom-0 flex size-[3.875rem] items-center justify-center rounded-full text-foreground opacity-0 transition-[scale] duration-200 ease-(--ease-spring) will-change-transform active:scale-[0.9]">
+          <Plus className="size-7" strokeWidth={2} />
         </button>
       </div>
     </nav>

@@ -13,11 +13,18 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 
 **Profile** (`/you`, with `/settings`, `/learn`, `/streaks`, `/tools`, `/assistant`) is not a tab. It opens from the avatar on Home (phones) and the avatar menu (desktop); its pages select no tab.
 
-The **+** (its own circle beside the tab bar on phones, "Add" on desktop) opens one menu: type it like a text, Expense, Income, Transfer, then receipt (photo or camera), goal, money owed, planned purchase, Faldo Check and import.
+The **+** (the middle of the tab bar on phones, and a glass circle in the corner while the bar is away; "Add" on desktop) opens one menu: type it like a text, Expense, Income, Transfer, then receipt (photo or camera), goal, money owed, planned purchase, Faldo Check and import.
 
 ## Navigation
 
-Phones: a floating glass capsule with Home, Wallet, Plan and History, and the + as a separate glass circle (dark + icon) to its right, fixed above the home indicator on the page's 20px margins (it never folds or hides on scroll). The selected tab sits in a grey lens set into the glass. Touching the bar lifts the lens into a clear bubble that swells past the bar's top and bottom; it follows the finger across the tabs, magnifying whatever it passes over, and on release glides onto that tab and settles back into a grey lens. The motion is physics, not keyframes: damped springs stepped every frame (glide: 90% in 175ms, settled by ~550ms, about 1% overshoot; follow: critically damped; lift: a small pop; settle: ~250ms), writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted. A plain tap does the same in one motion; the links stay in place for keyboard and screen readers.
+Phones: modelled on the Threads tab bar. One floating glass capsule, icons only: Home, Wallet, **+**, Plan, History, on the page's 20px margins and about 21px above the bottom edge (61px tall, the icons 26px with a 2px stroke). The selected tab sits in a darker lens (83 x 53px) set 4px into the glass, and whatever the lens covers is drawn **filled** (a solid icon with its details cut out: the wallet's clasp, the calendar's lines, the clock's hands); everything outside it stays outlined. The fill follows the lens exactly, so an icon half under a moving lens is half filled.
+
+- **Tap** a tab: the lens glides to it and the page opens. Tap **+**: the Add menu opens and the lens stays put.
+- **Drag** along the bar: the lens follows the finger (after 6px of travel), filling each icon it passes; let go and it settles on the nearest tab and opens it (on **+**, it glides back and the Add menu opens).
+- **Scroll down** 72px: the bar slides down off the screen and a glass **+** circle (62px) appears in the bottom-right corner in its place. **Scroll up** 28px, reach the top of the page, change page or tab onto the bar with the keyboard: the bar springs back and the circle fades out. The bounce past the end of a page does not count as scrolling up.
+- On pages that belong to no tab (Profile and its pages) the lens fades out and every icon is outlined.
+
+The motion is physics, not keyframes: damped springs stepped every frame, writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted. Glide: 90% in 175ms, about 1% overshoot. Follow: critically damped. Slide (bar away and back): 90% in about 90ms, settled by 120ms, a hair of overshoot as it lands. The links stay in the bar for keyboard and screen readers.
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
@@ -104,7 +111,7 @@ Sentence case for titles, buttons and copy. The one exception is `label-caps`: s
 
 ## Glass
 
-Content is solid; controls float. `glass-float` (tab bar, +) and `glass-control` (small header buttons) are a web approximation of liquid glass: a clear backdrop blur with strong colour pickup (content shows through and tints it), a bright thin rim, a soft specular sheen and a soft shadow. `glass-on-green` is the same idea on the Home environment. The selected-tab lens is the only glass state inside the bar. Never on cards, lists, charts or money. Page tops use `scroll-edge`, a soft fade and blur where content passes under the floating header, instead of a hard bar. `prefers-reduced-transparency` falls back to solid surfaces.
+Content is solid; controls float. `nav-glass` (the tab bar and its corner +) is a neutral frosted capsule (white in light mode, smoky grey in dark) that picks up the colour of what scrolls beneath it, lit along its top edge; `nav-lens` is the darker pill under the selected tab. `glass-control` (small header buttons) is a clearer glass with strong colour pickup, a bright thin rim and a soft specular sheen, and `glass-on-green` is the same idea on the Home environment. All of it is a web approximation of liquid glass, not Apple's native material. Never on cards, lists, charts or money. Page tops use `scroll-edge`, a soft fade and blur where content passes under the floating header, instead of a hard bar. `prefers-reduced-transparency` falls back to solid surfaces.
 
 ## Spacing and alignment
 
@@ -127,9 +134,9 @@ Every chart answers one question, written as its section title.
 
 Fast and ordered, using transforms and opacity only.
 
-- **Tabs:** lens swell on press (150ms), spring glide to the new tab (440ms, `--ease-spring`, a `linear()` spring with a smooth fallback).
+- **Tabs:** the lens glides to the new tab on a spring, filling the icons it passes over (see Navigation).
 - **Pages:** the first visit plays `page-enter`: the header settles in 180ms, then each group below follows at 60ms steps (260ms each: fade, a 6px rise, 3px blur to sharp), and anything marked `.cascade` (Plan rows, History days, Wallet groups, quick actions, Home cards) flows in one after another at 45ms steps. Coming back to a page plays a quick 180ms fade (`page-return`).
-- **Scroll:** the tab bar folds to a circle on scroll down and opens on scroll up.
+- **Scroll:** the tab bar slides off the screen on scroll down, leaving a glass + in the corner, and springs back on scroll up.
 - **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
 - **Everything else:** sheets rise, money counts up, buttons press to 97%.
 
