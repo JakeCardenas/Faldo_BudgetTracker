@@ -7,13 +7,18 @@ import { SeverityDot } from "@/components/finance/insight-card"
 import { formatMoney, relativeDays } from "@/lib/format"
 import { useInsights, useUpcoming } from "@/lib/queries"
 
-/** `light` is the white bell inside the Home hero's button pill, on the green environment. */
-export function Notifications({ tone = "default" }: { tone?: "default" | "light" }) {
+/** What needs a look now: warnings and bills due within three days. Shared by the bell and the Faldo bubble. */
+export function useNotifications() {
   const { data: insights = [] } = useInsights()
   const { data: upcoming = [] } = useUpcoming(7)
   const alerts = insights.filter((i) => i.severity === "warning" || i.severity === "critical").slice(0, 4)
   const bills = upcoming.filter((u) => !u.is_income && u.days_until_due <= 3).slice(0, 4)
-  const count = alerts.length + bills.length
+  return { alerts, bills, count: alerts.length + bills.length }
+}
+
+/** `light` is the white bell inside the Home hero's button pill, on the green environment. */
+export function Notifications({ tone = "default" }: { tone?: "default" | "light" }) {
+  const { alerts, bills, count } = useNotifications()
 
   return (
     <Popover>

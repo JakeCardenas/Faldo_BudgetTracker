@@ -29,6 +29,17 @@ The lens moves on physics, not keyframes: damped springs stepped every frame, wr
 
 Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
 
+
+### Faldo bubble
+
+On phones and tablets, a floating chat head like Messenger's: Faldo waving (`chat-head`) in a 56px green circle with a white ring, and a red badge counting what needs a look (the same count as the bell: warnings and bills due within three days).
+
+- **Drag** it anywhere; let go and it springs to the nearer side with a little bounce, carried by how you threw it (the side it is heading for, and a quarter second of its speed along the edge).
+- **Tap** it to open Talk to Faldo (it hides there).
+- **Drag it down** and a × rises above the tab bar while the bottom of the screen darkens; within 84px the bubble is pulled onto it and the × grows. Let go there to put it away, with an Undo toast; the "Faldo bubble" switch in Settings brings it back.
+- It rests 8px from the side, below the status bar and above the tab bar, and remembers its side and height on this device. The first time it appears, Faldo says "Tap me to ask about your money" beside it.
+- It moves on springs, frame by frame (drag: stiff, no lag you notice; snap: a small overshoot; pull: quick, no bounce), and keeps moving with Reduce Motion on, like the tab bar.
+
 ## Page layouts
 
 - **Home:** Faldo's green bamboo band at the top: the streak button and a glass pill (search, notifications, Profile) under the status bar, the date in small caps, the greeting with the name in bold, and Faldo standing on the band's edge beside his note in a speech bubble. Then quick action tiles, the total balance card with its balance line, Safe to Spend, a spending ring beside a money in and out card (Day, Week, Month), payments due on a date timeline, account cards and recent activity. Add to Home only by removing something.
@@ -50,6 +61,7 @@ The panda artworks in `apps/web/public/brand/panda/` are the canonical mascot, o
 | `boba` | Learn |
 | `sleep` | Not found |
 | `resting`, `cozy`, `ramen`, `box` | Unlockable poses and future empty states |
+| `chat-head` | The Faldo bubble only: the waving head, cropped square from the second pose sheet (`faldonew.png`, transparent), shown in a green circle |
 
 One panda per view. It never sits inside transaction rows, cards or charts. The app icon (`faldo-panda-*.png`) is the same character and stays as the logo mark.
 

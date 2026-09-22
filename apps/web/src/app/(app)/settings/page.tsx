@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import Image from "next/image"
 import Link from "next/link"
 import { ChevronRight, Download, EyeOff, Flame, Monitor, Moon, Pencil, Plus, Smartphone, Sun, Trash2, Volume2 } from "lucide-react"
 import { environmentStyle } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
 import { Segmented } from "@/components/ios/segmented"
 import { BACKGROUND_INFO, OUTFIT_INFO, poseFor } from "@/lib/catalog"
+import { setBubbleShown, useBubbleShown } from "@/lib/bubble"
 import { setAmountsHidden, useAmountsHidden } from "@/lib/privacy"
 import { useSmoothTheme } from "@/lib/theme"
 import { toast } from "sonner"
@@ -37,6 +39,7 @@ function Appearance({ me }: { me: Me }) {
   const { setTheme } = useSmoothTheme()
   const [sounds, setSounds] = useState(soundsEnabled)
   const hideAmounts = useAmountsHidden()
+  const bubble = useBubbleShown()
   const outfit = OUTFIT_INFO[me.settings.mascot_outfit]?.name ?? "Bamboo buddy"
   const background = BACKGROUND_INFO[me.settings.home_background]?.name ?? "Bamboo grove"
   return (
@@ -68,6 +71,16 @@ function Appearance({ me }: { me: Me }) {
             <span className="block text-xs text-muted-foreground">Soft taps and chimes for navigation, logging and rewards. Saved on this device.</span>
           </span>
           <Switch checked={sounds} onCheckedChange={(next) => { setSoundsEnabled(next); setSounds(next) }} aria-label="Sounds" />
+        </label>
+        <label className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3 shadow-[inset_0_0_0_1px_var(--border)] lg:hidden">
+          <span className="size-8 shrink-0 overflow-hidden rounded-full bg-[linear-gradient(160deg,#6cbf86_0%,#3c8d5c_55%,#2c6a45_100%)]">
+            <Image src="/brand/panda/chat-head.png" alt="" width={210} height={210} sizes="32px" quality={90} className="size-full" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.9375rem]">Faldo bubble</span>
+            <span className="block text-xs text-muted-foreground">A floating Faldo you can drag anywhere. Tap it to ask a question. Saved on this device.</span>
+          </span>
+          <Switch checked={bubble} onCheckedChange={setBubbleShown} aria-label="Faldo bubble" />
         </label>
         <div className="ios-group divide-y divide-border/60">
           <Link href="/streaks" className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">

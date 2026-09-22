@@ -8,6 +8,7 @@ import { useAppActions } from "@/components/layout/app-context"
 import { TAB_ITEMS, activeTabIndex, type TabItem } from "@/components/layout/nav"
 import { setChromeAway, useChromeAway } from "@/lib/chrome"
 import { play } from "@/lib/sound"
+import { Spring, clamp, type SpringConfig } from "@/lib/spring"
 import { cn } from "@/lib/utils"
 
 export function initialsOf(name?: string | null) {
@@ -31,38 +32,11 @@ const TOP_ZONE = 48
 
 const slotOf = (tab: number) => (tab < 0 ? -1 : tab < ADD_SLOT ? tab : tab + 1)
 const tabOf = (slot: number) => (slot < ADD_SLOT ? slot : slot === ADD_SLOT ? -1 : slot - 1)
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
 
-interface SpringConfig { stiffness: number; damping: number }
 /** Gliding to a tab: about a 0.38s response with a little give, like the system tab bar. */
 const GLIDE: SpringConfig = { stiffness: 300, damping: 28 }
 /** Following a finger: tight enough to stay under it, soft enough never to jitter. */
 const FOLLOW: SpringConfig = { stiffness: 1200, damping: 69 }
-
-/** A damped spring. Physics rather than keyframes, so a new target mid-motion keeps its speed. */
-class Spring {
-  value: number
-  target: number
-  velocity = 0
-  config: SpringConfig
-  constructor(value: number, config: SpringConfig) {
-    this.value = value
-    this.target = value
-    this.config = config
-  }
-  step(dt: number) {
-    const { stiffness, damping } = this.config
-    this.velocity += (-stiffness * (this.value - this.target) - damping * this.velocity) * dt
-    this.value += this.velocity * dt
-  }
-  resting(precision: number) {
-    return Math.abs(this.value - this.target) < precision && Math.abs(this.velocity) < precision * 10
-  }
-  snap(value = this.target) {
-    this.value = this.target = value
-    this.velocity = 0
-  }
-}
 
 /** A tab's icon drawn solid, with its inner details cut out so they show the lens through them. */
 function FilledIcon({ item }: { item: TabItem }) {

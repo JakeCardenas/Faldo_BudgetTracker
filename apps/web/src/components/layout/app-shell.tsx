@@ -12,6 +12,7 @@ import { TransactionSheet } from "@/components/finance/transaction-sheet"
 import { AppActionsContext, type AddModeOption } from "@/components/layout/app-context"
 import { AddMenu } from "@/components/layout/add-menu"
 import { CommandSearch } from "@/components/layout/command-search"
+import { FaldoBubble } from "@/components/layout/faldo-bubble"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { TopNav } from "@/components/layout/top-nav"
 import { useAmountsHidden } from "@/lib/privacy"
@@ -113,6 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </PageMain>
           </div>
           <MobileNav />
+          <FaldoBubble />
           <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} text={text} />
           <AddMenu open={menuOpen} onOpenChange={setMenuOpen} />
           <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} onAddTransaction={() => openAddTransaction()} onOpenTransaction={setTransactionId} />
