@@ -1,11 +1,12 @@
 import base64
 import json
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 from openai import APIError, AsyncOpenAI
 
-from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, ToolCall, TranscriptItem
+from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, TextDelta, ToolCall, TranscriptItem
 from app.ai.schemas import CAPTURE_SCHEMA, RECEIPT_SCHEMA
 from app.core.config import Settings
 
@@ -73,20 +74,19 @@ class OpenAIProvider:
                 })
         return items
 
-    async def assistant_turn(self, *, system: str, transcript: list[TranscriptItem], tools: list[dict[str, Any]]) -> ModelTurn:
-        try:
-            response = await self.client.responses.create(
-                model=self.chat_model,
-                instructions=system,
-                input=self._input(transcript),
-                tools=tools,  # type: ignore[arg-type]
-                parallel_tool_calls=True,
-                store=False,
-                include=["reasoning.encrypted_content"],
-            )
-        except APIError as exc:
-            logger.warning("OpenAI assistant call failed: %s", exc.__class__.__name__)
-            raise ProviderUnavailable("The AI service is temporarily unavailable.") from exc
+    def _request(self, system: str, transcript: list[TranscriptItem], tools: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "model": self.chat_model,
+            "instructions": system,
+            "input": self._input(transcript),
+            "tools": tools,
+            "parallel_tool_calls": True,
+            "store": False,
+            "include": ["reasoning.encrypted_content"],
+        }
+
+    @staticmethod
+    def _turn(response: Any) -> ModelTurn:
         calls: list[ToolCall] = []
         raw: list[Any] = []
         for item in response.output:
@@ -98,6 +98,29 @@ class OpenAIProvider:
                     args = {}
                 calls.append(ToolCall(id=item.call_id, name=item.name, arguments=args))
         return ModelTurn(text=response.output_text if not calls else None, tool_calls=calls, raw=raw)
+
+    async def assistant_turn(self, *, system: str, transcript: list[TranscriptItem], tools: list[dict[str, Any]]) -> ModelTurn:
+        try:
+            response = await self.client.responses.create(**self._request(system, transcript, tools))
+        except APIError as exc:
+            logger.warning("OpenAI assistant call failed: %s", exc.__class__.__name__)
+            raise ProviderUnavailable("The AI service is temporarily unavailable.") from exc
+        return self._turn(response)
+
+    async def stream_turn(
+        self, *, system: str, transcript: list[TranscriptItem], tools: list[dict[str, Any]]
+    ) -> AsyncIterator[TextDelta | ModelTurn]:
+        """The same turn, streamed: the answer's text arrives as it is written, then the complete turn."""
+        try:
+            async with self.client.responses.stream(**self._request(system, transcript, tools)) as stream:
+                async for event in stream:
+                    if event.type == "response.output_text.delta":
+                        yield TextDelta(event.delta)
+                response = await stream.get_final_response()
+        except APIError as exc:
+            logger.warning("OpenAI assistant stream failed: %s", exc.__class__.__name__)
+            raise ProviderUnavailable("The AI service is temporarily unavailable.") from exc
+        yield self._turn(response)
 
     async def parse_transactions(self, text: str, context: CaptureContext) -> dict[str, Any] | None:
         payload = {

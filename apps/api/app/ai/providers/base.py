@@ -14,6 +14,13 @@ class ToolCall:
 
 
 @dataclass
+class TextDelta:
+    """A piece of the answer as the model writes it, for providers that stream (see stream_turn)."""
+
+    text: str
+
+
+@dataclass
 class ModelTurn:
     text: str | None
     tool_calls: list[ToolCall] = field(default_factory=list)
@@ -53,6 +60,10 @@ class LLMProvider(Protocol):
     async def extract_receipt(self, image: bytes, mime_type: str, context: CaptureContext) -> dict[str, Any]: ...
 
     async def write_summary(self, kind: str, facts: dict[str, Any], draft: str) -> str | None: ...
+
+    # Providers that stream may also define
+    #   stream_turn(*, system, transcript, tools) -> AsyncIterator[TextDelta | ModelTurn]
+    # which yields the answer's text as it is written and ends with the complete ModelTurn.
 
 
 class EmbeddingProvider(Protocol):

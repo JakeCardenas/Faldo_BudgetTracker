@@ -34,7 +34,12 @@ class Settings(BaseSettings):
     allowed_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
     trust_proxy_headers: bool = ON_VERCEL
 
-    ai_provider: Literal["auto", "openai", "local"] = "auto"
+    # "auto" picks Claude when an Anthropic key is set, then OpenAI, then the local development provider.
+    ai_provider: Literal["auto", "anthropic", "openai", "local"] = "auto"
+    anthropic_api_key: SecretStr | None = None
+    anthropic_chat_model: str = "claude-sonnet-5"
+    anthropic_fast_model: str = "claude-haiku-4-5-20251001"
+    anthropic_vision_model: str = "claude-sonnet-5"
     openai_api_key: SecretStr | None = None
     openai_chat_model: str = "gpt-5-mini"
     openai_fast_model: str = "gpt-5-nano"
@@ -89,10 +94,20 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def resolved_ai_provider(self) -> Literal["openai", "local"]:
+    def resolved_ai_provider(self) -> Literal["anthropic", "openai", "local"]:
         if self.ai_provider == "auto":
+            if self.anthropic_api_key and self.anthropic_api_key.get_secret_value():
+                return "anthropic"
             return "openai" if self.openai_api_key and self.openai_api_key.get_secret_value() else "local"
         return self.ai_provider
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def resolved_embedding_provider(self) -> Literal["openai", "local"]:
+        """Anthropic has no embeddings, so search uses OpenAI's when a key is set and local hashing otherwise."""
+        if self.ai_provider == "local":
+            return "local"
+        return "openai" if self.openai_api_key and self.openai_api_key.get_secret_value() else "local"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -8,6 +8,10 @@ from app.core.config import get_settings
 @lru_cache
 def get_llm() -> LLMProvider:
     settings = get_settings()
+    if settings.resolved_ai_provider == "anthropic":
+        from app.ai.providers.anthropic_provider import AnthropicProvider
+
+        return AnthropicProvider(settings)
     if settings.resolved_ai_provider == "openai":
         from app.ai.providers.openai_provider import OpenAIProvider
 
@@ -20,7 +24,7 @@ def get_llm() -> LLMProvider:
 @lru_cache
 def get_embeddings() -> EmbeddingProvider:
     settings = get_settings()
-    if settings.resolved_ai_provider == "openai":
+    if settings.resolved_embedding_provider == "openai":
         from app.ai.providers.openai_provider import OpenAIEmbeddings
 
         return OpenAIEmbeddings(settings)

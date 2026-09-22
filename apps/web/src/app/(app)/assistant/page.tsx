@@ -320,6 +320,10 @@ function AssistantView() {
         }
         if (event === "blocks") patch((m) => ({ ...m, blocks: (data.blocks as Block[]) ?? [] }))
         if (event === "delta") patch((m) => ({ ...m, content: m.content + String(data.text) }))
+        // The model wrote a line before deciding to look something up: clear it, the answer follows.
+        if (event === "reset") patch((m) => ({ ...m, content: "" }))
+        // After the answer streamed live, every figure is checked against your data; a corrected answer replaces it.
+        if (event === "replace") patch((m) => ({ ...m, content: String(data.text) }))
         if (event === "done") patch((m) => ({
           ...m, streaming: false, id: String(data.message_id), sources: data.sources as Source[], follow_ups: data.follow_ups as string[],
           tool_calls: data.tool_calls as ToolCallRecord[], validation: String(data.validation), provider: String(data.provider),

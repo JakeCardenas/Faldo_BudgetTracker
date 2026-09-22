@@ -13,7 +13,7 @@ apps/api   FastAPI · SQLAlchemy 2 (async) · Alembic · Pydantic v2
    ├─ engine/       pure deterministic finance: money, periods, budgets, goals, forecast, scenarios, health, anomalies, calculator
    ├─ services/     domain logic shared by REST routes and AI tools
    ├─ ai/
-   │   ├─ providers/   OpenAI (Responses API, function calling, structured outputs, embeddings, vision) and a local development provider
+   │   ├─ providers/   Claude (Messages API, streaming, tool use, prompt caching, vision), OpenAI (Responses API, streaming, embeddings) and a local development provider
    │   ├─ tools/       strict-schema tool registry + 20 financial tools
    │   ├─ rag/         document renderers, indexer, hybrid retriever
    │   ├─ assistant/   tool loop, SSE streaming, validation, citations
@@ -28,17 +28,17 @@ PostgreSQL 17 + pgvector + pg_trgm, row-level security
 
 ## What's built
 
-Faldo is organised around four tabs: **Home** (today), **Wallet** (where your money lives), **Plan** (money ahead) and **History** (what happened). On phones they sit in a floating liquid-glass capsule with the **+** as its own glass circle beside it; the capsule folds into a small circle while you scroll down and opens again when you scroll up. **Profile** (settings, lessons, streaks, tools and Talk to Faldo) opens from the avatar on Home. On desktop the same four tabs sit in a slim top bar, with search, notifications, Add and the avatar menu beside them. The design is calm and list-first: colour is kept for Safe to Spend and account cards, the glass material is only used for floating controls, and every number comes from the backend. It supports light and dark mode and can be installed from the browser (Add to Home Screen on iPhone, Install app on Android and desktop).
+Faldo is organised around four tabs: **Home** (today), **Wallet** (where your money lives), **Plan** (money ahead) and **History** (what happened). On phones they sit in a Threads-style liquid-glass capsule, icons only, with the **+** in the middle; scrolling down sinks it away and leaves a glass **+** in the corner, and scrolling up brings it back. A draggable **Faldo bubble** (a chat head) opens Talk to Faldo from anywhere. **Profile** (settings, lessons, streaks, tools and insights) opens from the avatar on Home. On desktop the same four tabs sit in a slim top bar, with search, notifications, Add and the avatar menu beside them. The design is calm and list-first: colour is kept for Safe to Spend and account cards, the glass material is only used for floating controls, and every number comes from the backend. It supports light and dark mode and can be installed from the browser (Add to Home Screen on iPhone, Install app on Android and desktop).
 
-- **Home:** Faldo's green bamboo band with your streak, search, notifications and Profile, the greeting, and Faldo beside a speech bubble with the one thing worth knowing. Below: quick action tiles, your total balance with a balance line (1W to 1Y; drag across it to read any day), **Safe to Spend** as a calm status (the amount, a per-day pace, what's left this week and a "Why this number?" sheet with the engine's calculation), a spending ring beside money in and out for today, this week or this month, payments due on a date timeline (overdue bills can be marked paid in the row), account cards and recent activity.
+- **Home:** Faldo's green bamboo band with your streak, search, notifications and Profile, the greeting, and Faldo beside a speech bubble with the one thing worth knowing. Right under it, your total balance with a balance line (1W to 1Y; drag across it to read any day), then the quick actions as eight round buttons, **Safe to Spend** as a calm status (the amount, a per-day pace, what's left this week and a "Why this number?" sheet with the engine's calculation), a spending ring beside money in and out for today, this week or this month, payments due as compact rows (overdue bills can be marked paid in the row), account cards and recent activity.
 - **Hide amounts:** an eye button on Home and Wallet (and a switch in Settings) shows every amount as ₱•••• on that device.
 - **The + button:** type it like a text ("₱180 Jollibee lunch via GCash") and review the draft before it's saved, or pick Expense, Income or Transfer. The same menu scans a receipt, adds to a goal, records money owed, plans a purchase, checks a purchase and imports a statement.
 - **Logging sheet:** a calculator keypad (+ − × ÷ %), expense / income / transfer, notes, recent-expense templates, category chips that show budget progress, date shortcuts, account picker, keyboard support on desktop, and feedback with Undo after saving. "Type it out" and receipt scanning live in the same sheet.
 - **Adding an account:** a three-step vertical sheet: choose a type from a list (cash, e-wallet, bank, savings, debit card, credit card, something else), choose the bank or e-wallet from a searchable list, then name, balance, optional last four digits and colour with a live card preview. Known providers get a card face styled after their real card, with official logo files only (see `docs/DESIGN_SYSTEM.md`); no logo is drawn or generated.
 - **Wallet:** a green band with your net worth (or assets or liabilities) beside Faldo, an insight and a seven-day balance chart, then your accounts grouped by type as two-column tiles (or a list) with totals. Reorder opens a simple list with up and down buttons. Tiles and cards use the provider's card style or the account's colour; savings and set-aside money get a lighter striped look so it doesn't read as spending money. Cards and bank accounts can show the last four digits if you add them, and nothing more: Faldo never asks for full card numbers, CVVs, PINs or banking passwords.
-- **Plan:** every planning tool as a row with a live summary (budgets, goals, money plan, bills, money owed, planned purchases, installments, forecast, what if), plus "Can I afford it?" (Faldo Check inline) and quick links to statistics, insights, tools and lessons.
-- **History:** every transaction on a day-by-day timeline with the time it was logged, money in and out per day, search and filters, plus statistics and insights.
-- **Profile:** your details, statement import, statistics, Talk to Faldo, insights, lessons, streaks and rewards, tools and settings.
+- **Plan:** every planning tool as a plain row (budgets, goals, money plan, bills, money owed, planned purchases, forecast), plus "Can I afford it?" (Faldo Check inline) and Statistics in the header.
+- **History:** every transaction by day as flat rows, money in and out per day, search, sort and filters, and tabs for expenses, income and transfers, plus statistics and insights.
+- **Profile:** your details, then streaks and rewards, insights, lessons, tools and settings. Settings is a short list of screens: appearance (theme, hide amounts, sounds, reduce motion, Faldo bubble), preferences, categories, Faldo's memory, password and devices, and your data.
 - **Faldo Check ("Can I afford it?"):** enter a price (and optionally what it is and its category) from Home, Plan or the + menu. Faldo shows a verdict, Safe to Spend now and after, this week's share, the Money Plan bucket it comes from, budget impact, what's already set aside before your next income, and an estimated goal delay in days. It is pure arithmetic on your data; the decision stays yours. Save it for later or log it if you buy it.
 - **Money Plan:** gives each payday's income a job: bills and commitments (from your bills, subscriptions and loans), needs, Joy Money (wants), savings and a buffer. Needs and wants follow your essential / non-essential categories, which you can switch from the same page. 60/20/20 is an optional starting point (20% savings, 20% Joy Money, needs are whatever of the 60% your bills leave). A live bar shows what's left unassigned, and warnings appear when bills are more than your income, you've assigned more than you earn, or savings are below what your goals need. Joy Money feeds the weekly figure on Home: "left for this week" is the smaller of Safe to Spend's weekly share and what's left of this week's Joy Money and needs. Faldo Check shows which bucket a purchase comes out of.
 - **Planned purchases:** things you intend to buy (price, link, category, priority, notes, "want it by" date) re-checked against Safe to Spend every time you look: fits now, fits but more than this week's share, or an estimated date based on your usual monthly surplus. With a date, the purchase also appears on the cashflow forecast. An optional 24-hour pause is there if you want it. "I bought it" records the expense.
@@ -134,7 +134,9 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 
 **Guardrails:** every money amount and percentage in an answer must match a tool result or the user's message. On mismatch the model gets one repair turn; if it still fails, the answer falls back to the calculated cards only. Output is stripped of links, images and HTML; unknown citations are removed; investment and loan product advice triggers a professional-advice note. The system prompt treats tool content as data, forbids invented records, and requires estimates to be labelled.
 
-**Providers:** `AI_PROVIDER=auto` uses OpenAI when `OPENAI_API_KEY` is set. Otherwise the **local development provider** runs: a rule-based planner that calls the same tools and writes templated answers from their results, hashed lexical embeddings for RAG, and no receipt vision. The UI labels this mode.
+**Providers:** `AI_PROVIDER=auto` uses **Claude** (`claude-sonnet-5` for answers and receipts, `claude-haiku-4-5` for quick capture and summaries) when `ANTHROPIC_API_KEY` is set, then OpenAI when `OPENAI_API_KEY` is set. Otherwise the **local development provider** runs: a rule-based planner that calls the same tools and writes templated answers from their results, hashed lexical embeddings for RAG, and no receipt vision. The UI labels this mode. Search embeddings come from OpenAI when its key is set (Anthropic has no embeddings) and from local hashing otherwise.
+
+**Speed:** answers stream token by token from Claude or OpenAI, so the reply appears as it is written. Each question also carries a compact snapshot of the user's money (balances, Safe to Spend, this month's spending, budgets, what's due in 7 days, goals), so everyday questions need no tool round-trip; the snapshot counts as evidence for the numeric guardrail. Claude's tool definitions and system prompt are prompt-cached. If checking changes an answer that already streamed (a repaired figure, cleaned formatting, the advice note), the final version replaces it.
 
 ## Environment variables
 
@@ -149,8 +151,10 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 | `PUBLIC_APP_URL` | `http://localhost:3000` | **required** | web URL; used for reset links and added to allowed origins |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | optional | comma-separated extra origins |
 | `COOKIE_SECURE` | `false` | `true` | |
-| `AI_PROVIDER` | `auto` | `auto` | uses OpenAI when a key is present |
-| `OPENAI_API_KEY` | — | recommended | server-side only |
+| `AI_PROVIDER` | `auto` | `auto` | `anthropic`, `openai` or `local`; auto picks Claude, then OpenAI, by which key is present |
+| `ANTHROPIC_API_KEY` | — | recommended | server-side only; makes Claude the assistant |
+| `ANTHROPIC_CHAT_MODEL` / `ANTHROPIC_FAST_MODEL` / `ANTHROPIC_VISION_MODEL` | `claude-sonnet-5` / `claude-haiku-4-5-20251001` / `claude-sonnet-5` | same | |
+| `OPENAI_API_KEY` | — | recommended | server-side only; the assistant when there is no Anthropic key, and search embeddings |
 | `OPENAI_CHAT_MODEL` / `OPENAI_FAST_MODEL` / `OPENAI_VISION_MODEL` / `OPENAI_EMBEDDING_MODEL` | `gpt-5-mini` / `gpt-5-nano` / `gpt-5-mini` / `text-embedding-3-small` | same | |
 | `JOB_MODE` | `worker` | `inline` | inline processes queued jobs right after each write |
 | `CRON_SECRET` | — | recommended | protects the daily job sweep |
@@ -204,7 +208,7 @@ Faldo deploys as **two Vercel projects from the same GitHub repository** plus a 
 1. **Database.** Create a Postgres 17 database with the `vector`, `pg_trgm` and `citext` extensions available. Migrations create them if the role is allowed to.
 2. **API project.**
    - Import the repository, set **Root Directory** to `apps/api`. Vercel detects FastAPI at `app/main.py`.
-   - Environment variables: `DATABASE_URL`, `PUBLIC_APP_URL` (the web project's URL), `OPENAI_API_KEY`, `CRON_SECRET`, and optionally `RESEND_API_KEY` + `EMAIL_FROM`.
+   - Environment variables: `DATABASE_URL`, `PUBLIC_APP_URL` (the web project's URL), `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY` for search embeddings), `CRON_SECRET`, and optionally `RESEND_API_KEY` + `EMAIL_FROM`.
    - Each build runs `python -m app.deploy`, which applies Alembic migrations. Set `RUN_MIGRATIONS_ON_BUILD=false` to skip.
    - `vercel.json` sets a daily cron that sweeps queued jobs.
 3. **Web project.**
@@ -221,7 +225,7 @@ Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the
 ## Quality checks
 
 ```bash
-make test        # 136 backend tests
+make test        # 142 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build

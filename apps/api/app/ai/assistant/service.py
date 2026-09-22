@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import uuid
 from collections.abc import AsyncIterator
@@ -8,10 +9,11 @@ from typing import Any
 from sqlalchemy import func, select
 
 import app.ai.tools.definitions  # noqa: F401
+from app.ai.assistant.snapshot import money_snapshot
 from app.ai.factory import get_llm
 from app.ai.guardrails.numeric import check_numbers
 from app.ai.guardrails.output import ADVICE_NOTE, cited_refs, needs_advice_note, sanitize_markdown, strip_unknown_refs
-from app.ai.providers.base import ProviderUnavailable, TranscriptItem
+from app.ai.providers.base import ModelTurn, ProviderUnavailable, TextDelta, TranscriptItem
 from app.ai.tools.registry import TOOLS, ToolContext, run_tool, tool_specs
 from app.core.db import scoped_session
 from app.core.errors import NotFound
@@ -23,8 +25,20 @@ logger = logging.getLogger("faldo.ai.assistant")
 MAX_ROUNDS = 6
 MAX_BLOCKS = 6
 
-SYSTEM_PROMPT = """You are Faldo, a personal finance copilot inside the user's Faldo app. Today is {today} ({timezone}).
-The user's currency is {currency}. You only know what the tools return from the user's own Faldo data.
+SYSTEM_PROMPT = """You are Faldo, a sharp, warm personal finance copilot inside the user's Faldo app, built for everyday money
+in the Philippines. Today is {today} ({timezone}). The user's currency is {currency}. You only know the user's own Faldo
+data: the snapshot below and what the tools return.
+
+Snapshot of the user's money right now (use it for quick answers; call tools for details, other periods, breakdowns,
+transactions, forecasts and anything the snapshot doesn't cover):
+{snapshot}
+
+How to answer:
+- Think about what the user really wants to know, fetch everything you need first (call several tools at once when
+  they are independent), then answer. Write nothing before your tool calls.
+- Reply in the user's language: English, Filipino or Taglish, matching how they wrote.
+- Be specific and personal: use their real categories, merchants, accounts and dates. When it helps, end with one
+  concrete next step they can take in Faldo.
 
 Rules:
 1. Every amount, percentage, count or date you state must come from a tool result in this conversation or from the
@@ -46,6 +60,7 @@ Rules:
     insurance or other high-stakes decisions, suggest speaking with a qualified professional.
 11. Be concise and calm: lead with the direct answer in 1–3 short sentences, then at most 3 short supporting points.
     No headings, tables, links or images. The app shows calculation cards separately, so don't repeat every number.
+12. Figures from the snapshot count as tool results: copy them exactly as written there.
 {page_context}"""
 
 REPAIR_PROMPT = (
@@ -124,8 +139,14 @@ async def stream_answer(
 
         transcript = [TranscriptItem("user" if m.role == "user" else "assistant", text=m.content) for m in reversed(history)]
         transcript.append(TranscriptItem("user", text=question))
+        try:
+            snapshot = await money_snapshot(db, user_id, settings, today)
+        except Exception:
+            logger.exception("Money snapshot failed; answering from tools only")
+            snapshot = {}
         system = SYSTEM_PROMPT.format(
             today=today.isoformat(), timezone=settings.timezone, currency=settings.currency,
+            snapshot=json.dumps(snapshot, ensure_ascii=False, default=str) if snapshot else "(not available, use the tools)",
             page_context=f"\nThe user opened the assistant from: {page_context[:120]}" if page_context else "",
         )
         specs = tool_specs()
@@ -135,11 +156,38 @@ async def stream_answer(
         records: list[dict[str, Any]] = []
         final_text: str | None = None
         failed = False
+        stream = getattr(provider, "stream_turn", None)
+        shown = ""  # what the user has seen so far, when the answer streamed live
+        sent_blocks: list[dict[str, Any]] | None = None
 
-        async def run_rounds(max_rounds: int) -> AsyncIterator[dict[str, Any]]:
-            nonlocal final_text
+        def ordered() -> list[dict[str, Any]]:
+            return sorted(blocks, key=lambda b: BLOCK_PRIORITY.get(b["type"], 9))[:MAX_BLOCKS]
+
+        async def run_rounds(max_rounds: int, live: bool) -> AsyncIterator[dict[str, Any]]:
+            nonlocal final_text, shown, sent_blocks
             for _ in range(max_rounds):
-                turn = await provider.assistant_turn(system=system, transcript=transcript, tools=specs)
+                turn: ModelTurn | None = None
+                if stream is None:
+                    turn = await provider.assistant_turn(system=system, transcript=transcript, tools=specs)
+                else:
+                    # Stream the answer as the model writes it. Cards from earlier lookups go first.
+                    async for item in stream(system=system, transcript=transcript, tools=specs):
+                        if isinstance(item, TextDelta):
+                            if not live:
+                                continue
+                            if sent_blocks != ordered():
+                                sent_blocks = ordered()
+                                yield _event("blocks", {"blocks": sent_blocks})
+                            shown += item.text
+                            yield _event("delta", {"text": item.text})
+                        else:
+                            turn = item
+                    if turn is None:
+                        raise ProviderUnavailable("The AI service is temporarily unavailable.")
+                    if turn.tool_calls and shown:
+                        # It wrote a line before deciding to look something up: clear it, the answer follows.
+                        shown = ""
+                        yield _event("reset", {})
                 if not turn.tool_calls:
                     final_text = turn.text or ""
                     return
@@ -156,15 +204,17 @@ async def stream_answer(
                                             "state": "done" if record["ok"] else "error"})
 
         try:
-            async for event in run_rounds(MAX_ROUNDS):
+            async for event in run_rounds(MAX_ROUNDS, live=True):
                 yield event
         except ProviderUnavailable as exc:
             failed = True
             final_text = str(exc)
 
+        # The snapshot is evidence too: figures quoted from it are real.
+        evidence = [snapshot, *tool_outputs] if snapshot else tool_outputs
         validation = "passed"
         text = sanitize_markdown(final_text or "") or _fallback_text(blocks, tool_outputs)
-        check = check_numbers(text, tool_outputs, question)
+        check = check_numbers(text, evidence, question)
         if not check.ok and not failed and provider.is_development:
             validation = "fallback"
             logger.warning("Development provider produced unsupported figures: %s", check.unsupported_amounts)
@@ -177,12 +227,12 @@ async def stream_answer(
             transcript.append(TranscriptItem("user", text=REPAIR_PROMPT.format(figures=figures)))
             final_text = None
             try:
-                async for event in run_rounds(2):
+                async for event in run_rounds(2, live=False):
                     yield event
             except ProviderUnavailable:
                 final_text = None
             text = sanitize_markdown(final_text or "")
-            if not text or not check_numbers(text, tool_outputs, question).ok:
+            if not text or not check_numbers(text, evidence, question).ok:
                 validation = "fallback"
                 text = _fallback_text(blocks, tool_outputs)
         if failed:
@@ -202,14 +252,21 @@ async def stream_answer(
                 if suggestion not in follow_ups and suggestion.lower() != question.lower():
                     follow_ups.append(suggestion)
         follow_ups = (follow_ups or DEFAULT_FOLLOW_UPS)[:3]
-        ordered_blocks = sorted(blocks, key=lambda b: BLOCK_PRIORITY.get(b["type"], 9))[:MAX_BLOCKS]
+        ordered_blocks = ordered()
 
-        yield _event("blocks", {"blocks": ordered_blocks})
-        words = text.split(" ")
-        for i in range(0, len(words), 3):
-            chunk = " ".join(words[i:i + 3]) + (" " if i + 3 < len(words) else "")
-            yield _event("delta", {"text": chunk})
-            await asyncio.sleep(0.012)
+        if sent_blocks != ordered_blocks:
+            yield _event("blocks", {"blocks": ordered_blocks})
+        if shown:
+            # The answer already streamed live; if checking changed it (a repaired figure, cleaned formatting or
+            # the advice note), show the final version.
+            if text != shown:
+                yield _event("replace", {"text": text})
+        else:
+            words = text.split(" ")
+            for i in range(0, len(words), 3):
+                chunk = " ".join(words[i:i + 3]) + (" " if i + 3 < len(words) else "")
+                yield _event("delta", {"text": chunk})
+                await asyncio.sleep(0.012)
 
         message = AIMessage(
             user_id=user_id, conversation_id=conversation.id, role="assistant", content=text, blocks=ordered_blocks,
