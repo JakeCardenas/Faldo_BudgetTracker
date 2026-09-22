@@ -6,8 +6,9 @@ import { usePathname, useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { useAppActions } from "@/components/layout/app-context"
 import { TAB_ITEMS, activeTabIndex, type TabItem } from "@/components/layout/nav"
-import { isChromeAway, setChromeAway, subscribeChrome } from "@/lib/chrome"
+import { setChromeAway, useChromeAway } from "@/lib/chrome"
 import { play } from "@/lib/sound"
+import { cn } from "@/lib/utils"
 
 export function initialsOf(name?: string | null) {
   return (name ?? "?").split(" ").filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "?"
@@ -37,17 +38,6 @@ interface SpringConfig { stiffness: number; damping: number }
 const GLIDE: SpringConfig = { stiffness: 300, damping: 28 }
 /** Following a finger: tight enough to stay under it, soft enough never to jitter. */
 const FOLLOW: SpringConfig = { stiffness: 1200, damping: 69 }
-/* The scroll transition, timed against the reference frame by frame. Every one is critically damped. */
-/** The bar sinking below the screen: a quick start that eases out (about 90% gone at 0.1s). */
-const SINK: SpringConfig = { stiffness: 1225, damping: 70 }
-/** The bar coming back: launched fast and easing out on a pure exponential, no bounce (about 0.15s). */
-const RISE: SpringConfig = { stiffness: 784, damping: 56 }
-/** The corner + rising into place as it appears, and sinking as it fades back into the bar. */
-const PLUS: SpringConfig = { stiffness: 484, damping: 44 }
-/** The corner + appearing: almost at once, so it seems to come out of the bar's end as the bar sinks. */
-const PLUS_IN: SpringConfig = { stiffness: 3600, damping: 120 }
-/** How far the corner + travels as it appears and fades. */
-const PLUS_TRAVEL = 13
 
 /** A damped spring. Physics rather than keyframes, so a new target mid-motion keeps its speed. */
 class Spring {
@@ -71,16 +61,6 @@ class Spring {
   snap(value = this.target) {
     this.value = this.target = value
     this.velocity = 0
-  }
-  /**
-   * Head for a target on a pure exponential: a critically damped spring launched at exactly the speed
-   * that makes it ease out from the first frame, never overshooting or lingering. A smaller launch
-   * starts it gentler.
-   */
-  approach(target: number, config: SpringConfig, launch = 1) {
-    this.config = config
-    this.target = target
-    this.velocity = -launch * Math.sqrt(config.stiffness) * (this.value - target)
   }
 }
 
@@ -127,7 +107,8 @@ function IconRow({ filled }: { filled?: boolean }) {
  * an icon when it is half over one); let go and it settles on that tab and opens it. Scroll down a page
  * and the bar sinks below the screen as a glass + comes out of its right end and stays in the corner;
  * scroll back up and the bar rises under the +, which fades back into it. The page header steps aside
- * and back with it (see lib/chrome). Everything moves on springs, frame by frame, writing styles directly so the motion
+ * and back with it (see lib/chrome). That transition is CSS (.nav-away in globals.css), so the system
+ * runs it off the main thread; the lens moves on springs, frame by frame, writing styles directly so it
  * stays smooth while the next page renders.
  */
 export function MobileNav() {
@@ -137,27 +118,23 @@ export function MobileNav() {
   const active = activeTabIndex(pathname)
   const activeSlot = slotOf(active)
   const hidden = pathname.startsWith("/assistant")
+  const away = useChromeAway()
 
-  const nav = useRef<HTMLElement>(null)
   const bar = useRef<HTMLDivElement>(null)
   const lens = useRef<HTMLSpanElement>(null)
   const outline = useRef<HTMLDivElement>(null)
   const fill = useRef<HTMLDivElement>(null)
-  const fab = useRef<HTMLButtonElement>(null)
   const x = useRef(new Spring(PAD, GLIDE))
-  const away = useRef(new Spring(0, SINK))
-  const plus = useRef(new Spring(0, PLUS))
-  const glow = useRef(new Spring(0, PLUS))
-  const geo = useRef({ width: 0, lens: LENS_MAX, step: 0, travel: 0 })
+  const geo = useRef({ width: 0, lens: LENS_MAX, step: 0 })
   const box = useRef<DOMRect | null>(null)
   const press = useRef<{ startX: number; dragging: boolean } | null>(null)
   const lit = useRef(activeSlot >= 0)
-  const collapsed = useRef(false)
   const frame = useRef(0)
+  const lastTick = useRef(0)
   const activeRef = useRef(activeSlot)
 
   const paint = useCallback(() => {
-    const { width, lens: size, travel } = geo.current
+    const { width, lens: size } = geo.current
     const left = x.current.value
     const right = left + size
     if (lens.current) lens.current.style.transform = `translate3d(${left}px,0,0)`
@@ -168,38 +145,28 @@ export function MobileNav() {
       outline.current.style.setProperty("mask-image", mask)
       outline.current.style.setProperty("-webkit-mask-image", mask)
     }
-    const gone = away.current.value
-    if (bar.current) {
-      bar.current.style.transform = `translate3d(0,${gone * travel}px,0)`
-      bar.current.style.pointerEvents = gone < 0.5 ? "" : "none"
-    }
-    // The corner + sits over the bar's right end: it shows the moment the bar starts to sink and rises
-    // the last few points into place; coming back, the bar slides up under it as it fades and sinks.
-    if (fab.current) {
-      const shown = clamp(glow.current.value, 0, 1)
-      fab.current.style.opacity = String(shown)
-      fab.current.style.transform = `translate3d(0,${(1 - plus.current.value) * PLUS_TRAVEL}px,0)`
-      fab.current.style.pointerEvents = collapsed.current && shown > 0.5 ? "auto" : "none"
-    }
   }, [])
 
   const run = useCallback(() => {
-    if (frame.current) return
-    const springs = [x.current, away.current, plus.current, glow.current]
+    // A loop that has not ticked for a while was dropped (the page was suspended, say): start afresh.
+    if (frame.current && performance.now() - lastTick.current < 250) return
+    cancelAnimationFrame(frame.current)
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      springs.forEach((s) => s.snap())
+      x.current.snap()
       paint()
+      frame.current = 0
       return
     }
-    let last = performance.now()
+    // Time comes only from the frames themselves, so no clock can disagree with them.
+    let last = -1
+    lastTick.current = performance.now()
     const tick = (now: number) => {
-      // A frame's timestamp can be a little earlier than the moment the motion started (when it starts
-      // from a scroll or pointer event in that same frame); never step backwards.
-      const dt = Math.min(0.034, Math.max(0, now - last) / 1000)
-      last = Math.max(last, now)
-      for (let i = 0; i < 4; i++) springs.forEach((s) => s.step(dt / 4))
-      if (x.current.resting(0.1) && springs.slice(1).every((s) => s.resting(0.001)) && !press.current?.dragging) {
-        springs.forEach((s) => s.snap())
+      lastTick.current = performance.now()
+      const dt = last < 0 ? 1 / 60 : Math.min(0.034, Math.max(0, now - last) / 1000)
+      last = now
+      for (let i = 0; i < 4; i++) x.current.step(dt / 4)
+      if (x.current.resting(0.1) && !press.current?.dragging) {
+        x.current.snap()
         paint()
         frame.current = 0
         return
@@ -231,26 +198,6 @@ export function MobileNav() {
     run()
   }, [light, run])
 
-  /** Send the bar away (the corner + takes its place) or bring it back, following the shared chrome state. */
-  const collapse = useCallback((on: boolean) => {
-    if (collapsed.current === on) return
-    collapsed.current = on
-    if (fab.current) {
-      fab.current.tabIndex = on ? 0 : -1
-      fab.current.setAttribute("aria-hidden", String(!on))
-    }
-    if (on) {
-      away.current.approach(1, SINK, 0.5)
-      plus.current.approach(1, PLUS)
-      glow.current.approach(1, PLUS_IN)
-    } else {
-      away.current.approach(0, RISE)
-      plus.current.approach(0, PLUS)
-      glow.current.approach(0, PLUS)
-    }
-    run()
-  }, [run])
-
   // Measure the bar, lay out the lens and icons before the first paint, and again whenever it resizes.
   useLayoutEffect(() => {
     const node = bar.current
@@ -259,7 +206,7 @@ export function MobileNav() {
       const width = node.clientWidth
       const size = Math.min(LENS_MAX, ((width - PAD * 2) / SLOTS) * 1.3)
       const step = (width - PAD * 2 - size) / (SLOTS - 1)
-      geo.current = { width, lens: size, step, travel: (nav.current?.offsetHeight ?? node.offsetHeight) + 8 }
+      geo.current = { width, lens: size, step }
       node.style.setProperty("--lens", `${size}px`)
       node.style.setProperty("--step", `${step}px`)
       if (press.current?.dragging) { paint(); return }
@@ -278,12 +225,6 @@ export function MobileNav() {
     if (press.current?.dragging || !geo.current.step) return
     glideTo(activeSlot)
   }, [activeSlot, glideTo])
-
-  // The bar (and the page header, which follows the same state) steps aside and comes back together.
-  useEffect(() => {
-    collapse(isChromeAway())
-    return subscribeChrome(() => collapse(isChromeAway()))
-  }, [collapse])
 
   // A new page starts with the bar and header in view.
   useEffect(() => { setChromeAway(false) }, [pathname])
@@ -378,12 +319,12 @@ export function MobileNav() {
   }
 
   return (
-    <nav ref={nav} aria-label="Main"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden">
+    <nav aria-label="Main"
+      className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden", away && "nav-away")}>
       <div className="relative mx-auto max-w-[30rem]">
         <div ref={bar} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
           onFocus={() => setChromeAway(false)}
-          className="pointer-events-auto relative h-[3.8125rem] touch-none select-none will-change-transform [-webkit-touch-callout:none]">
+          className="nav-bar pointer-events-auto relative h-[3.8125rem] touch-none select-none will-change-transform [-webkit-touch-callout:none]">
           <span aria-hidden className="nav-glass absolute inset-0 rounded-full" />
           <span ref={lens} aria-hidden className="nav-lens pointer-events-none absolute inset-y-1 left-0 w-(--lens) rounded-full transition-opacity duration-200 will-change-transform" />
           <div ref={outline} aria-hidden className="pointer-events-none absolute inset-0"><IconRow /></div>
@@ -414,8 +355,9 @@ export function MobileNav() {
           </div>
         </div>
 
-        <button ref={fab} type="button" onClick={openAddMenu} aria-label="Add money in or out" aria-haspopup="dialog" aria-hidden tabIndex={-1}
-          className="nav-glass pointer-events-none absolute right-0 bottom-0 flex size-[3.875rem] items-center justify-center rounded-full text-foreground opacity-0 transition-[scale] duration-200 ease-(--ease-spring) will-change-transform active:scale-[0.9]">
+        {/* The + that stands in for the bar while it is away (.nav-plus in globals.css). */}
+        <button type="button" onClick={openAddMenu} aria-label="Add money in or out" aria-haspopup="dialog" aria-hidden={!away} tabIndex={away ? 0 : -1}
+          className="nav-glass nav-plus absolute right-0 bottom-0 flex size-[3.875rem] items-center justify-center rounded-full text-foreground will-change-[transform,opacity] active:scale-[0.9]">
           <Plus className="size-7" strokeWidth={2} />
         </button>
       </div>
