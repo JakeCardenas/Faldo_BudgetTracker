@@ -125,7 +125,7 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 
 ## AI tools
 
-`get_current_balance` (includes Safe to Spend and what's left this week), `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `plan_future_purchase` (savings prediction for something to buy later), `get_upcoming_payments`, `get_recurring_payments`, `get_money_plan`, `calculate_affordability` (Faldo Check plus a projected balance), `calculate_forecast`, `simulate_scenario` (one-off or repeating changes), `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
+`get_current_balance` (includes Safe to Spend and what's left this week), `get_monthly_income`, `get_monthly_expenses`, `get_category_spending`, `get_transactions`, `compare_spending`, `get_savings_summary`, `get_budget_status`, `get_goal_progress`, `plan_future_purchase` (savings prediction for something to buy later), `suggest_ideas` (gift and purchase ideas with rough price ranges, checked against the budget and Safe to Spend), `get_upcoming_payments`, `get_recurring_payments`, `get_money_plan`, `calculate_affordability` (Faldo Check plus a projected balance), `calculate_forecast`, `simulate_scenario` (one-off or repeating changes), `search_financial_memory`, `sum_transactions`, `calculate`, `get_financial_health`, `get_debts`, `get_insights`.
 
 - Pydantic argument models are converted to strict JSON schemas (all fields required, nullable where optional, no `$ref`).
 - `user_id` comes from the session, never from the model. Periods are resolved server-side in the user's timezone.
@@ -139,6 +139,8 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 **Speed:** answers stream token by token from Claude or OpenAI, so the reply appears as it is written. Each question also carries a compact snapshot of the user's money (balances, Safe to Spend, this month's spending, budgets, what's due in 7 days, goals), so everyday questions need no tool round-trip; the snapshot counts as evidence for the numeric guardrail. Claude's tool definitions and system prompt are prompt-cached. If checking changes an answer that already streamed (a repaired figure, cleaned formatting, the advice note), the final version replaces it.
 
 **Predictions:** plans to buy something later ("When can I afford a MacBook?", "plano ko bumili ng iPhone sa July 2028, magkano ipon ko?") are answered even without a goal. `plan_future_purchase` works out the months left, what to save each month and week (rounded up to whole pesos), the share of the usual monthly surplus (average over the last 3 full months) that takes, and when the user would have it at that pace. It uses the user's price, a matching goal's target and saved amount, or the model's labelled rough estimate. The rule-based fallback reads the same questions in English and Taglish and asks for the price when none is given.
+
+**Ideas and conversation:** Faldo chats like a friend who is good with money (gifts, what to buy, money concepts in the Philippines), not only about the user's records. Suggestions go through `suggest_ideas`, so their price ranges pass the numeric guardrail and appear as a card where each idea can be planned (a planned purchase) or logged after buying (the expense form opens prefilled). Nothing is saved automatically, and chat never auto-logs a message that asks for something ("suggest…", "what can I buy…", "budget is…"); the capture parser refuses those too. The rule-based fallback suggests from a small catalogue of typical Philippine prices. When Claude refuses, the fallback answer shows why (no API credits, invalid key, busy) so it can be fixed.
 
 ## Environment variables
 
@@ -227,7 +229,7 @@ Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the
 ## Quality checks
 
 ```bash
-make test        # 149 backend tests
+make test        # 154 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build

@@ -518,6 +518,13 @@ export interface Receipt {
 }
 
 export type Block =
+  | {
+      type: "ideas"
+      title: string
+      budget_minor: number | null
+      items: { name: string; why: string; low_minor: number; high_minor: number; category_id: string | null }[]
+      note: string
+    }
   | { type: "stats"; title: string; items: { label: string; amount_minor?: number; value?: string; hint?: string }[] }
   | { type: "breakdown"; title: string; total_minor: number; rows: { label: string; amount_minor: number; pct: number; color: string }[] }
   | {

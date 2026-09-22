@@ -19,10 +19,13 @@ const QUESTION_START = /^(what|how|why|when|where|who|which|can|could|should|wou
 // questions for Faldo, not spending to log.
 const PLAN_WORDS = /\b(want(?:s|ed)? to|wanna|plan(?:s|ning)?|going to|gonna|will|i'll|i'd like|someday|afford|save (?:up )?for|saving (?:up )?for|ipon|mag-?ipon|magkano|balak|plano|gusto|bibili|mabibili|next (?:week|month|year)|sa susunod|(?:in|within|after) \d+ (?:days?|weeks?|months?|years?)|\d+ buwan|(?:in|by|sa|before|until) 20\d\d)\b/i
 
+// Asking Faldo for something ("suggest gift ideas for my tito, budget 5k") is never spending to log.
+const REQUEST_WORDS = /\b(suggest|recommend|ideas?|advice|tips|help me|mag-?suggest|pa-?suggest|i-?suggest|pwedeng|puwedeng|ano(?:ng)? (?:magandang|pwede|puwede|bibilhin|bilhin)|what (?:should|can|could) i|should i|can i|could you|can you|would you|paano|magkano|bakit|budget (?:ko|is|of|na)|with (?:that|my|a) budget)\b/i
+
 export function looksLikeLogging(text: string) {
   const value = text.trim()
-  if (!/\d/.test(value) || value.endsWith("?")) return false
-  return !QUESTION_START.test(value) && !PLAN_WORDS.test(value)
+  if (!/\d/.test(value) || value.includes("?")) return false
+  return !QUESTION_START.test(value) && !PLAN_WORDS.test(value) && !REQUEST_WORDS.test(value)
 }
 
 export function draftToInput(draft: CaptureDraft): TransactionInput {

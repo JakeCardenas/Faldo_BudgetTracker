@@ -275,7 +275,23 @@ def parse_segment(text: str, context: CaptureContext) -> dict[str, Any]:
     }
 
 
+# Asking for something ("suggest gift ideas for my tito, budget 5k", "what can I buy with 10k?") is a question for
+# Faldo, never money to log, even when it mentions an amount.
+REQUEST_RE = re.compile(
+    r"\?|\b(suggest|recommend|ideas?|advice|tips|help me|mag-?suggest|pa-?suggest|i-?suggest|pwedeng|puwedeng|"
+    r"ano(?:ng)? (?:magandang|pwede|puwede|bibilhin|bilhin)|what (?:should|can|could) i|should i|can i|could you|can you|"
+    r"would you|how (?:much|do|can|should)|paano|magkano|bakit|budget (?:ko|is|of|na)|with (?:that|my|a) budget)\b",
+    re.IGNORECASE,
+)
+
+
+def is_request(text: str) -> bool:
+    return bool(REQUEST_RE.search(text))
+
+
 def parse_with_rules(text: str, context: CaptureContext) -> dict[str, Any]:
+    if is_request(text):
+        return {"transactions": [], "is_financial": False, "is_request": True}
     segments = _segment(text.strip())
     transactions = [parse_segment(s, context) for s in segments]
     is_financial = any(t["amount"] is not None for t in transactions)

@@ -2,6 +2,7 @@
 
 import { ArrowDownRight, ArrowUpRight, ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react"
 import { ForecastChart, IncomeExpenseBars } from "@/components/charts/charts"
+import { IdeasCard } from "@/components/assistant/ideas-card"
 import { CalculationCard, RiskBadge } from "@/components/finance/calculation-card"
 import { ProgressBar, STATUS_LABEL } from "@/components/finance/progress-bar"
 import { formatDate, formatMoney, formatPct } from "@/lib/format"
@@ -22,6 +23,8 @@ function Frame({ title, children, badge = true }: { title: string; children: Rea
 
 export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTransaction?: (id: string) => void }) {
   switch (block.type) {
+    case "ideas":
+      return <IdeasCard block={block} />
     case "calculation":
       return <CalculationCard title={block.title} lines={block.lines} resultLabel={block.result_label} resultMinor={block.result_minor} note={block.note} />
     case "risk": {

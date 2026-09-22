@@ -36,6 +36,31 @@ def _reason(status: int, body: bytes) -> str:
         return str(status)
 
 
+def _hint(status: int, body: bytes) -> str:
+    """Why Claude refused, in plain words and with the fix, shown under answers Faldo gave without it."""
+    try:
+        error = json.loads(body).get("error", {})
+    except (ValueError, AttributeError):
+        error = {}
+    kind, message = str(error.get("type", "")), str(error.get("message", "")).lower()
+    if "credit balance" in message:
+        return "Claude isn't answering: the Anthropic account has no API credits. Add credits in the Anthropic Console under Billing."
+    if status == 401 or kind == "authentication_error":
+        return "Claude isn't answering: ANTHROPIC_API_KEY isn't valid. Create a new key in the Anthropic Console, update it in Vercel and redeploy."
+    if status == 403 or kind == "permission_error":
+        return "Claude isn't answering: this API key isn't allowed to use the model."
+    if status == 404 or kind == "not_found_error":
+        return "Claude isn't answering: the model isn't available to this API key."
+    if status == 429 or kind == "rate_limit_error":
+        return "Claude is getting too many requests right now. Try again in a minute."
+    if status >= 500 or kind in {"overloaded_error", "api_error"}:
+        return "Claude is busy right now. Try again shortly."
+    return f"Claude refused the request ({kind or status})."
+
+
+NETWORK_HINT = "Faldo couldn't reach Claude. Try again shortly."
+
+
 def _tools(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Faldo's tool specs (OpenAI function format) as Claude tools; the last one carries the cache mark."""
     tools = [{"name": s["name"], "description": s["description"], "input_schema": s["parameters"]} for s in specs]
@@ -100,10 +125,10 @@ class AnthropicProvider:
             response = await self._http().post(API_URL, headers=self._headers, json=body)
         except httpx.HTTPError as exc:
             logger.warning("Anthropic request failed: %s", exc.__class__.__name__)
-            raise ProviderUnavailable(UNAVAILABLE) from exc
+            raise ProviderUnavailable(UNAVAILABLE, NETWORK_HINT) from exc
         if response.status_code >= 400:
             logger.warning("Anthropic request refused: %s", _reason(response.status_code, response.content))
-            raise ProviderUnavailable(UNAVAILABLE)
+            raise ProviderUnavailable(UNAVAILABLE, _hint(response.status_code, response.content))
         data: dict[str, Any] = response.json()
         return data
 
@@ -124,7 +149,7 @@ class AnthropicProvider:
                 if response.status_code >= 400:
                     refusal = await response.aread()
                     logger.warning("Anthropic assistant call refused: %s", _reason(response.status_code, refusal))
-                    raise ProviderUnavailable(UNAVAILABLE)
+                    raise ProviderUnavailable(UNAVAILABLE, _hint(response.status_code, refusal))
                 async for line in response.aiter_lines():
                     if not line.startswith("data: "):
                         continue
@@ -146,10 +171,10 @@ class AnthropicProvider:
                     elif kind == "error":
                         error = event.get("error", {})
                         logger.warning("Anthropic stream error: %s: %s", error.get("type"), str(error.get("message", ""))[:200])
-                        raise ProviderUnavailable(UNAVAILABLE)
+                        raise ProviderUnavailable(UNAVAILABLE, _hint(500, json.dumps(event).encode()))
         except httpx.HTTPError as exc:
             logger.warning("Anthropic stream failed: %s", exc.__class__.__name__)
-            raise ProviderUnavailable(UNAVAILABLE) from exc
+            raise ProviderUnavailable(UNAVAILABLE, NETWORK_HINT) from exc
 
         calls: list[ToolCall] = []
         raw: list[dict[str, Any]] = []

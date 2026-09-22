@@ -56,6 +56,94 @@ GENERIC_ITEMS = {"it", "this", "that", "goal", "my goal", "goals", "one", "thing
 PAST_RE = re.compile(r"\b(did|bought|spent|was|were|last|nung|noong|binili ko|nabili ko)\b", re.IGNORECASE)
 
 
+# Requests for ideas ("suggest ka nga ng gift ideas para sa tito ko, 5k budget"): Faldo suggests, never logs.
+IDEAS_RE = re.compile(
+    r"\b(suggest|recommend|ideas?|mag-?suggest|pa-?suggest|i-?suggest|gift|gifts|regalo|iregalo|ireregalo|pasalubong|"
+    r"pwedeng bilhin|puwedeng bilhin|what (?:should|can|could) i (?:buy|get)|ano(?:ng)? (?:magandang|pwede|puwede|bibilhin|"
+    r"bilhin|bilhin ko))\b",
+    re.IGNORECASE,
+)
+RECEIVED_RE = re.compile(r"\b(nagbigay|binigyan|bigay|gave me|received|natanggap|got \S+ from|pamasko|aguinaldo)\b", re.IGNORECASE)
+RECIPIENTS: list[tuple[str, str, set[str]]] = [
+    (r"\b(tito|uncle|ninong)\b", "your tito", {"male", "any"}),
+    (r"\b(tita|auntie|aunt|ninang)\b", "your tita", {"female", "any"}),
+    (r"\b(mama|mom|mommy|nanay|inay|mother)\b", "your mom", {"female", "any"}),
+    (r"\b(papa|dad|daddy|tatay|itay|father)\b", "your dad", {"male", "any"}),
+    (r"\b(lola|grandma|lolo|grandpa)\b", "your grandparent", {"elder"}),
+    (r"\b(kuya|brother)\b", "your kuya", {"male", "any"}),
+    (r"\b(ate|sister)\b", "your ate", {"female", "any"}),
+    (r"\b(girlfriend|gf|wife)\b", "her", {"female", "any"}),
+    (r"\b(boyfriend|bf|husband)\b", "him", {"male", "any"}),
+    (r"\b(jowa|partner|asawa)\b", "your partner", {"any", "friend"}),
+    (r"\b(inaanak|pamangkin|godchild|kid|kids|child|baby)\b", "the kid", {"kid"}),
+    (r"\b(friend|kaibigan|barkada|bestfriend|bff)\b", "your friend", {"friend", "any"}),
+    (r"\b(boss|coworker|officemate|katrabaho|teacher|guro|prof)\b", "them", {"work"}),
+]
+# Rough typical prices in the Philippines, in pesos; always shown as estimates.
+IDEA_CATALOGUE: list[tuple[str, str, int, int, set[str]]] = [
+    ("Men's perfume", "A classic that always feels special; pick a fresh everyday scent.", 1500, 4500, {"male"}),
+    ("Women's perfume", "A signature scent she can wear every day.", 1500, 4500, {"female"}),
+    ("Wristwatch", "Useful every day; a simple analog or digital one goes with everything.", 2000, 6000, {"male", "female", "self"}),
+    ("Simple jewelry", "A necklace or bracelet she can wear every day.", 1500, 5000, {"female"}),
+    ("Handbag or tote", "Something she'll use daily.", 1500, 5000, {"female"}),
+    ("Leather wallet", "Practical and lasts for years.", 800, 2500, {"male", "self"}),
+    ("Polo shirt", "Easy to wear to work or family gatherings.", 700, 2000, {"male"}),
+    ("Grooming kit", "A shaver or trimmer set for everyday use.", 800, 2500, {"male"}),
+    ("Skincare set", "A treat she might not buy for herself.", 800, 3000, {"female", "self"}),
+    ("Air fryer", "A kitchen upgrade the whole family will use.", 2500, 5000, {"female"}),
+    ("Foot or neck massager", "Comfort after a long day.", 1500, 4500, {"elder", "male", "female"}),
+    ("Blood pressure monitor", "Thoughtful and practical for health at home.", 1500, 3500, {"elder"}),
+    ("Comfortable house slippers", "Simple comfort they'll use every day.", 500, 1500, {"elder"}),
+    ("Photo album or frame", "Family photos never get old.", 500, 1500, {"elder", "female"}),
+    ("Bluetooth speaker", "Great for music and videoke nights.", 1200, 4000, {"male", "friend", "self", "any"}),
+    ("Wireless earbuds", "Handy for commutes and calls.", 1000, 4000, {"friend", "self", "any"}),
+    ("Power bank", "Never runs out of battery on the go.", 800, 2000, {"friend", "self", "male"}),
+    ("Coffee gift set", "Local beans or a sampler for the coffee lover.", 600, 2000, {"male", "female", "elder", "work", "any"}),
+    ("Nice bottle of wine", "Good for celebrations and family dinners.", 800, 3000, {"male", "female"}),
+    ("Dinner treat together", "Treat them to a meal; the time together counts most.", 1000, 3000, {"friend", "elder", "any"}),
+    ("Insulated tumbler", "Keeps drinks cold all day at work or school.", 800, 2500, {"friend", "work", "self", "any"}),
+    ("Board or card game", "Something fun to enjoy together.", 800, 2500, {"friend", "kid"}),
+    ("Toy or building set", "Fun that lasts beyond the holidays.", 800, 3000, {"kid"}),
+    ("Books", "Picture books or a series they'll love.", 300, 1500, {"kid"}),
+    ("School bag", "Useful for the next school year.", 800, 2000, {"kid"}),
+    ("Art set", "Crayons, paints and sketch pads for creative kids.", 400, 1200, {"kid"}),
+    ("Desk plant", "A small, low-care plant for their desk.", 300, 1200, {"work"}),
+    ("Planner or notebook set", "Always handy at work.", 500, 1500, {"work"}),
+    ("Running shoes", "Good shoes pay off if you walk or run a lot.", 2500, 6000, {"self"}),
+    ("Durable backpack", "One good bag for work, school or travel.", 1500, 4000, {"self"}),
+    ("Online course", "Learn a skill that can help you earn more.", 500, 3000, {"self"}),
+]
+
+
+def _ideas(question: str) -> dict[str, Any]:
+    """Ideas from the catalogue for whoever it's for, within the budget when there is one."""
+    whom, audience = None, {"self"}
+    # "Nagbigay ng ₱10k yung ninong ko": the ninong gave the money, so only "para sa …" / "for …" names who it's for.
+    target = question
+    if RECEIVED_RE.search(question):
+        marked = re.search(r"\b(?:para sa|para kay|for|kay)\s+(.*)", question, re.IGNORECASE)
+        target = marked.group(1) if marked else ""
+    for pattern, label, tags in RECIPIENTS:
+        if re.search(pattern, target, re.IGNORECASE):
+            whom, audience = label, tags
+            break
+    gift = bool(re.search(r"\b(gift|gifts|regalo|iregalo|ireregalo|pasalubong|para sa)\b", question, re.IGNORECASE))
+    if whom is None and gift:
+        audience = {"any"}
+    budget = _amount(question)
+    pool = [i for i in IDEA_CATALOGUE if i[4] & audience]
+    if budget:
+        fitting = sorted([i for i in pool if i[3] <= budget], key=lambda i: -i[3])
+        stretch = [i for i in pool if i[2] <= budget < i[3]]
+        chosen = (fitting + stretch)[:5]
+    else:
+        chosen = pool[:5]
+    topic = f"Gift ideas for {whom}" if whom else ("Gift ideas" if gift else "Ideas for your money")
+    ideas = [{"name": n, "why": why, "price_low": low, "price_high": high,
+              "category": "Gifts & Family" if whom or gift else "Shopping"} for n, why, low, high, _ in chosen]
+    return {"topic": topic, "budget": budget, "ideas": ideas}
+
+
 def _when(text: str, today: date) -> tuple[str | None, int | None, str]:
     """A target month from the text (as YYYY-MM-01) or a number of months, and the text without it."""
     match = IN_MONTHS_RE.search(text)
@@ -146,6 +234,8 @@ def plan(question: str, today: date | None = None) -> tuple[str, list[ToolCall]]
     q = question.lower()
     period = _period(q)
     topic = _topic(question)
+    if IDEAS_RE.search(question):
+        return "ideas", [_call("suggest_ideas", **_ideas(question))]
     purchase = _purchase(question, today or date.today())
     if purchase and (purchase["price"] or purchase["target_date"] or purchase["months_from_now"]):
         return "future_purchase", [_call("plan_future_purchase", **purchase)]
@@ -476,6 +566,22 @@ def compose_goal(question: str, r: dict[str, dict[str, Any]]) -> str:
     return " ".join(parts) + " Projections are estimates."
 
 
+def compose_ideas(question: str, r: dict[str, dict[str, Any]]) -> str:
+    s = r["suggest_ideas"]
+    if not s.get("ideas"):
+        return "I couldn't find ideas that fit that budget. Try a bigger budget or tell me more about who it's for."
+    topic = s["topic"][0].lower() + s["topic"][1:]
+    text = f"Here are some {topic}" + (f" within {s['budget']}." if s.get("budget") else ".")
+    if s.get("budget_fits_safe_to_spend") is False:
+        text += (f" Heads up: your Safe to Spend is {s['safe_to_spend']} right now, so spending {s['budget']} would dip into "
+                 "money set aside for bills and savings.")
+    elif s.get("budget_fits_safe_to_spend"):
+        text += f" Your Safe to Spend is {s['safe_to_spend']}, so this fits."
+    if RECEIVED_RE.search(question):
+        text += " Since it's gift money, log it as income first so Faldo counts it, and consider saving part of it."
+    return text + " Tap Plan it to save an idea for later, or Log it after you buy. Prices are rough estimates."
+
+
 def compose_future_purchase(question: str, r: dict[str, dict[str, Any]]) -> str:
     p = r["plan_future_purchase"]
     if "error" in p:
@@ -694,6 +800,7 @@ COMPOSERS = {
     "scenario": compose_scenario,
     "goal": compose_goal,
     "future_purchase": compose_future_purchase,
+    "ideas": compose_ideas,
     "running_out": compose_running_out,
     "recurring": compose_recurring,
     "upcoming": compose_upcoming,

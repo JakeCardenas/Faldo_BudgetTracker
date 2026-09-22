@@ -23,7 +23,7 @@ from app.engine.periods import (
 )
 from app.engine.scenarios import Adjustment
 from app.models import Category, Transaction, TransactionItem
-from app.models.enums import TransactionType
+from app.models.enums import CategoryKind, TransactionType
 from app.services import analytics, budgets, debts, forecast, goals, health, insights, money_plan, recurring
 from app.services import check as check_service
 from app.services import planned as planned_service
@@ -490,6 +490,59 @@ async def plan_future_purchase(ctx: ToolContext, args: FuturePurchaseArgs) -> To
     elif surplus is not None:
         stats.append({"label": "You usually overspend", "amount_minor": -surplus, "hint": "a month, last 3 months"})
     return ToolOutput(result, [{"type": "stats", "title": title, "items": stats}])
+
+
+class IdeaArgs(BaseModel):
+    name: str = Field(..., description="The idea, short and specific, e.g. 'Men's perfume' or 'Wireless earbuds'")
+    why: str = Field(..., description="One short line on why it suits them or what to look for")
+    price_low: float = Field(..., description="Low end of a typical price in the Philippines, in major units")
+    price_high: float = Field(..., description="High end of a typical price in the Philippines, in major units")
+    category: str | None = Field(None, description="The expense category it would go under, e.g. 'Gifts & Family' or 'Shopping'")
+
+
+class SuggestArgs(BaseModel):
+    topic: str = Field(..., description="What the ideas are for, as a short title, e.g. 'Gift ideas for your tito'")
+    budget: float | None = Field(None, description="The user's budget in major units, if they gave one")
+    ideas: list[IdeaArgs] = Field(..., description="3 to 6 ideas, each with a rough price range")
+
+
+@tool("suggest_ideas", "Show the user ideas to buy or do (gifts, what to get with some money, alternatives, cheaper swaps), "
+      "each with a rough typical price range in the Philippines, as a card they can turn into a planned purchase or log "
+      "later. Use whenever you recommend things that cost money: you supply the ideas and price ranges from general "
+      "knowledge; this checks them against the budget and their Safe to Spend. Nothing is logged or saved.",
+      SuggestArgs, "Gathering ideas")
+async def suggest_ideas(ctx: ToolContext, args: SuggestArgs) -> ToolOutput:
+    budget = to_minor(args.budget, ctx.currency) if args.budget else None
+    names = {c.name.lower(): c for c in (await ctx.db.execute(select(Category).where(
+        Category.user_id == ctx.user_id, Category.kind == CategoryKind.expense))).scalars()}
+    if not args.ideas:
+        return ToolOutput({"error": "Give at least one idea."})
+    ideas = []
+    for idea in args.ideas[:6]:
+        low, high = sorted((to_minor(max(idea.price_low, 0), ctx.currency), to_minor(max(idea.price_high, 0), ctx.currency)))
+        wanted = (idea.category or "").lower()
+        category = names.get(wanted) or next((c for n, c in names.items() if wanted and (wanted in n or n in wanted)), None)
+        ideas.append({
+            "name": idea.name.strip()[:80], "why": idea.why.strip()[:160],
+            "price_range": _fmt(ctx, low) if low == high else f"{_fmt(ctx, low)}–{_fmt(ctx, high)}",
+            "low_minor": low, "high_minor": high,
+            "within_budget": None if budget is None else high <= budget,
+            "category": category.name if category else None, "category_id": str(category.id) if category else None,
+        })
+    sts = await forecast.safe_to_spend(ctx.db, ctx.user_id, ctx.settings, ctx.today)
+    result = {
+        "topic": args.topic, "budget": _fmt(ctx, budget) if budget else None, "budget_minor": budget,
+        "ideas": [{k: v for k, v in i.items() if k != "category_id"} for i in ideas],
+        "safe_to_spend": _fmt(ctx, sts["amount_minor"]), "safe_to_spend_minor": sts["amount_minor"],
+        "budget_fits_safe_to_spend": None if budget is None else budget <= sts["amount_minor"],
+        "is_estimate": True,
+        "note": "Price ranges are rough estimates from general knowledge; nothing was logged or saved.",
+    }
+    block = {"type": "ideas", "title": args.topic.strip()[:80], "budget_minor": budget,
+             "items": [{"name": i["name"], "why": i["why"], "low_minor": i["low_minor"], "high_minor": i["high_minor"],
+                        "category_id": i["category_id"]} for i in ideas],
+             "note": "Rough price ranges. Check current prices before you buy."}
+    return ToolOutput(result, [block])
 
 
 class UpcomingArgs(BaseModel):

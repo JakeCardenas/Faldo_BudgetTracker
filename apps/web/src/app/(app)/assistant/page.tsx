@@ -23,7 +23,7 @@ import type { Block, CaptureDraft, CaptureResult, ChatMessage, Source, ToolCallR
 import { cn } from "@/lib/utils"
 
 interface Step { id: string; tool: string; label: string; state: "running" | "done" | "error" }
-interface LiveMessage extends ChatMessage { steps?: Step[]; streaming?: boolean; error?: string; logged?: Transaction[]; drafts?: CaptureDraft[] }
+interface LiveMessage extends ChatMessage { steps?: Step[]; streaming?: boolean; error?: string; logged?: Transaction[]; drafts?: CaptureDraft[]; fallbackHint?: string }
 
 const SUGGESTIONS = [
   { group: "Log it", items: ["Spent 250 on lunch", "Grab 180 and coffee 140 from GCash", "Salary 30k"] },
@@ -168,6 +168,11 @@ function AssistantMessage({ message, latest, onFollowUp, onOpenTransaction, onDr
               </div>
             ))}
           </div>
+        )}
+        {message.fallbackHint && (
+          <p className="flex items-start gap-1.5 rounded-lg bg-warning-soft px-3 py-2 text-[0.8125rem] leading-snug text-warning">
+            <CircleAlert className="mt-0.5 size-3.5 shrink-0" /> <span>Basic answer. {message.fallbackHint}</span>
+          </p>
         )}
         {!message.streaming && !message.logged && !message.drafts && <Details message={message} onOpenTransaction={onOpenTransaction} />}
         {!message.streaming && message.follow_ups?.length > 0 && (
@@ -335,6 +340,7 @@ function AssistantView() {
         if (event === "done") patch((m) => ({
           ...m, streaming: false, id: String(data.message_id), sources: data.sources as Source[], follow_ups: data.follow_ups as string[],
           tool_calls: data.tool_calls as ToolCallRecord[], validation: String(data.validation), provider: String(data.provider),
+          fallbackHint: data.fallback_hint ? String(data.fallback_hint) : undefined,
         }))
         if (event === "error") patch((m) => ({ ...m, streaming: false, error: String(data.message) }))
       }, controller.signal)

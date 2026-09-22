@@ -72,6 +72,7 @@ export function replyMood({ streaming, hasText, error, logged, tools, blocks }: 
     if (tools.includes("calculate_affordability")) return "money"
   }
   for (const block of blocks) {
+    if (block.type === "ideas") return /gift|regalo/i.test(block.title) ? "love" : "idea"
     if (block.type === "progress" && block.title.startsWith("Budgets")) return budgetMood(block)
     if (block.type === "progress" && block.title.startsWith("Savings goals")) return goalMood(block)
     if (block.type === "stats" && block.title === "Balances") return balanceMood(block)

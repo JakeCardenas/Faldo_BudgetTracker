@@ -3,7 +3,11 @@ from typing import Any, Protocol
 
 
 class ProviderUnavailable(Exception):
-    pass
+    """The AI service refused or failed. `hint` says why in plain words, for whoever runs this Faldo."""
+
+    def __init__(self, message: str = "The AI service is temporarily unavailable.", hint: str | None = None):
+        super().__init__(message)
+        self.hint = hint
 
 
 @dataclass

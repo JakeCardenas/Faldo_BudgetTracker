@@ -180,7 +180,7 @@ async def parse_capture(db: AsyncSession, user_id: uuid.UUID, settings: UserSett
     context = await build_context(db, user_id, settings, today)
     provider = get_llm()
     rules = parse_with_rules(text, context)
-    ai = None if rules_are_confident(rules) else await provider.parse_transactions(text, context)
+    ai = None if rules_are_confident(rules) or rules.get("is_request") else await provider.parse_transactions(text, context)
     raw = rules
     source = "rules"
     if ai and ai.get("is_financial") and ai.get("transactions"):
