@@ -157,7 +157,7 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
               <li key={c.id} className="border-b border-border/60 last:border-b-0">
                 <button type="button" onClick={() => pickChoice(c.id)}
                   className="flex w-full min-w-0 items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-accent/70">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-card text-foreground/80 shadow-(--shadow-card)"><Icon className="size-[1.05rem]" strokeWidth={1.9} /></span>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-card text-foreground/80 shadow-(--shadow-card)"><Icon className="size-[1.05rem]" strokeWidth={2} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[0.9375rem] font-medium">{c.label}</span>
                     <span className="block truncate text-[0.8125rem] text-muted-foreground">{c.hint}</span>

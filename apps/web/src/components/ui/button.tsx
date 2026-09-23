@@ -25,15 +25,16 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "h-10 gap-1.5 rounded-[0.75rem] px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
-        xs: "h-7 gap-1 rounded-[0.5rem] px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3.5",
-        sm: "h-8 gap-1.5 rounded-[0.625rem] px-3 text-[0.8125rem] [&_svg:not([class*='size-'])]:size-3.5",
+          "h-11 gap-1.5 rounded-[0.75rem] px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
+        // Smaller buttons keep a 44pt tap area around them (.hit).
+        xs: "hit h-7 gap-1 rounded-[0.5rem] px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "hit h-8 gap-1.5 rounded-[0.625rem] px-3 text-[0.8125rem] [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-12 gap-2 rounded-[0.875rem] px-6 text-[0.9375rem]",
-        icon: "size-10 rounded-full",
+        icon: "hit size-10 rounded-full",
         "icon-xs":
-          "size-7 rounded-full [&_svg:not([class*='size-'])]:size-3.5",
+          "hit size-7 rounded-full [&_svg:not([class*='size-'])]:size-3.5",
         "icon-sm":
-          "size-8 rounded-full",
+          "hit size-8 rounded-full",
         "icon-lg": "size-12 rounded-full",
       },
     },

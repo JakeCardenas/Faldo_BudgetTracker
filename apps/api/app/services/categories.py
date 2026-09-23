@@ -10,32 +10,36 @@ from app.models.enums import CategoryKind
 from app.schemas.ledger import CategoryIn, CategoryUpdate
 from app.services.common import get_owned
 
+# One palette for every category: d3's Spectral scheme, deepened where it runs pale so each colour holds up on white
+# and on dark. Neighbouring colours blend (coral, apricot, gold, lime, green, teal, blue, indigo), so a chart of
+# several categories reads as one set instead of a rainbow. Faldo's own green stays for the app itself.
 DEFAULT_EXPENSE_CATEGORIES: list[tuple[str, str, str, bool, list[str]]] = [
-    ("Food & Dining", "utensils", "#C2410C", False, ["Restaurants", "Fast food", "Coffee", "Food delivery"]),
-    ("Groceries", "shopping-basket", "#15803D", True, []),
-    ("Transportation", "car", "#0369A1", True, ["Ride-hailing", "Public transit", "Fuel", "Parking"]),
-    ("Bills & Utilities", "zap", "#A16207", True, ["Electricity", "Water", "Internet", "Mobile load"]),
-    ("Housing", "home", "#4D7C0F", True, ["Rent", "Maintenance"]),
-    ("Shopping", "shopping-bag", "#7C3AED", False, ["Clothing", "Shoes", "Electronics", "Home goods"]),
-    ("Subscriptions", "repeat", "#BE185D", False, []),
-    ("Entertainment", "clapperboard", "#9333EA", False, ["Movies", "Games", "Events"]),
-    ("Health", "heart-pulse", "#DC2626", True, ["Pharmacy", "Medical"]),
-    ("Personal Care", "sparkles", "#DB2777", False, []),
-    ("Education", "graduation-cap", "#1D4ED8", True, []),
-    ("Travel", "plane", "#0E7490", False, []),
-    ("Gifts & Family", "gift", "#B45309", False, []),
-    ("Fees & Charges", "receipt", "#57534E", False, []),
-    ("Other", "circle-dashed", "#6B7280", False, []),
+    ("Food & Dining", "utensils", "#F0643D", False, ["Restaurants", "Fast food", "Coffee", "Food delivery"]),
+    ("Groceries", "shopping-basket", "#6DBE7B", True, []),
+    ("Transportation", "car", "#3380BE", True, ["Ride-hailing", "Public transit", "Fuel", "Parking"]),
+    ("Bills & Utilities", "zap", "#E3B63E", True, ["Electricity", "Water", "Internet", "Mobile load"]),
+    ("Housing", "home", "#3FAE95", True, ["Rent", "Maintenance"]),
+    ("Shopping", "shopping-bag", "#A8174D", False, ["Clothing", "Shoes", "Electronics", "Home goods"]),
+    ("Subscriptions", "repeat", "#7B4F9E", False, []),
+    ("Entertainment", "clapperboard", "#5A5BAA", False, ["Movies", "Games", "Events"]),
+    ("Health", "heart-pulse", "#D53E4F", True, ["Pharmacy", "Medical"]),
+    ("Personal Care", "sparkles", "#E3739B", False, []),
+    ("Education", "graduation-cap", "#2E97A8", True, []),
+    ("Travel", "plane", "#A5C956", False, []),
+    ("Gifts & Family", "gift", "#F59B4C", False, []),
+    ("Fees & Charges", "receipt", "#6E7A74", False, []),
+    ("Other", "circle-dashed", "#A3ABA5", False, []),
 ]
 
 DEFAULT_INCOME_CATEGORIES: list[tuple[str, str, str]] = [
-    ("Salary", "briefcase", "#0B6B4B"),
-    ("Freelance", "laptop", "#15803D"),
-    ("Allowance", "wallet", "#4D7C0F"),
-    ("Gifts Received", "gift", "#B45309"),
-    ("Refunds", "rotate-ccw", "#0369A1"),
-    ("Other Income", "plus-circle", "#6B7280"),
+    ("Salary", "briefcase", "#6DBE7B"),
+    ("Freelance", "laptop", "#3FAE95"),
+    ("Allowance", "wallet", "#A5C956"),
+    ("Gifts Received", "gift", "#F59B4C"),
+    ("Refunds", "rotate-ccw", "#3380BE"),
+    ("Other Income", "plus-circle", "#A3ABA5"),
 ]
+
 
 
 async def create_default_categories(db: AsyncSession, user_id: uuid.UUID) -> None:

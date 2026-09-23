@@ -7,7 +7,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import { format, parseISO } from "date-fns"
 import { ArrowDownRight, ArrowUpRight, ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, FileUp, LayoutGrid, List, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
-import { BambooDecor, environmentStyle } from "@/components/brand/environment"
+import { bandTint, environmentStyle } from "@/components/brand/environment"
+import { BandScenery } from "@/components/brand/scenery"
 import { Panda } from "@/components/brand/panda"
 import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { AccountDialog } from "@/components/finance/account-dialog"
@@ -21,7 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ACCOUNT_GROUPS } from "@/lib/account-templates"
 import { api } from "@/lib/api"
-import { environmentFor, poseFor } from "@/lib/catalog"
+import { poseFor } from "@/lib/catalog"
 import { formatMoney } from "@/lib/format"
 import { maskAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights, useMe } from "@/lib/queries"
@@ -105,10 +106,15 @@ function DailyBalance({ view }: { view: View }) {
   return (
     <section aria-label="Daily balance" className="card-surface flex min-w-0 flex-col p-3.5">
       <span className="label-caps">Daily balance</span>
+      {points.length >= 2 && (
+        <p className={cn("tabular mt-1 text-[0.8125rem] font-semibold", values[values.length - 1] - values[0] < 0 ? "text-foreground" : "text-income")}>
+          {formatMoney(values[values.length - 1] - values[0], "PHP", { signed: true })} <span className="font-normal text-muted-foreground">over 7 days</span>
+        </p>
+      )}
       {isLoading ? <Skeleton className="mt-3 h-20" /> : points.length < 2 ? (
         <p className="mt-2 text-[0.8125rem] text-muted-foreground">Appears after a few days.</p>
       ) : (
-        <ol className="mt-3 flex flex-1 items-end justify-between gap-1">
+        <ol className="mt-2 flex flex-1 items-end justify-between gap-1">
           {points.map((p, i) => {
             const last = i === points.length - 1
             const height = max === min ? 60 : 28 + ((p.value - min) / (max - min)) * 72
@@ -204,8 +210,8 @@ export default function AccountsPage() {
     <div className="space-y-6 pb-2">
       <section data-band aria-label="Wallet" style={environmentStyle(me?.settings.home_background)}
         className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
-        <StatusBarTint color={`color-mix(in oklab, ${environmentFor(me?.settings.home_background).from} 88%, ${environmentFor(me?.settings.home_background).to})`} />
-        <BambooDecor className="absolute top-0 -right-8 -z-10 h-[18rem] lg:h-[24rem]" />
+        <StatusBarTint color={bandTint(me?.settings.home_background)} />
+        <BandScenery theme={me?.settings.home_background} />
         <div className="flex items-center justify-between gap-2">
           {arranging ? <span /> : (
             <button type="button" onClick={() => router.push("/import")} aria-label="Import a statement" className={bandButton}><FileUp /></button>
@@ -224,8 +230,10 @@ export default function AccountsPage() {
             )}
           </div>
         </div>
-        <h1 className="mt-4 text-[1.625rem] leading-tight font-extrabold tracking-[-0.03em] lg:text-[2rem]">Wallet</h1>
-        <p className="mt-0.5 text-[0.8125rem] text-white/75">Cash, e-wallets, banks and cards you track by hand</p>
+        <div className="[text-shadow:0_1px_2px_rgb(4_24_12/0.55)]">
+          <h1 className="mt-4 text-[1.625rem] leading-tight font-extrabold tracking-[-0.03em] lg:text-[2rem]">Wallet</h1>
+          <p className="mt-0.5 text-[0.8125rem] text-white/85">Cash, e-wallets, banks and cards you track by hand</p>
+        </div>
 
         {isLoading ? <Skeleton className="mt-4 mb-5 ml-28 h-24 rounded-[1.25rem] bg-white/15" /> : active.length > 0 && (
           <>
@@ -300,7 +308,8 @@ export default function AccountsPage() {
             </div>
           </div>
 
-          <div className="cascade space-y-6">
+          {/* On desktop the groups sit side by side as columns, so a type with one account doesn't leave a row empty. */}
+          <div className="cascade space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6 lg:gap-y-8 lg:space-y-0 xl:grid-cols-4">
             {groups.map((group) => {
               const total = group.accounts.reduce((s, a) => s + a.balance_minor, 0)
               const isCollapsed = collapsed.has(group.type)
@@ -312,7 +321,7 @@ export default function AccountsPage() {
                     <span className={cn("tabular text-[0.875rem] font-bold", total < 0 ? "text-expense" : "text-muted-foreground")}>{formatMoney(total)}</span>
                   </button>
                   {!isCollapsed && (layout === "grid" ? (
-                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-1">
                       {group.accounts.map((account) => <AccountTile key={account.id} account={account} index={active.indexOf(account)} actions={actions} />)}
                     </div>
                   ) : (

@@ -239,7 +239,7 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
         <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) upload(f) }}
           className="flex w-full flex-col items-center gap-3 rounded-xl border border-dashed border-input bg-muted/30 px-6 py-12 text-center transition-colors hover:border-ring hover:bg-muted/50">
-          {uploading ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : <FileImage className="size-6 text-muted-foreground" strokeWidth={1.75} />}
+          {uploading ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : <FileImage className="size-6 text-muted-foreground" strokeWidth={2} />}
           <span className="text-sm font-medium">{uploading ? "Uploading securely…" : "Drop a receipt photo or browse"}</span>
           <span className="text-xs text-muted-foreground">JPEG, PNG or WebP up to 8 MB. Location data is removed.</span>
         </button>
@@ -374,7 +374,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
         <div className="flex items-center gap-2 px-3 pb-2 sm:px-4 sm:pt-4">
           {keypad ? (
             <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
-              <X className="size-5" strokeWidth={1.85} />
+              <X className="size-5" strokeWidth={2} />
             </button>
           ) : (
             <button type="button" onClick={() => onModeChange(entryType)} className="pressable hit flex h-9 shrink-0 items-center gap-0.5 rounded-lg pr-2.5 pl-1 text-sm font-medium text-primary hover:bg-accent">
@@ -390,9 +390,9 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
           {keypad ? (
             <div className="flex shrink-0 gap-1.5">
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
-                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><MessageCircle className="size-[1.15rem]" strokeWidth={1.85} /></button>
+                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><MessageCircle className="size-[1.15rem]" strokeWidth={2} /></button>
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan receipt"
-                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><ScanLine className="size-[1.15rem]" strokeWidth={1.85} /></button>
+                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><ScanLine className="size-[1.15rem]" strokeWidth={2} /></button>
             </div>
           ) : <span className="w-[4.5rem]" />}
         </div>

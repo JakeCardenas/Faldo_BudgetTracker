@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
+import { DateTile } from "@/components/home/sections"
 import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader, SectionCard } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
@@ -17,13 +18,23 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
-import { FREQUENCY_LABELS, formatDate, formatMoney, minorToInput, relativeDays, toMinor, todayISO } from "@/lib/format"
+import { FREQUENCY_LABELS, formatMoney, minorToInput, toMinor, todayISO } from "@/lib/format"
 import { invalidateFinancialData, useAccounts, useCategories, useRecurring } from "@/lib/queries"
 import type { Frequency, Recurring, RecurringKind } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 const KINDS: Record<RecurringKind, string> = { bill: "Bill", subscription: "Subscription", rent: "Rent", loan: "Loan", insurance: "Insurance", income: "Income", other: "Other" }
 const NONE = "__none__"
+
+/** When a payment is due, in words: "4 days overdue", "Due today", "In 5 days", or why there is no date. */
+function dueLabel(item: Recurring) {
+  if (!item.is_active) return item.frequency === "once" ? "Done" : "Paused"
+  const days = item.days_until_due
+  if (days < 0) return `${-days} ${days === -1 ? "day" : "days"} overdue`
+  if (days === 0) return "Due today"
+  if (days === 1) return "Due tomorrow"
+  return `In ${days} days`
+}
 
 function RecurringDialog({ item, onOpenChange }: { item?: Recurring; onOpenChange: (open: boolean) => void }) {
   const qc = useQueryClient()
@@ -155,21 +166,22 @@ export default function BillsPage() {
     }
   }
 
-  const row = (item: Recurring) => (
+  const row = (item: Recurring) => {
+    const tone = !item.is_active ? "normal" : item.days_until_due < 0 ? "overdue" : item.days_until_due <= 3 ? "soon" : "normal"
+    return (
     <li key={item.id} className={cn("flex items-center gap-3 py-3", !item.is_active && "opacity-60")}>
-      <div className={cn("flex w-12 shrink-0 flex-col items-center rounded-xl border py-1.5", item.days_until_due < 0 && "border-destructive/30 bg-danger-soft")}>
-        <span className="text-[0.6rem] font-medium text-muted-foreground uppercase">{formatDate(item.next_due_on, "MMM")}</span>
-        <span className="text-base leading-none font-semibold">{formatDate(item.next_due_on, "d")}</span>
-      </div>
+      <DateTile date={item.next_due_on} tone={tone === "overdue" ? "overdue" : "normal"} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{item.name}</p>
-        <p className={cn("truncate text-xs text-muted-foreground", item.days_until_due < 0 && "text-destructive")}>
-          {KINDS[item.kind]} · {FREQUENCY_LABELS[item.frequency]}{item.account_name && ` · ${item.account_name}`} · {item.is_active ? relativeDays(item.days_until_due) : item.frequency === "once" ? "Done" : "Paused"}
+        <p className="truncate text-[0.9375rem] font-semibold tracking-[-0.01em]">{item.name}</p>
+        {/* When it's due comes first, so it never gets cut off; how often and from where follow. */}
+        <p className="truncate text-[0.8125rem] text-muted-foreground">
+          <span className={cn(tone === "overdue" && "font-medium text-expense", tone === "soon" && "font-medium text-warning")}>{dueLabel(item)}</span>
+          {" · "}{FREQUENCY_LABELS[item.frequency]}{item.account_name && ` · ${item.account_name}`}
         </p>
       </div>
-      <div className="text-right">
-        <Money minor={item.kind === "income" ? item.amount_minor : -item.amount_minor} signed={item.kind === "income"} className={cn("text-sm font-medium", item.kind === "income" && "text-income")} />
-        {item.is_amount_variable && <p className="text-[0.7rem] text-muted-foreground">varies</p>}
+      <div className="shrink-0 text-right">
+        <Money minor={item.amount_minor} signed={item.kind === "income"} className={cn("text-[0.9375rem] font-bold tracking-[-0.01em]", item.kind === "income" && "text-income")} />
+        {item.is_amount_variable && <p className="text-[0.75rem] text-muted-foreground">varies</p>}
       </div>
       <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => setDialog({ mode: "pay", item })} disabled={!item.is_active}><Check /> {item.kind === "income" ? "Received" : "Paid"}</Button>
       <DropdownMenu>
@@ -183,7 +195,8 @@ export default function BillsPage() {
         </DropdownMenuContent>
       </DropdownMenu>
     </li>
-  )
+    )
+  }
 
   return (
     <div className="space-y-5">

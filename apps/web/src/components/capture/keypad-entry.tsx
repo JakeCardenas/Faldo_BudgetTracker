@@ -177,9 +177,18 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
   const value = evaluate(expr)
   const amountMinor = value !== null && value > 0 ? Math.round(value * 100) : 0
   const kind = type === "income" ? "income" : "expense"
-  const topCategories = categories.filter((c) => c.kind === kind && !c.parent_id)
   const subcategories = categories.filter((c) => c.parent_id === categoryId)
-  const budgetByCategory = new Map((budget?.lines ?? []).map((l) => [l.category_id, l]))
+  const budgetByCategory = useMemo(() => new Map((budget?.lines ?? []).map((l) => [l.category_id, l])), [budget])
+  // The categories you reach for first: most used in your recent entries of this type, then the ones with a budget,
+  // then the rest in their usual order, so the common case is the first chip, not one screen down.
+  const topCategories = useMemo(() => {
+    const uses = new Map<string, number>()
+    for (const t of recent?.items ?? []) if (t.category_id) uses.set(t.category_id, (uses.get(t.category_id) ?? 0) + 1)
+    return categories.filter((c) => c.kind === kind && !c.parent_id)
+      .map((c, i) => ({ c, i, used: uses.get(c.id) ?? 0, budgeted: budgetByCategory.has(c.id) ? 1 : 0 }))
+      .sort((a, b) => b.used - a.used || b.budgeted - a.budgeted || a.i - b.i)
+      .map(({ c }) => c)
+  }, [categories, kind, recent, budgetByCategory])
 
   const templates = useMemo(() => {
     const seen = new Set<string>()
@@ -388,7 +397,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setKeypad((k) => !k)} aria-label={keypad ? "Hide keypad" : "Show keypad"} aria-pressed={keypad}
             className="pressable flex size-12 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-accent/60 aria-pressed:text-foreground">
-            <Grid3x3 className="size-5" strokeWidth={1.75} />
+            <Grid3x3 className="size-5" strokeWidth={2} />
           </button>
           {type !== "transfer" && <AccountPicker label="Account" accounts={active} value={fromId} onChange={setAccountId} />}
           <button type="button" onClick={save} disabled={!canSave || saving}

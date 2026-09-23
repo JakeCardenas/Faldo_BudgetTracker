@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.engine.money import percent, percent_change
+from app.engine.money import pct_text, percent, percent_change
 from app.engine.periods import Period, add_months, month_end, month_key, month_start
 from app.services.analytics import (
     category_meta,
@@ -82,17 +82,17 @@ def draft_report_summary(report: dict[str, Any], currency: str) -> str:
     parts = [f"In {report['label']}{' so far' if report['is_partial'] else ''}, you earned {m(s['income_minor'])} and spent "
              f"{m(s['expense_minor'])}, leaving {m(s['net_minor'])}."]
     if s["savings_rate"] is not None:
-        parts.append(f"That's a savings rate of {s['savings_rate']:g}%.")
+        parts.append(f"That's a savings rate of {pct_text(s['savings_rate'])}%.")
     if report["spending_by_category"]:
         top = report["spending_by_category"][0]
-        parts.append(f"{top['label']} was your largest category at {m(top['amount_minor'])} ({top['pct']:g}% of spending).")
+        parts.append(f"{top['label']} was your largest category at {m(top['amount_minor'])} ({pct_text(top['pct'])}% of spending).")
     changes = [c for c in report["category_changes"] if c["delta_minor"] > 0]
     if changes:
         c = changes[0]
         parts.append(f"{c['label']} rose the most, from {m(c['previous_minor'])} to {m(c['current_minor'])}.")
     if s["expense_change_pct"] is not None:
         direction = "more" if s["expense_change_pct"] > 0 else "less"
-        parts.append(f"Overall you spent {abs(s['expense_change_pct']):g}% {direction} than the comparison period.")
+        parts.append(f"Overall you spent {pct_text(abs(s['expense_change_pct']))}% {direction} than the comparison period.")
     if report["top_merchants"]:
         tm = report["top_merchants"][0]
         parts.append(f"Your top merchant was {tm['name']} ({m(tm['amount_minor'])}).")

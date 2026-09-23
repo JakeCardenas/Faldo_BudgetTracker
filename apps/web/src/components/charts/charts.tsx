@@ -6,6 +6,7 @@ import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts"
 import { formatMoney } from "@/lib/format"
+import { PALETTE } from "@/lib/palette"
 import { useAmountsHidden } from "@/lib/privacy"
 import type { CategoryRow, ForecastPoint } from "@/lib/types"
 
@@ -144,7 +145,7 @@ export function BalanceLine({ data, height = 168, tone = "default", onHover }: {
 export function SpendingDonut({ rows, total, label = "Spent" }: { rows: CategoryRow[]; total: number; label?: string }) {
   const top = rows.slice(0, 6)
   const rest = rows.slice(6).reduce((s, r) => s + r.amount_minor, 0)
-  const data = rest > 0 ? [...top, { label: "Other", amount_minor: rest, pct: 0, color: "#c5cfc9", category_id: null, icon: "" }] : top
+  const data = rest > 0 ? [...top, { label: "Other", amount_minor: rest, pct: 0, color: PALETTE.stone, category_id: null, icon: "" }] : top
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[13rem]">
       <ResponsiveContainer>
@@ -174,13 +175,13 @@ export function IncomeExpenseBars({ data, height = 240 }: { data: { label: strin
         <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={56} />
         <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload, label }) => payload?.length ? (
           <TooltipCard title={`${label}${payload[0].payload.partial || payload[0].payload.is_partial ? " (so far)" : ""}`} rows={[
-            { label: "Income", value: formatMoney(payload[0].payload.income_minor), color: "var(--chart-2)" },
-            { label: "Expenses", value: formatMoney(payload[0].payload.expense_minor), color: "var(--chart-1)" },
+            { label: "Money in", value: formatMoney(payload[0].payload.income_minor), color: "var(--chart-1)" },
+            { label: "Money out", value: formatMoney(payload[0].payload.expense_minor), color: "var(--chart-ink)" },
             { label: "Net", value: formatMoney(payload[0].payload.income_minor - payload[0].payload.expense_minor, "PHP", { signed: true }) },
           ]} />
         ) : null} />
-        <Bar dataKey="income_minor" fill="var(--chart-3)" radius={[6, 6, 2, 2]} maxBarSize={18} />
-        <Bar dataKey="expense_minor" fill="var(--chart-1)" radius={[6, 6, 2, 2]} maxBarSize={18} />
+        <Bar dataKey="income_minor" fill="var(--chart-1)" radius={[6, 6, 2, 2]} maxBarSize={18} />
+        <Bar dataKey="expense_minor" fill="var(--chart-ink)" radius={[6, 6, 2, 2]} maxBarSize={18} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -234,8 +235,8 @@ export function ForecastChart({ series, actual = EMPTY_ACTUAL, baseline, bufferM
       <ComposedChart data={data} margin={{ top: 10, right: 6, left: -6, bottom: 0 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.22} />
-            <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.06} />
+            <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.34} />
+            <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.12} />
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.7} />

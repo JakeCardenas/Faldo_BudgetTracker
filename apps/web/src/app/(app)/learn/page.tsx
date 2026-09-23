@@ -54,7 +54,7 @@ export default function LearnPage() {
                 return (
                   <Link key={lesson.slug} href={`/learn/${lesson.slug}`} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/60">
                     <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", finished ? "bg-secondary text-primary" : "bg-muted text-foreground/70")}>
-                      <Icon className="size-4.5" strokeWidth={1.75} />
+                      <Icon className="size-4.5" strokeWidth={2} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[0.9375rem]">{lesson.title}</span>

@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeftRight, ArrowUp, ChevronLeft, ChevronRight, FileUp, HandCoins, Minus, PiggyBank, Plus, Scale, ScanLine, ShoppingBag, type LucideIcon } from "lucide-react"
+import { ArrowLeftRight, ArrowUp, ChevronLeft, ChevronRight, FileUp, Minus, PiggyBank, Plus, Scale, ScanLine, ShoppingBag, type LucideIcon } from "lucide-react"
+import { MoneyOwedIcon } from "@/components/finance/category-icon"
 import { AddPlannedSheet } from "@/components/decide/planned"
 import { IosSheet } from "@/components/ios/sheet"
 import { useAppActions } from "@/components/layout/app-context"
@@ -24,7 +25,7 @@ function Row({ icon: Icon, title, subtitle, onClick }: { icon: LucideIcon; title
   return (
     <button type="button" onClick={() => { play("tap"); onClick() }}
       className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-accent/70 active:bg-accent">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><Icon className="size-[1.05rem]" strokeWidth={1.85} /></span>
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><Icon className="size-[1.05rem]" strokeWidth={2} /></span>
       <span className="min-w-0 flex-1">
         <span className="block text-[0.9375rem] font-medium">{title}</span>
         <span className="block truncate text-[0.8125rem] text-muted-foreground">{subtitle}</span>
@@ -88,7 +89,7 @@ export function AddMenu({ open, onOpenChange }: { open: boolean; onOpenChange: (
             <div className="-mx-1 overflow-hidden rounded-2xl bg-muted/40 dark:bg-muted/50">
               <Row icon={ScanLine} title="Scan a receipt" subtitle="Faldo reads the items and total" onClick={() => then(() => openAddTransaction({ mode: "receipt" }))} />
               <Row icon={PiggyBank} title="Add to a goal" subtitle="Put money toward something you're saving for" onClick={() => setStep("goal")} />
-              <Row icon={HandCoins} title="Money owed" subtitle="Utang, loans and split bills" onClick={() => then(() => router.push("/debts?new=1"))} />
+              <Row icon={MoneyOwedIcon} title="Money owed" subtitle="Utang, loans and split bills" onClick={() => then(() => router.push("/debts?new=1"))} />
               <Row icon={ShoppingBag} title="Plan a purchase" subtitle="Faldo tells you when it fits" onClick={() => then(() => setPlanning(true))} />
               <Row icon={Scale} title="Check a purchase" subtitle="See what it does to Safe to Spend first" onClick={() => then(() => openCheck())} />
               <Row icon={FileUp} title="Import a statement" subtitle="Bring in a bank or e-wallet CSV" onClick={() => then(() => router.push("/import"))} />

@@ -3,21 +3,23 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { HandCoins, Loader2, Pencil, Split, Trash2 } from "lucide-react"
+import { Loader2, Pencil, Split, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
 import { TransactionForm } from "@/components/finance/transaction-form"
+import { IosSheet } from "@/components/ios/sheet"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
+import { PALETTE } from "@/lib/palette"
 import { invalidateFinancialData, useDeleteTransaction, useSaveTransaction } from "@/lib/queries"
 import type { Debt, Transaction } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -103,42 +105,35 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
   const inflow = t?.type === "income" || t?.type === "debt_in"
 
   return (
-    <Sheet open={!!id} onOpenChange={(open) => { if (!open) close() }}>
-      <SheetContent className="w-full gap-0 overflow-y-auto bg-popover sm:max-w-md">
-        <SheetHeader className="border-b px-5 py-4">
-          <SheetTitle>{editing ? "Edit transaction" : "Transaction"}</SheetTitle>
-          <SheetDescription className="sr-only">Transaction details</SheetDescription>
-        </SheetHeader>
+    <>
+      <IosSheet open={!!id} onOpenChange={(open) => { if (!open) close() }} title={editing ? "Edit transaction" : "Transaction"} size="sm">
         {isLoading || !t ? (
-          <div className="space-y-3 p-5"><Skeleton className="h-16 w-full" /><Skeleton className="h-40 w-full" /></div>
+          <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-40 w-full" /></div>
         ) : editing ? (
-          <div className="p-5">
-            <TransactionForm
-              initial={{ ...t, items: t.items.map((i) => ({ name: i.name, amount_minor: i.amount_minor })) }}
-              busy={save.isPending}
-              onCancel={() => setEditing(false)}
-              submitLabel="Save changes"
-              onSubmit={(input) => save.mutate({ id: t.id, data: input }, {
-                onSuccess: () => { toast.success("Changes saved"); setEditing(false) },
-                onError: (e) => toast.error(e.message),
-              })}
-            />
-          </div>
+          <TransactionForm
+            initial={{ ...t, items: t.items.map((i) => ({ name: i.name, amount_minor: i.amount_minor })) }}
+            busy={save.isPending}
+            onCancel={() => setEditing(false)}
+            submitLabel="Save changes"
+            onSubmit={(input) => save.mutate({ id: t.id, data: input }, {
+              onSuccess: () => { toast.success("Changes saved"); setEditing(false) },
+              onError: (e) => toast.error(e.message),
+            })}
+          />
         ) : (
-          <div className="space-y-5 p-5">
+          <div className="space-y-5">
             <div className="flex items-center gap-3">
-              {t.type === "debt_in" || t.type === "debt_out" ? (
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><HandCoins className="size-5" /></span>
-              ) : <CategoryIcon icon={t.type === "transfer" ? "transfer" : t.category_icon} color={t.category_color} size="lg" />}
+              <CategoryIcon icon={t.type === "transfer" ? "transfer" : t.type === "debt_in" || t.type === "debt_out" ? "owed" : t.category_icon}
+                color={t.type === "transfer" || t.type === "debt_in" || t.type === "debt_out" ? PALETTE.slate : t.category_color} size="lg" />
               <div className="min-w-0">
-                <p className="truncate text-[0.9375rem] font-medium">{t.type === "transfer" ? "Transfer" : t.merchant ?? t.notes ?? t.category_name ?? "Transaction"}</p>
+                <p className="truncate text-[0.9375rem] font-semibold">{t.type === "transfer" ? "Transfer" : t.merchant ?? t.notes ?? t.category_name ?? "Transaction"}</p>
                 <p className="text-[0.8125rem] text-muted-foreground">{formatDate(t.occurred_on, "EEEE, MMMM d, yyyy")}</p>
               </div>
             </div>
-            <p className={`display-number ${t.type === "income" ? "text-income" : ""}`}>
+            <p className={cn("display-number", inflow && "text-income")}>
               {formatMoney(t.type === "expense" || t.type === "debt_out" ? -t.amount_minor : t.amount_minor, t.currency, { signed: inflow })}
             </p>
-            <div className="divide-y rounded-xl border bg-card px-4">
+            <div className="divide-y rounded-2xl border bg-card px-4">
               <Row label="Type">{TYPE_LABELS[t.type] ?? t.type}</Row>
               <Row label={t.type === "transfer" ? "From" : "Account"}>{t.account_name}</Row>
               {t.to_account_name && <Row label="To">{t.to_account_name}</Row>}
@@ -150,7 +145,7 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
             {t.items.length > 0 && (
               <div className="space-y-2">
                 <p className="text-[0.8125rem] font-medium text-muted-foreground">Items</p>
-                <ul className="divide-y rounded-xl border bg-card px-4">
+                <ul className="divide-y rounded-2xl border bg-card px-4">
                   {t.items.map((item) => (
                     <li key={item.id} className="flex justify-between gap-3 py-2.5 text-sm">
                       <span>{item.name}{Number(item.quantity) !== 1 && <span className="text-muted-foreground"> × {Number(item.quantity)}</span>}</span>
@@ -167,7 +162,7 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
               </div>
             )}
             {owed ? (
-              <div className="space-y-3 rounded-xl bg-muted/60 p-4 text-[0.8125rem]">
+              <div className="space-y-3 rounded-2xl bg-muted/60 p-4 text-[0.8125rem]">
                 <p>This is part of a Money owed record, so it moves your balance without counting as {inflow ? "income" : "spending"}.
                   Change or remove it from Money owed.</p>
                 <Button variant="outline" size="sm" asChild><Link href="/debts" onClick={close}>Open Money owed</Link></Button>
@@ -177,17 +172,17 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
             ) : (
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  <Button variant="outline" size="lg" className="flex-1" onClick={() => setConfirmDelete(true)}><Trash2 className="text-destructive" /> Delete</Button>
                   <Button variant="secondary" size="lg" className="flex-1" onClick={() => setEditing(true)}><Pencil /> Edit</Button>
+                  {t.type === "expense" && <Button variant="outline" size="lg" className="flex-1" onClick={() => setSplitting(true)}><Split /> Split</Button>}
                 </div>
-                {t.type === "expense" && (
-                  <Button variant="ghost" className="w-full" onClick={() => setSplitting(true)}><Split /> Split with someone</Button>
-                )}
+                <Button variant="ghost" className="w-full text-destructive hover:bg-danger-soft hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 /> Delete transaction
+                </Button>
               </div>
             )}
           </div>
         )}
-      </SheetContent>
+      </IosSheet>
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -203,6 +198,6 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Sheet>
+    </>
   )
 }

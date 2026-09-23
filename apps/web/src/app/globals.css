@@ -24,6 +24,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-ink: var(--chart-ink);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -87,8 +88,8 @@
   */
   --ios-edge: 0px;
   --top-inset: calc(env(safe-area-inset-top) + var(--ios-edge));
-  --background: #f5f7f7;
-  --surface: #fbfcfc;
+  --background: #f4f7f4;
+  --surface: #fafcfa;
   --foreground: #101411;
   --card: #ffffff;
   --card-foreground: #101411;
@@ -122,8 +123,10 @@
   --chart-1: #2c7549;
   --chart-2: #7fbf8f;
   --chart-3: #c3dfc9;
-  --chart-4: #d69a4e;
-  --chart-5: #7a91b8;
+  --chart-4: #e3b63e;
+  --chart-5: #3380be;
+  /* Panda ink: money out and other neutral series beside Faldo's green. */
+  --chart-ink: #2f3532;
   --radius: 0.75rem;
   --sidebar: #f3f4f1;
   --sidebar-foreground: #101411;
@@ -196,8 +199,9 @@ html.ios {
   --chart-1: #7ccb93;
   --chart-2: #4f9565;
   --chart-3: #2e4c37;
-  --chart-4: #e0a860;
-  --chart-5: #8aa3cc;
+  --chart-4: #e7c15a;
+  --chart-5: #5b9bd0;
+  --chart-ink: #cfd5d0;
   --sidebar: #0b0d0c;
   --sidebar-foreground: #eceeec;
   --sidebar-primary: #7ccb93;
@@ -238,6 +242,10 @@ html.ios {
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* The parts the browser draws still carry Faldo: the caret, native checks and radios, and scrollbars. */
+    caret-color: var(--primary);
+    accent-color: var(--primary);
+    scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
   }
   body {
     @apply bg-background text-foreground;
@@ -248,10 +256,17 @@ html.ios {
     background: var(--mint);
     color: var(--mint-foreground);
   }
+  /* Taps fire at once (no double-tap-zoom wait), and holding a control never selects its label. */
   button,
   [role="button"],
   a {
     -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  button,
+  [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]) {

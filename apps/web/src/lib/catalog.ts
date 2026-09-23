@@ -23,19 +23,20 @@ export function poseFor(outfit?: string | null): PandaPose {
   return OUTFIT_INFO[outfit ?? "classic"]?.pose ?? "bamboo"
 }
 
-/** Unlockable green environments for the Home hero. */
-export const BACKGROUND_INFO: Record<string, { name: string; hint: string; from: string; to: string }> = {
-  meadow: { name: "Bamboo grove", hint: "Always available", from: "#17462c", to: "#2f7a4c" },
-  sunrise: { name: "Morning light", hint: "Log two days in a row", from: "#1b4a30", to: "#3d7f4f" },
-  terraces: { name: "Rice terraces", hint: "Keep a 7-day streak", from: "#23502a", to: "#4f8a3c" },
-  lagoon: { name: "Island lagoon", hint: "Set up a budget", from: "#0f4a44", to: "#23806b" },
-  hills: { name: "Highlands", hint: "Keep a 14-day streak", from: "#1e4032", to: "#48805f" },
-  bay_sunset: { name: "Golden hour", hint: "Track a recurring bill", from: "#28452c", to: "#6a7f3a" },
-  night_market: { name: "Night grove", hint: "Keep a 30-day streak", from: "#0c1f17", to: "#1f4a33" },
-}
-
-export function environmentFor(id?: string | null) {
-  return BACKGROUND_INFO[id ?? "meadow"] ?? BACKGROUND_INFO.meadow
+/**
+ * Home environments: Faldo's panda habitat, then landmarks across Asia, unlocked with badges. Each is drawn by
+ * `components/brand/scenery.tsx` over its sky (`components/brand/environment.tsx`). The ids are the original theme
+ * ids, kept so saved choices still work.
+ */
+export const BACKGROUND_INFO: Record<string, { name: string; place: string; hint: string }> = {
+  meadow: { name: "Bamboo valley", place: "Faldo's home", hint: "Always available" },
+  sunrise: { name: "Mayon Volcano", place: "Philippines", hint: "Log two days in a row" },
+  terraces: { name: "Banaue Rice Terraces", place: "Philippines", hint: "Keep a 7-day streak" },
+  lagoon: { name: "Marina Bay", place: "Singapore", hint: "Set up a budget" },
+  hills: { name: "Mount Fuji", place: "Japan", hint: "Keep a 14-day streak" },
+  bay_sunset: { name: "Wat Arun", place: "Thailand", hint: "Track a recurring bill" },
+  seoul: { name: "Gyeongbokgung", place: "Korea", hint: "Create a savings goal" },
+  night_market: { name: "Taipei 101", place: "Taiwan", hint: "Keep a 30-day streak" },
 }
 
 export const BADGE_ART: Record<string, { icon: LucideIcon }> = {

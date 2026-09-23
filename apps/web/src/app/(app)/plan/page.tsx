@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { ArrowRight, BarChart3, Flag, HandCoins, LineChart, Loader2, PieChart, ReceiptText, ShoppingBag, Wallet } from "lucide-react"
+import { ArrowRight, BarChart3, Flag, LineChart, Loader2, PieChart, ReceiptText, ShoppingBag, Wallet } from "lucide-react"
+import { MoneyOwedIcon } from "@/components/finance/category-icon"
 import { CheckResultView, useFaldoCheck } from "@/components/decide/faldo-check"
 import { AmountInput } from "@/components/finance/amount-input"
 import { ListGroup, ListRow } from "@/components/ios/list"
@@ -109,7 +110,7 @@ const PLAN_ITEMS = [
   { href: "/goals", label: "Goals", icon: Flag },
   { href: "/plan/money", label: "Money plan", icon: Wallet },
   { href: "/bills", label: "Bills and recurring", icon: ReceiptText },
-  { href: "/debts", label: "Money owed", icon: HandCoins },
+  { href: "/debts", label: "Money owed", icon: MoneyOwedIcon },
   { href: "/plan/purchases", label: "Planned purchases", icon: ShoppingBag },
   { href: "/forecast", label: "Forecast", icon: LineChart },
 ]

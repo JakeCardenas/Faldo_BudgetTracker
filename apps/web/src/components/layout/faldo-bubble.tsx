@@ -201,13 +201,15 @@ export function FaldoBubble() {
       untuck.current = window.setTimeout(comeOut, RETURN_AFTER)
       tuck()
     }
-    // Each page gets the same check once it has drawn.
+    // Each page gets the same check once it has drawn, and again once its data has had time to arrive.
     untuck.current = window.setTimeout(comeOut, RETURN_AFTER)
+    const settled = window.setTimeout(comeOut, 2000)
     // Capturing on the document hears every scroller, not only the page's own.
     document.addEventListener("scroll", onScroll, { capture: true, passive: true })
     return () => {
       document.removeEventListener("scroll", onScroll, { capture: true })
       window.clearTimeout(untuck.current)
+      window.clearTimeout(settled)
     }
   }, [hidden, pathname, bounds, paint, run])
 

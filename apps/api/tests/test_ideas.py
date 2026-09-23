@@ -27,7 +27,7 @@ async def test_suggested_ideas_come_back_priced_checked_and_unsaved(app):
     assert record["ok"]
     r = output.result
     assert r["budget_minor"] == 500_000 and r["is_estimate"] is True
-    assert r["ideas"][0]["price_range"] == "₱1,500–₱4,500" and r["ideas"][0]["within_budget"] is True
+    assert r["ideas"][0]["price_range"] == "₱1,500 to ₱4,500" and r["ideas"][0]["within_budget"] is True
     assert r["ideas"][1]["within_budget"] is False
     block = output.blocks[0]
     assert block["type"] == "ideas" and block["items"][0]["low_minor"] == 150_000 and block["budget_minor"] == 500_000

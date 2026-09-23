@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Lightbulb, RefreshCw, Sparkles } from "lucide-react"
 import { EmptyState } from "@/components/finance/empty-state"
@@ -11,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import { useInsights, usePulse } from "@/lib/queries"
 import type { Insight } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 const QUESTIONS: Record<string, (i: Insight) => string> = {
   budget_exceeded: (i) => `Why is my ${i.facts.category} budget over this month?`,
@@ -27,8 +29,11 @@ export default function InsightsPage() {
   const { data: insights, isLoading, isFetching, refetch } = useInsights()
   const { data: pulse } = usePulse()
 
+  // A dismissed insight folds away (200ms) before it leaves the list, so the rows below don't jump.
+  const [leaving, setLeaving] = useState<Set<string>>(new Set())
   async function dismiss(id: string) {
-    qc.setQueryData<Insight[]>(["insights"], (old) => old?.filter((i) => i.id !== id))
+    setLeaving((s) => new Set(s).add(id))
+    window.setTimeout(() => qc.setQueryData<Insight[]>(["insights"], (old) => old?.filter((i) => i.id !== id)), 200)
     await api.post(`/insights/${id}/dismiss`)
   }
 
@@ -53,19 +58,22 @@ export default function InsightsPage() {
       ) : (
         groups.filter((g) => g.items.length).map((group) => (
           <section key={group.title} className="space-y-3">
-            <h2 className="text-sm font-semibold text-muted-foreground">{group.title}</h2>
-            <div className="stagger grid gap-3 md:grid-cols-2">
+            <h2 className="section-title">{group.title}</h2>
+            <ul className="ios-group divide-y divide-border/60">
               {group.items.map((insight) => (
-                <div key={insight.id} className="flex flex-col">
-                  <InsightCard insight={insight} onDismiss={dismiss} />
-                  {QUESTIONS[insight.type] && (
-                    <Link href={`/assistant?q=${encodeURIComponent(QUESTIONS[insight.type](insight))}`} className="mt-1.5 ml-auto inline-flex items-center gap-1 px-2 text-xs font-medium text-primary hover:underline">
+                <li key={insight.id} className={cn("grid transition-[grid-template-rows,opacity] duration-200 ease-(--ease-out-quint)",
+                  leaving.has(insight.id) ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr]")}>
+                  <div className="min-h-0 overflow-hidden">
+                  <InsightCard insight={insight} onDismiss={dismiss} action={QUESTIONS[insight.type] && (
+                    <Link href={`/assistant?q=${encodeURIComponent(QUESTIONS[insight.type](insight))}`}
+                      className="hit inline-flex items-center gap-1 text-xs font-semibold text-primary hover:opacity-80">
                       <Sparkles className="size-3" /> Explain this
                     </Link>
-                  )}
-                </div>
+                  )} />
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         ))
       )}

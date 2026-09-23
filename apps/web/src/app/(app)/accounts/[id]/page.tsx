@@ -7,6 +7,7 @@ import { Archive, ArchiveRestore, ArrowLeftRight, Loader2, Minus, Pencil, Plus }
 import { toast } from "sonner"
 import { BalanceLine } from "@/components/charts/charts"
 import { AccountDialog } from "@/components/finance/account-dialog"
+import { TINTED } from "@/components/finance/category-icon"
 import { DayGroups } from "@/components/finance/day-groups"
 import { EmptyState } from "@/components/finance/empty-state"
 import { HeaderButton, LargeTitle } from "@/components/ios/nav-header"
@@ -16,6 +17,7 @@ import { AccountCard } from "@/components/wallet/account-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import { formatDate } from "@/lib/format"
+import { PALETTE } from "@/lib/palette"
 import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 import { invalidateFinancialData, useAccounts } from "@/lib/queries"
@@ -66,10 +68,10 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         <div className="space-y-6 lg:sticky lg:top-24">
           <AccountCard account={account} large />
           <div className="grid grid-cols-3 gap-2">
-            {([["expense", "Expense", Minus], ["income", "Income", Plus], ["transfer", "Transfer", ArrowLeftRight]] as const).map(([mode, label, Icon]) => (
+            {([["expense", "Expense", Minus, PALETTE.coral], ["income", "Income", Plus, PALETTE.green], ["transfer", "Transfer", ArrowLeftRight, PALETTE.blue]] as const).map(([mode, label, Icon, tint]) => (
               <button key={mode} type="button" onClick={() => openAddTransaction({ mode, preset: { account_id: id } })}
                 className="pressable flex flex-col items-center gap-1.5 rounded-2xl py-1 text-[0.8125rem] font-medium">
-                <span className="flex size-12 items-center justify-center rounded-full bg-card text-foreground shadow-(--shadow-card) ring-1 ring-border/60"><Icon className="size-5" strokeWidth={1.9} /></span>
+                <span style={{ "--cat": tint } as React.CSSProperties} className={cn("flex size-12 items-center justify-center rounded-full", TINTED)}><Icon className="size-5" strokeWidth={2} /></span>
                 {label}
               </button>
             ))}

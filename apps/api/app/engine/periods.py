@@ -38,8 +38,8 @@ class Period:
         if self.start.day == 1 and self.end == month_end(self.start):
             return self.start.strftime("%B %Y")
         if self.start.year == self.end.year:
-            return f"{self.start:%b %-d} – {self.end:%b %-d, %Y}"
-        return f"{self.start:%b %-d, %Y} – {self.end:%b %-d, %Y}"
+            return f"{self.start:%b %-d} to {self.end:%b %-d, %Y}"
+        return f"{self.start:%b %-d, %Y} to {self.end:%b %-d, %Y}"
 
     def as_dict(self) -> dict[str, str]:
         return {"name": self.name, "start": self.start.isoformat(), "end": self.end.isoformat(), "label": self.label()}

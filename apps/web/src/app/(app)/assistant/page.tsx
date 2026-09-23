@@ -10,7 +10,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { FALDO_MOODS, Faldo, FaldoAvatar, type FaldoMood } from "@/components/brand/faldo"
-import { BlockView } from "@/components/assistant/blocks"
+import { BlockView, SourceTag } from "@/components/assistant/blocks"
 import { LoggedCard, ReviewCard, draftToInput, looksLikeLogging } from "@/components/assistant/logged-card"
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
@@ -68,8 +68,9 @@ function RichText({ text, sources, onOpenTransaction }: { text: string; sources:
         return (
           <button key={i} type="button" onClick={() => txnId && onOpenTransaction(txnId)} disabled={!txnId}
             title={source ? `${source.label}${source.date ? `, ${source.date}` : ""}` : undefined}
-            className="mx-0.5 inline-flex -translate-y-px items-center rounded border bg-muted px-1 align-middle font-mono text-[0.6875rem] text-muted-foreground transition-colors enabled:hover:border-input enabled:hover:text-foreground disabled:cursor-default">
-            {match[1]}
+            aria-label={source ? `Source ${match[1].replace(/^[a-z]+/i, "")}: ${source.label}` : undefined}
+            className="mx-0.5 inline-flex -translate-y-px align-middle [&>span]:transition-colors enabled:hover:[&>span]:bg-accent enabled:hover:[&>span]:text-foreground disabled:cursor-default">
+            <SourceTag refId={match[1]} />
           </button>
         )
       })}
@@ -123,7 +124,7 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
                     <li key={s.ref}>
                       <button type="button" disabled={!txnId} onClick={() => txnId && onOpenTransaction(txnId)}
                         className="flex w-full items-start gap-2 rounded-md border bg-card p-2 text-left text-xs transition-colors enabled:hover:bg-accent/60">
-                        <span className="rounded bg-muted px-1 font-mono text-[0.6875rem] text-muted-foreground">{s.ref}</span>
+                        <SourceTag refId={s.ref} className="mt-px" />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{s.label}</span>
                           <span className="block truncate text-muted-foreground">{s.type.replace(/_/g, " ")}{s.date && `, ${formatDate(s.date, "MMM d, yyyy")}`}</span>
@@ -440,8 +441,8 @@ function AssistantView() {
               <p className="truncate text-xs text-muted-foreground">Ask questions or log money in plain language</p>
             </div>
             {devProvider && <span className="hidden rounded-md bg-warning-soft px-2 py-1 text-[0.6875rem] font-medium text-warning sm:inline">Dev AI</span>}
-            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"><History className="size-[1.1rem]" strokeWidth={1.85} /></button>
-            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><PenSquare className="size-[1.1rem]" strokeWidth={1.85} /></button>
+            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"><History className="size-[1.1rem]" strokeWidth={2} /></button>
+            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><PenSquare className="size-[1.1rem]" strokeWidth={2} /></button>
           </div>
         </div>
 

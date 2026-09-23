@@ -219,7 +219,7 @@ export default function OnboardingPage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {ACCOUNT_PRESETS.map((p, i) => (
                   <Choice key={p.name} selected={accountPreset === i} onClick={() => { setAccountPreset(i); setAccountName(p.name) }} className="p-3.5">
-                    <p.icon className="size-5 text-muted-foreground" strokeWidth={1.75} /><span className="mt-2 block text-sm font-medium">{p.name}</span>
+                    <p.icon className="size-5 text-muted-foreground" strokeWidth={2} /><span className="mt-2 block text-sm font-medium">{p.name}</span>
                   </Choice>
                 ))}
               </div>

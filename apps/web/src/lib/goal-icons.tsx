@@ -28,5 +28,5 @@ export function goalIconId(value: string | null | undefined) {
 
 export function GoalIcon({ value, className }: { value: string | null | undefined; className?: string }) {
   const Icon = GOAL_ICONS.find((g) => g.id === goalIconId(value))?.icon ?? Target
-  return <Icon className={cn("size-4", className)} strokeWidth={1.85} aria-hidden />
+  return <Icon className={cn("size-4", className)} strokeWidth={2} aria-hidden />
 }

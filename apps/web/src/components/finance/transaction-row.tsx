@@ -1,9 +1,10 @@
 "use client"
 
 import { isToday, isYesterday, parseISO } from "date-fns"
-import { ArrowLeftRight, HandCoins, Paperclip } from "lucide-react"
+import { Paperclip } from "lucide-react"
 import { CategoryIcon } from "@/components/finance/category-icon"
 import { formatDate, formatMoney } from "@/lib/format"
+import { PALETTE } from "@/lib/palette"
 import type { Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -36,13 +37,7 @@ export function TransactionRow({ transaction: t, onClick, showDate }: {
       onClick={onClick}
       className="flex w-full items-center gap-3.5 rounded-2xl px-2 py-3 text-left transition-[background-color,scale] duration-200 ease-(--ease-spring) hover:bg-accent/50 focus-visible:bg-accent focus-visible:outline-none active:scale-[0.985] active:bg-accent/70"
     >
-      {isTransfer || isOwed ? (
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/70">
-          {isOwed ? <HandCoins className="size-[1.1rem]" strokeWidth={1.8} /> : <ArrowLeftRight className="size-[1.1rem]" strokeWidth={1.8} />}
-        </span>
-      ) : (
-        <CategoryIcon icon={t.category_icon} color={t.category_color} />
-      )}
+      <CategoryIcon icon={isTransfer ? "transfer" : isOwed ? "owed" : t.category_icon} color={isTransfer || isOwed ? PALETTE.slate : t.category_color} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-[0.96875rem] font-semibold tracking-[-0.01em]">{title}</span>

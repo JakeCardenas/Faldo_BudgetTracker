@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { HandCoins, MoreHorizontal, Plus } from "lucide-react"
+import { MoreHorizontal, Plus } from "lucide-react"
+import { MoneyOwedIcon, TINTED } from "@/components/finance/category-icon"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { EmptyState } from "@/components/finance/empty-state"
@@ -22,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
+import { PALETTE } from "@/lib/palette"
 import { invalidateFinancialData, useAccounts, useCategories, useDebts } from "@/lib/queries"
 import { useUrlIntent } from "@/lib/use-url-intent"
 import type { Debt } from "@/lib/types"
@@ -180,41 +182,60 @@ export default function DebtsPage() {
       </div>
       <Tabs value={tab} onValueChange={setTab}><TabsList><TabsTrigger value="open">Open</TabsTrigger><TabsTrigger value="closed">Settled</TabsTrigger></TabsList></Tabs>
       {isLoading ? <Skeleton className="h-64 rounded-xl" /> : list.length === 0 ? (
-        <div className="card-surface"><EmptyState icon={HandCoins} title={tab === "open" ? "Nothing owed right now" : "No settled records"} description="Track loans, bill splits and IOUs so nothing slips through." action={tab === "open" ? <Button variant="outline" onClick={() => setCreating(true)}><Plus /> Add record</Button> : undefined} /></div>
+        <div className="card-surface"><EmptyState icon={MoneyOwedIcon} title={tab === "open" ? "Nothing owed right now" : "No settled records"} description={tab === "open" ? "Track loans, bill splits and IOUs so nothing slips through." : "Records you mark settled or cancel move here, with their payments."} action={tab === "open" ? <Button variant="outline" onClick={() => setCreating(true)}><Plus /> Add record</Button> : undefined} /></div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {list.map((debt) => (
-            <div key={debt.id} className="card-surface space-y-3 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className={cn("text-xs font-medium", debt.direction === "i_owe" ? "text-warning" : "text-income")}>{debt.direction === "i_owe" ? "You owe" : "Owes you"}</p>
-                  <p className="font-semibold">{debt.counterparty}</p>
-                  <p className={cn("text-xs text-muted-foreground", debt.is_overdue && "text-destructive")}>
-                    {debt.status !== "open" ? `${debt.status[0].toUpperCase()}${debt.status.slice(1)}` : debt.due_on ? `${debt.is_overdue ? "Overdue since" : "Due"} ${formatDate(debt.due_on)}` : "No due date"}
+        <ul className="ios-group divide-y divide-border/60">
+          {list.map((debt) => {
+            const owe = debt.direction === "i_owe"
+            const partial = debt.paid_minor > 0 && debt.outstanding_minor > 0
+            const when = debt.status !== "open" ? `${debt.status[0].toUpperCase()}${debt.status.slice(1)}`
+              : debt.due_on ? `${debt.is_overdue ? "Overdue since" : "Due"} ${formatDate(debt.due_on, "MMM d")}` : "No due date"
+            return (
+              <li key={debt.id} className="flex items-start gap-3 px-4 py-3.5">
+                <span aria-hidden style={{ "--cat": owe ? PALETTE.apricot : PALETTE.green } as React.CSSProperties}
+                  className={cn("flex size-10 shrink-0 items-center justify-center rounded-full text-[0.9375rem] font-bold", TINTED)}>
+                  {debt.counterparty.trim()[0]?.toUpperCase() ?? "?"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.9375rem] font-semibold tracking-[-0.01em]">{debt.counterparty}</p>
+                  <p className="text-[0.8125rem] text-muted-foreground">
+                    <span className={cn("font-medium", owe ? "text-warning" : "text-income")}>{owe ? "You owe" : "Owes you"}</span>
+                    {" · "}<span className={cn(debt.is_overdue && debt.status === "open" && "font-medium text-expense")}>{when}</span>
                   </p>
+                  {partial && (
+                    <div className="mt-2 max-w-xs">
+                      <ProgressBar value={(debt.paid_minor / debt.amount_minor) * 100} label={`${debt.counterparty} repaid`} />
+                      <p className="tabular mt-1 text-xs text-muted-foreground">
+                        {formatMoney(debt.paid_minor)} of {formatMoney(debt.amount_minor)} paid back
+                        {debt.payments.length > 0 && `, last on ${formatDate(debt.payments[debt.payments.length - 1].paid_on, "MMM d")}`}
+                      </p>
+                    </div>
+                  )}
+                  {(debt.notes || debt.account_name || debt.source_transaction_id) && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {debt.notes ?? (debt.source_transaction_id ? "Split from a purchase" : owe ? `Received in ${debt.account_name}` : `Paid from ${debt.account_name}`)}
+                    </p>
+                  )}
+                  {debt.status === "open" && (
+                    <button type="button" onClick={() => setPaying(debt)}
+                      className="pressable hit mt-2.5 inline-flex h-8 items-center rounded-full bg-muted px-3.5 text-[0.8125rem] font-medium text-foreground hover:bg-accent">
+                      Record payment
+                    </button>
+                  )}
                 </div>
+                <Money minor={debt.outstanding_minor} className={cn("shrink-0 pt-0.5 text-[0.9375rem] font-bold tracking-[-0.01em]", !owe && "text-income")} />
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Options"><MoreHorizontal /></Button></DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="-mr-2 -mt-1 size-9" aria-label={`Options for ${debt.counterparty}`}><MoreHorizontal /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {debt.status === "open" && <DropdownMenuItem onSelect={() => update(debt, { status: "settled" })}>Mark settled</DropdownMenuItem>}
                     {debt.status === "open" && <DropdownMenuItem onSelect={() => update(debt, { status: "cancelled" })}>Cancel</DropdownMenuItem>}
                     <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(debt)}>Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
-              <p><Money minor={debt.outstanding_minor} className="text-2xl font-semibold tracking-[-0.025em]" /> <span className="text-sm text-muted-foreground">of {formatMoney(debt.amount_minor)}</span></p>
-              <ProgressBar value={(debt.paid_minor / debt.amount_minor) * 100} label={`${debt.counterparty} repaid`} />
-              {debt.notes && <p className="text-sm text-muted-foreground">{debt.notes}</p>}
-              {(debt.account_name || debt.source_transaction_id) && (
-                <p className="text-xs text-muted-foreground">
-                  {debt.source_transaction_id ? "Split from a purchase" : debt.direction === "i_owe" ? `Received in ${debt.account_name}` : `Paid from ${debt.account_name}`}
-                </p>
-              )}
-              {debt.payments.length > 0 && <p className="text-xs text-muted-foreground">{debt.payments.length} payment{debt.payments.length > 1 && "s"} · last {formatDate(debt.payments[debt.payments.length - 1].paid_on)}</p>}
-              {debt.status === "open" && <Button variant="outline" size="sm" onClick={() => setPaying(debt)}>Record payment</Button>}
-            </div>
-          ))}
-        </div>
+              </li>
+            )
+          })}
+        </ul>
       )}
       {creating && <DebtDialog onOpenChange={() => setCreating(false)} />}
       {paying && <PaymentDialog debt={paying} onOpenChange={() => setPaying(null)} />}

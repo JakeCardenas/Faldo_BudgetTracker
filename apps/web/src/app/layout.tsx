@@ -32,12 +32,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f7f7" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f7f4" },
     { media: "(prefers-color-scheme: dark)", color: "#0b0d0c" },
   ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Android's keyboard shrinks the layout like iOS does, so the chat's composer rides above it.
+  interactiveWidget: "resizes-content",
 }
 
 /** "Reduce motion" from Settings, applied before first paint (see lib/motion). */

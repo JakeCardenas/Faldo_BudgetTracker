@@ -3,7 +3,8 @@
 import { format, parseISO } from "date-fns"
 import { Award, Check, Flame, Lock } from "lucide-react"
 import { toast } from "sonner"
-import { BambooDecor, environmentStyle } from "@/components/brand/environment"
+import { environmentStyle } from "@/components/brand/environment"
+import { BandScenery } from "@/components/brand/scenery"
 import { Panda } from "@/components/brand/panda"
 import { ChallengesSection } from "@/components/challenges/challenges-section"
 import { LargeTitle } from "@/components/ios/nav-header"
@@ -19,7 +20,7 @@ function BadgeMark({ badge, size = "md" }: { badge: Badge; size?: "md" | "lg" })
   return (
     <div className={cn("relative flex shrink-0 items-center justify-center rounded-xl", size === "lg" ? "size-14" : "size-12",
       badge.earned ? "bg-secondary text-primary" : "bg-muted text-muted-foreground/45")}>
-      <Icon className={size === "lg" ? "size-6" : "size-5"} strokeWidth={1.75} />
+      <Icon className={size === "lg" ? "size-6" : "size-5"} strokeWidth={2} />
       {!badge.earned && <span className="absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full border bg-card"><Lock className="size-2.5 text-muted-foreground" /></span>}
     </div>
   )
@@ -53,7 +54,7 @@ export default function StreaksPage() {
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.1fr_1fr] lg:gap-5">
         <section className="card-surface px-5 py-7 text-center sm:py-8">
           <span className={cn("mx-auto flex size-12 items-center justify-center rounded-xl", data.current_streak > 0 ? "bg-warning-soft text-warning" : "bg-muted text-muted-foreground")}>
-            <Flame className={cn("size-6", data.current_streak > 0 && "fill-warning/25")} strokeWidth={1.85} />
+            <Flame className={cn("size-6", data.current_streak > 0 && "fill-warning/25")} strokeWidth={2} />
           </span>
           <p className="tabular mt-4 text-[4rem] leading-none font-semibold tracking-[-0.04em]">{data.current_streak}</p>
           <p className="mt-1 text-[0.9375rem] font-medium">day streak</p>
@@ -164,7 +165,7 @@ export default function StreaksPage() {
 
       <section className="card-surface p-4 sm:p-5">
         <h2 className="section-title">Home environments</h2>
-        <p className="text-[0.8125rem] text-muted-foreground">Change the light in Faldo&apos;s green corner of your Home screen.</p>
+        <p className="text-[0.8125rem] text-muted-foreground">Faldo&apos;s bamboo valley, or a trip across Asia. Earn each place with a badge.</p>
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {data.backgrounds.map((bg) => {
             const info = BACKGROUND_INFO[bg.id] ?? BACKGROUND_INFO.meadow
@@ -174,12 +175,12 @@ export default function StreaksPage() {
                 <button type="button" onClick={() => wear("home_background", bg.id, bg.unlocked, info.hint)} aria-pressed={selected}
                   className={cn("pressable w-full overflow-hidden rounded-2xl text-left shadow-[inset_0_0_0_1px_var(--border)]", selected && "ring-2 ring-primary/60")}>
                   <div className={cn("relative isolate h-20 overflow-hidden", !bg.unlocked && "opacity-40 grayscale")} style={environmentStyle(bg.id)}>
-                    <BambooDecor className="absolute -right-4 -bottom-6 -z-10 h-32" />
+                    <BandScenery theme={bg.id} compact />
                     {!bg.unlocked && <span className="absolute inset-0 flex items-center justify-center"><Lock className="size-5 text-white drop-shadow" /></span>}
                   </div>
                   <div className="bg-card px-3 py-2">
                     <p className="text-sm font-medium">{info.name}</p>
-                    <p className="truncate text-[0.6875rem] text-muted-foreground">{bg.unlocked ? (selected ? "In use" : "Tap to use") : info.hint}</p>
+                    <p className="truncate text-[0.6875rem] text-muted-foreground">{info.place} · {bg.unlocked ? (selected ? "In use" : "Tap to use") : info.hint}</p>
                   </div>
                 </button>
               </li>

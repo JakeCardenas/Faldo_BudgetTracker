@@ -194,7 +194,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <LargeTitle title="Statistics" back={{ href: "/transactions", label: "History" }} actions={switcher} />
+      <LargeTitle title="Statistics" back={{ href: "/transactions", label: "History" }} actions={switcher} mobileActions="below" />
 
       {isLoading || !report || !s ? (
         <div className="space-y-6"><div className="space-y-3"><Skeleton className="h-4 w-32" /><Skeleton className="h-11 w-52" /><Skeleton className="h-4 w-64" /></div><Skeleton className="h-72 rounded-2xl" /></div>
@@ -219,8 +219,8 @@ export default function ReportsPage() {
               <div className="card-surface p-4 sm:p-5">
                 <IncomeExpenseBars data={report.history} height={220} />
                 <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-3" /> Money in</span>
-                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-1" /> Money out</span>
+                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-1" /> Money in</span>
+                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-ink" /> Money out</span>
                 </div>
               </div>
             </Section>

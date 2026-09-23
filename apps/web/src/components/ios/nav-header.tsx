@@ -44,7 +44,7 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
         <div data-away={away} className="chrome-hide relative flex h-11 items-center gap-2">
           {back ? (
             <Link href={back.href} aria-label={`Back to ${back.label}`} className="pressable -ml-2.5 flex size-11 items-center justify-center rounded-full text-foreground">
-              <ChevronLeft className="size-7" strokeWidth={1.9} />
+              <ChevronLeft className="size-7" strokeWidth={2} />
             </Link>
           ) : <span className="w-2" />}
           <p className={cn("pointer-events-none absolute inset-x-24 truncate text-center text-[1.0625rem] font-bold tracking-[-0.01em] transition-opacity duration-200",

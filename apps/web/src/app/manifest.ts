@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f6f7f5",
-    theme_color: "#5d8a5e",
+    background_color: "#f4f7f4",
+    theme_color: "#2c7549",
     categories: ["finance", "productivity"],
     icons: [
       { src: "/brand/faldo-panda-192.png", sizes: "192x192", type: "image/png" },

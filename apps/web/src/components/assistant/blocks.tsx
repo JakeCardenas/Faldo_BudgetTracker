@@ -23,6 +23,16 @@ function Frame({ title, children, badge = true }: { title: string; children: Rea
   )
 }
 
+
+/** A source reference ("t3") shown as its number in a small round tag, the way it appears in Faldo's answer. */
+export function SourceTag({ refId, className }: { refId: string; className?: string }) {
+  return (
+    <span className={cn("tabular inline-flex h-[1.125rem] min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-muted px-1 text-[0.6875rem] font-semibold text-muted-foreground", className)}>
+      {refId.replace(/^[a-z]+/i, "")}
+    </span>
+  )
+}
+
 export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTransaction?: (id: string) => void }) {
   switch (block.type) {
     case "ideas":
@@ -77,7 +87,7 @@ export function BlockView({ block, onOpenTransaction }: { block: Block; onOpenTr
             {block.items.slice(0, 8).map((t) => (
               <li key={t.id}>
                 <button type="button" onClick={() => onOpenTransaction?.(t.id)} className="flex w-full items-center gap-3 py-2 text-left text-sm hover:text-primary">
-                  <span className="rounded bg-muted px-1.5 font-mono text-[0.65rem] text-muted-foreground">{t.ref}</span>
+                  <SourceTag refId={t.ref} />
                   <span className="min-w-0 flex-1 truncate">{t.merchant ?? t.category ?? "Transaction"} <span className="text-xs text-muted-foreground">{formatDate(t.date, "MMM d")}, {t.account}</span></span>
                   <span className="tabular">{formatMoney(t.type === "expense" ? -t.amount_minor : t.amount_minor)}</span>
                 </button>

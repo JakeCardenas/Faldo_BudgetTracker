@@ -524,7 +524,7 @@ async def suggest_ideas(ctx: ToolContext, args: SuggestArgs) -> ToolOutput:
         category = names.get(wanted) or next((c for n, c in names.items() if wanted and (wanted in n or n in wanted)), None)
         ideas.append({
             "name": idea.name.strip()[:80], "why": idea.why.strip()[:160],
-            "price_range": _fmt(ctx, low) if low == high else f"{_fmt(ctx, low)}–{_fmt(ctx, high)}",
+            "price_range": _fmt(ctx, low) if low == high else f"{_fmt(ctx, low)} to {_fmt(ctx, high)}",
             "low_minor": low, "high_minor": high,
             "within_budget": None if budget is None else high <= budget,
             "category": category.name if category else None, "category_id": str(category.id) if category else None,
@@ -923,7 +923,7 @@ async def calculate_forecast(ctx: ToolContext, args: ForecastArgs) -> ToolOutput
           "series": fc["days"], "actual": fc["actual"], "buffer_minor": fc["buffer_minor"]},
          {"type": "stats", "title": "Forecast (estimate)", "items": [
              {"label": "Spendable now", "amount_minor": fc["start_balance_minor"]},
-             {"label": "Projected end", "amount_minor": end["p50"], "hint": f"{_fmt(ctx, end['p10'])} – {_fmt(ctx, end['p90'])}"},
+             {"label": "Projected end", "amount_minor": end["p50"], "hint": f"{_fmt(ctx, end['p10'])} to {_fmt(ctx, end['p90'])}"},
              {"label": "Lowest point", "amount_minor": fc["lowest_point"]["p50_minor"],
               "hint": date.fromisoformat(fc["lowest_point"]["date"]).strftime("%b %-d")},
          ]}],

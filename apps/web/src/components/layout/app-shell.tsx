@@ -28,6 +28,14 @@ const WelcomeSplash = dynamic(() => import("@/components/brand/welcome-splash"),
 
 const visited = new Set<string>()
 
+/**
+ * Pages that are one list or one form. On desktop they keep a reading width (48rem, centred) instead of stretching to
+ * the full 1240px, where a name and its amount would sit a screen apart. Pages with two columns (Home, Wallet, Plan,
+ * Statistics, Forecast, Budgets) use the full width.
+ */
+const NARROW = ["/transactions", "/insights", "/bills", "/debts", "/goals", "/learn", "/tools", "/settings", "/plan/money", "/plan/purchases", "/import"]
+const isNarrow = (pathname: string) => NARROW.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+
 /** The page area. The first visit to a page plays the full entrance; coming back to it is a quick fade. */
 function PageMain({ pathname, className, children }: { pathname: string; className: string; children: React.ReactNode }) {
   const [firstVisit] = useState(() => !visited.has(pathname))
@@ -112,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <PageMain key={`${pathname}:${hideAmounts ? "hidden" : "shown"}`} pathname={pathname} className={fullBleed
               ? "w-full flex-1"
               // With the Faldo bubble docked above the tab bar, the page scrolls far enough for its last row to clear it.
-              : cn("mx-auto w-full max-w-[1240px] flex-1 px-5 sm:px-6 lg:px-8 lg:pb-20",
+              : cn("mx-auto w-full max-w-[1240px] flex-1 px-5 sm:px-6 lg:px-8 lg:pb-20", isNarrow(pathname) && "lg:max-w-[52rem]",
                 bubble ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(6.5rem+env(safe-area-inset-bottom))]")}>
               {children}
             </PageMain>

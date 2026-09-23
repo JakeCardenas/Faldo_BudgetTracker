@@ -95,7 +95,7 @@ export default function LessonPage({ params }: { params: Promise<{ slug: string 
       </div>
       {next && (
         <Link href={`/learn/${next.slug}`} className="card-surface group flex items-center gap-3 p-4 transition-colors hover:border-input">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/70"><next.icon className="size-4.5" strokeWidth={1.75} /></span>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/70"><next.icon className="size-4.5" strokeWidth={2} /></span>
           <span className="min-w-0 flex-1"><span className="block text-[0.8125rem] text-muted-foreground">Next lesson</span><span className="block truncate text-[0.9375rem] font-medium">{next.title}</span></span>
           <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Link>

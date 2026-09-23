@@ -169,12 +169,14 @@ async def detect(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, t
                  "target_date": goal.target_date.isoformat() if goal.target_date else None,
                  "required_monthly_minor": goal.required_monthly_minor}
         if goal.on_track is False and goal.target_date:
-            detail = (f"at your current pace you'd reach it around {goal.projected_completion_on:%b %Y}"
-                      if goal.projected_completion_on else "there are no recent contributions")
+            projected = goal.projected_completion_on
+            # Late within the same month reads as a contradiction by month ("Oct 2026, but around Oct 2026"): give days.
+            when = "%b %-d, %Y" if projected and (projected.year, projected.month) == (goal.target_date.year, goal.target_date.month) else "%b %Y"
+            detail = f"at your current pace you'd reach it around {projected:{when}}" if projected else "there are no recent contributions"
             need = f" You'd need about {m(goal.required_monthly_minor)} a month." if goal.required_monthly_minor else ""
             found.append(_insight(
                 "goal_behind", InsightSeverity.warning, f"{goal.name} is behind schedule",
-                f"Your target is {goal.target_date:%b %Y}, but {detail}.{need}",
+                f"Your target is {goal.target_date:{when}}, but {detail}.{need}",
                 f"{period}:{goal.id}", period, facts))
         elif goal.on_track:
             milestone = max((p for p in (25, 50, 75) if goal.pct_complete >= p), default=None)

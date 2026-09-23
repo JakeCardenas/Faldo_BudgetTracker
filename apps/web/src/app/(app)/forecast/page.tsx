@@ -241,7 +241,7 @@ export default function ForecastPage() {
               <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 bg-chart-1" /> Actual</span>
                 <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 border-t-2 border-dashed border-chart-2" /> Projected</span>
-                <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-sm bg-chart-2/20" /> Likely range</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-4 rounded-sm bg-chart-2/30" /> Likely range</span>
                 <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 border-t-2 border-dashed border-warning/60" /> Safety buffer</span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{data.sufficiency === "low" ? "Limited history, so treat this range with caution." : `Based on ${data.history_days} days of your spending.`}</p>

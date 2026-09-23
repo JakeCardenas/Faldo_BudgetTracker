@@ -22,7 +22,7 @@ export function CalculationCard({ title, lines, resultLabel, resultMinor, note, 
           <div key={`${line.label}-${index}`} className="py-2 text-sm">
             <div className="flex items-center justify-between gap-3">
               <dt className="text-muted-foreground">{line.label}</dt>
-              <dd className="tabular font-medium">
+              <dd className="tabular shrink-0 font-medium whitespace-nowrap">
                 <span className="mr-1 text-muted-foreground">{line.op === "add" ? "+" : line.op === "subtract" ? "−" : ""}</span>
                 {formatMoney(line.amount_minor)}
               </dd>
@@ -33,7 +33,7 @@ export function CalculationCard({ title, lines, resultLabel, resultMinor, note, 
                 {line.items.map((item) => (
                   <li key={`${item.ref_id}-${item.date}-${item.label}`} className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                     <span className="min-w-0 truncate">{item.label} · <span className={cn(item.is_overdue && "font-medium text-expense")}>{item.is_overdue ? "overdue" : formatDate(item.date, "MMM d")}</span></span>
-                    <span className="tabular">{formatMoney(item.amount_minor)}</span>
+                    <span className="tabular shrink-0 whitespace-nowrap">{formatMoney(item.amount_minor)}</span>
                   </li>
                 ))}
               </ul>

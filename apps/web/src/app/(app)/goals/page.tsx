@@ -73,7 +73,7 @@ function GoalDialog({ goal, open, onOpenChange }: { goal?: Goal; open: boolean; 
               {GOAL_ICONS.map(({ id, label, icon: Icon }) => (
                 <button key={id} type="button" role="radio" aria-checked={emoji === id} onClick={() => setEmoji(id)} aria-label={label} title={label}
                   className={cn("pressable flex size-10 items-center justify-center rounded-full transition-colors", emoji === id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground")}>
-                  <Icon className="size-4" strokeWidth={1.85} />
+                  <Icon className="size-4" strokeWidth={2} />
                 </button>
               ))}
             </div>
@@ -244,7 +244,7 @@ export default function GoalsPage() {
           <Button variant="secondary" asChild className="hidden sm:inline-flex"><Link href="/assistant?q=When%20can%20I%20reach%20my%20goals%3F"><MessageCircle /> Ask Faldo</Link></Button>
           <HeaderButton onClick={() => setCreating(true)} aria-label="New goal"><Plus /><span className="max-lg:sr-only">New goal</span></HeaderButton>
         </>} />
-      {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-80 rounded-2xl" />)}</div> : !goals?.length ? (
+      {isLoading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-80 rounded-2xl" />)}</div> : !goals?.length ? (
         <section className="card-surface flex flex-col items-center px-6 py-10 text-center">
           <Panda pose="backpack" sizes="136px" className="w-32" />
           <h2 className="mt-4 text-lg font-semibold tracking-[-0.02em]">What are you saving for?</h2>
@@ -263,7 +263,7 @@ export default function GoalsPage() {
               {monthly > 0 && <p className="mt-2 text-sm text-muted-foreground">You plan to add <span className="tabular font-medium text-foreground">{formatMoney(monthly)}</span> a month.</p>}
             </section>
           )}
-          <div className="stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="stagger grid gap-4 md:grid-cols-2">
             {goals.map((g) => <GoalCard key={g.id} goal={g} onEdit={() => setEditing(g)} onContribute={() => setContributing(g)} />)}
           </div>
         </>

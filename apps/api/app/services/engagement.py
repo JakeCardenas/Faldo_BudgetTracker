@@ -52,6 +52,10 @@ OUTFITS: dict[str, str | None] = {
     "crown": "monthly_habit",
 }
 
+# Home environments: Faldo's panda habitat, then landmarks across Asia, each unlocked by a badge. The ids are the
+# original theme ids (kept so saved choices still work); the web app draws them (components/brand/scenery.tsx):
+# sunrise is Mayon Volcano, terraces the Banaue Rice Terraces, lagoon Marina Bay, hills Mount Fuji, bay_sunset Wat Arun,
+# seoul Gyeongbokgung and night_market Taipei 101.
 BACKGROUNDS: dict[str, str | None] = {
     "meadow": None,
     "sunrise": "two_in_a_row",
@@ -59,6 +63,7 @@ BACKGROUNDS: dict[str, str | None] = {
     "lagoon": "budget_builder",
     "hills": "fortnight_focus",
     "bay_sunset": "bill_planner",
+    "seoul": "goal_setter",
     "night_market": "monthly_habit",
 }
 

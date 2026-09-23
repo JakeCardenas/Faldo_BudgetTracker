@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { ExternalLink, Hourglass, Loader2, MoreHorizontal, Plus, ShoppingBag } from "lucide-react"
+import { ExternalLink, Hourglass, Loader2, MoreHorizontal, ShoppingBag } from "lucide-react"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
+import { CategoryIcon } from "@/components/finance/category-icon"
 import { Money } from "@/components/finance/money"
-import { Section } from "@/components/ios/panel"
 import { IosSheet } from "@/components/ios/sheet"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
+import { PALETTE } from "@/lib/palette"
 import { invalidateFinancialData, useAccounts, usePlanned } from "@/lib/queries"
 import type { PlannedPurchase } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -121,10 +122,10 @@ function BuySheet({ item, onOpenChange }: { item: PlannedPurchase; onOpenChange:
   )
 }
 
-export function PlannedPurchases({ className }: { className?: string }) {
+export function PlannedPurchases({ adding, onAddingChange, className }: { adding: boolean; onAddingChange: (open: boolean) => void; className?: string }) {
   const qc = useQueryClient()
   const { data = [], isLoading } = usePlanned()
-  const [adding, setAdding] = useState(false)
+  const setAdding = onAddingChange
   const [buying, setBuying] = useState<PlannedPurchase | null>(null)
   const planned = data.filter((p) => p.status === "planned")
 
@@ -139,8 +140,7 @@ export function PlannedPurchases({ className }: { className?: string }) {
   }
 
   return (
-    <Section title="Planned purchases" className={className}
-      action={<Button variant="secondary" size="sm" onClick={() => setAdding(true)}><Plus /> Add</Button>}>
+    <div className={className}>
       {isLoading ? <Skeleton className="h-20 rounded-2xl" /> : planned.length === 0 ? (
         <button type="button" onClick={() => setAdding(true)}
           className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-foreground/15 px-4 py-4 text-left text-[0.875rem] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground">
@@ -153,7 +153,7 @@ export function PlannedPurchases({ className }: { className?: string }) {
             const s = status(p)
             return (
               <li key={p.id} className="flex items-start gap-3 px-4 py-3">
-                <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground/75"><ShoppingBag className="size-[1.05rem]" strokeWidth={1.85} /></span>
+                <CategoryIcon icon="shopping-bag" color={PALETTE.berry} className="mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="truncate text-[0.9375rem] font-medium">{p.name}</p>
@@ -183,6 +183,6 @@ export function PlannedPurchases({ className }: { className?: string }) {
       )}
       <AddPlannedSheet open={adding} onOpenChange={setAdding} />
       {buying && <BuySheet item={buying} onOpenChange={(open) => { if (!open) setBuying(null) }} />}
-    </Section>
+    </div>
   )
 }

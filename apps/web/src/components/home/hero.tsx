@@ -4,7 +4,8 @@ import Link from "next/link"
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleUserRound, Flame, Search } from "lucide-react"
-import { BambooDecor, environmentStyle } from "@/components/brand/environment"
+import { bandTint, environmentStyle } from "@/components/brand/environment"
+import { BandScenery } from "@/components/brand/scenery"
 import { Panda } from "@/components/brand/panda"
 import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { BalanceLine, type BalancePointValue } from "@/components/charts/charts"
@@ -14,7 +15,7 @@ import { useFaldoNote } from "@/components/home/sections"
 import { useAppActions } from "@/components/layout/app-context"
 import { Notifications } from "@/components/layout/notifications"
 import { Skeleton } from "@/components/ui/skeleton"
-import { environmentFor, poseFor } from "@/lib/catalog"
+import { poseFor } from "@/lib/catalog"
 import { formatDate, formatMoney, greeting } from "@/lib/format"
 import { maskAmounts } from "@/lib/privacy"
 import { useBalanceHistory, useEngagement, useMe } from "@/lib/queries"
@@ -45,7 +46,7 @@ function FaldoBubble({ data, className }: { data: Dashboard; className?: string 
   const { note, isLoading } = useFaldoNote(data)
   return (
     <div className={cn("relative min-w-0 rounded-[1.25rem] bg-card p-4 text-card-foreground shadow-[0_18px_36px_-18px_rgb(0_0_0/0.45)]", className)}>
-      <span aria-hidden className="absolute top-8 -left-1.5 size-3.5 rotate-45 rounded-[3px] bg-card lg:top-auto lg:-bottom-1.5 lg:left-1/2 lg:-translate-x-1/2" />
+      <span aria-hidden className="absolute top-8 -left-1.5 size-3.5 rotate-45 rounded-[3px] bg-card lg:top-auto lg:bottom-8 lg:left-auto lg:-right-1.5" />
       <p className="relative text-[0.8125rem] font-bold text-primary">Faldo</p>
       {isLoading && !note ? (
         <div className="relative mt-2 space-y-2"><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-2/3" /></div>
@@ -79,9 +80,9 @@ export function HomeBand({ data }: { data: Dashboard }) {
 
   return (
     <section data-band aria-label="Welcome" style={environmentStyle(me?.settings.home_background)}
-      className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
-      <StatusBarTint color={`color-mix(in oklab, ${environmentFor(me?.settings.home_background).from} 88%, ${environmentFor(me?.settings.home_background).to})`} />
-      <BambooDecor className="absolute top-0 -right-8 -z-10 h-[18rem] lg:top-auto lg:right-2 lg:-bottom-12 lg:h-[26rem]" />
+      className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:flex lg:min-h-56 lg:flex-col lg:justify-end lg:rounded-[2rem] lg:px-10 lg:pt-8">
+      <StatusBarTint color={bandTint(me?.settings.home_background)} />
+      <BandScenery theme={me?.settings.home_background} />
 
       <div className="flex items-center justify-between lg:hidden">
         <Link href="/streaks" onClick={() => play("tap")} className={bandButton}
@@ -106,19 +107,20 @@ export function HomeBand({ data }: { data: Dashboard }) {
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-end lg:gap-10">
-        <div className="pt-5 lg:pt-0 lg:pb-9">
-          <p className="text-[0.6875rem] font-semibold tracking-[0.08em] text-white/75 uppercase">{formatDate(new Date().toISOString(), "EEEE, MMMM d")}</p>
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-10">
+        <div className="pt-5 [text-shadow:0_1px_2px_rgb(4_24_12/0.55)] lg:pt-0 lg:pb-9">
+          <p className="text-[0.6875rem] font-semibold tracking-[0.08em] text-white/90 uppercase">{formatDate(new Date().toISOString(), "EEEE, MMMM d")}</p>
           <h1 className="mt-1 truncate text-[1.625rem] leading-tight font-normal tracking-[-0.03em] lg:text-[2.125rem]">
             {greeting()}{name ? <>, <span className="font-extrabold">{name}</span>!</> : ""}
           </h1>
         </div>
 
-        {/* Faldo stands on the band's lower edge with his note beside him. */}
-        <div className="mt-3 flex items-end gap-2 lg:mt-0 lg:flex-col-reverse lg:items-center lg:gap-3">
-          <Panda pose={pose} priority sizes="(min-width: 1024px) 208px, 144px"
-            className="pointer-events-none -mb-5 -ml-2 w-[8.25rem] shrink-0 drop-shadow-[0_12px_18px_rgb(0_0_0/0.22)] min-[390px]:w-[9rem] sm:w-[10rem] lg:-mb-6 lg:ml-0 lg:w-52" />
-          <FaldoBubble data={data} className="mb-5 flex-1 lg:mb-0 lg:w-full lg:flex-none" />
+        {/* Faldo stands on the band's lower edge with his note beside him; on desktop he stands in the grove on the
+            right and the note sits to his left, so the band stays short. */}
+        <div className="mt-3 flex items-end gap-2 lg:mt-0 lg:flex-row-reverse lg:gap-3">
+          <Panda pose={pose} priority sizes="(min-width: 1024px) 176px, 144px"
+            className="pointer-events-none -mb-5 -ml-2 w-[8.25rem] shrink-0 drop-shadow-[0_12px_18px_rgb(0_0_0/0.22)] min-[390px]:w-[9rem] sm:w-[10rem] lg:-mb-6 lg:ml-0 lg:w-44" />
+          <FaldoBubble data={data} className="mb-5 flex-1 lg:mb-9 lg:w-[21rem] lg:flex-none" />
         </div>
       </div>
     </section>
@@ -180,7 +182,7 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
           <p className="flex h-full items-center justify-center rounded-xl border border-dashed px-6 text-center text-sm text-muted-foreground">Your balance line appears after a few days of activity.</p>
         )}
       </div>
-      <div className="mt-3 flex justify-between gap-1" role="radiogroup" aria-label="Chart range">
+      <div className="mx-auto mt-3 flex w-full justify-between gap-1 sm:max-w-sm" role="radiogroup" aria-label="Chart range">
         {RANGES.map((r) => (
           <button key={r.label} type="button" role="radio" aria-checked={r.label === range.label}
             onClick={() => { play("select"); setRange(r); setHover(null) }}

@@ -39,7 +39,7 @@ export function TopNav() {
         <div className="flex items-center justify-self-end gap-1.5">
           <button type="button" onClick={openSearch}
             className="flex h-9 items-center gap-2 rounded-full bg-card pr-2 pl-3 text-sm text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)] transition-colors hover:text-foreground">
-            <Search className="size-4" strokeWidth={1.9} />
+            <Search className="size-4" strokeWidth={2} />
             <span className="pr-4">Search</span>
             <kbd className="rounded-md bg-muted px-1.5 font-sans text-[0.6875rem] text-muted-foreground">⌘K</kbd>
           </button>

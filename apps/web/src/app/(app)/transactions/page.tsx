@@ -100,7 +100,7 @@ function HistoryView() {
 
       {pendingReceipts.length > 0 && (
         <div className="flex items-center gap-3 rounded-2xl bg-secondary/70 p-3 pr-3 dark:bg-secondary/60">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-primary"><ScanLine className="size-4.5" strokeWidth={1.85} /></span>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-primary"><ScanLine className="size-4.5" strokeWidth={2} /></span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{pendingReceipts.length} receipt{pendingReceipts.length === 1 ? "" : "s"} to review</p>
             <p className="truncate text-[0.8125rem] text-muted-foreground">{pendingReceipts.map((r) => r.extraction?.merchant ?? "Receipt").join(", ")}</p>
@@ -122,12 +122,12 @@ function HistoryView() {
             {q && <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="flex size-5 items-center justify-center rounded-full bg-muted-foreground/25 text-foreground/70"><X className="size-3" /></button>}
           </label>
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-10! w-10 justify-center rounded-full border-0 bg-transparent px-0 shadow-none hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort"><ArrowDownUp className="size-5 text-foreground" strokeWidth={1.8} /></SelectTrigger>
+            <SelectTrigger className="h-10! w-10 justify-center rounded-full border-0 bg-transparent px-0 shadow-none hover:bg-accent [&>svg:last-child]:hidden" aria-label="Sort"><ArrowDownUp className="size-5 text-foreground" strokeWidth={2} /></SelectTrigger>
             <SelectContent align="end">{SORTS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
           </Select>
           <button type="button" onClick={() => setFiltersOpen(true)} aria-label="Filters"
             className="pressable relative flex size-10 items-center justify-center rounded-full hover:bg-accent">
-            <SlidersHorizontal className="size-5 text-foreground" strokeWidth={1.8} />
+            <SlidersHorizontal className="size-5 text-foreground" strokeWidth={2} />
             {activeFilters > 0 && <span className="tabular absolute -top-1.5 -right-1.5 flex size-4.5 items-center justify-center rounded-full bg-primary text-[0.6875rem] font-semibold text-primary-foreground">{activeFilters}</span>}
           </button>
         </div>
@@ -150,7 +150,7 @@ function HistoryView() {
             <Money minor={summary.total_income_minor} className={cn("font-medium", summary.total_income_minor > 0 ? "text-income" : "text-foreground")} /> in,{" "}
             <Money minor={summary.total_expense_minor} className="font-medium text-foreground" /> out
           </p>
-          <Link href="/reports" aria-label="Where it went" className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"><PieChart className="size-5" strokeWidth={1.8} /></Link>
+          <Link href="/reports" aria-label="Where it went" className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"><PieChart className="size-5" strokeWidth={2} /></Link>
         </div>
       )}
 
