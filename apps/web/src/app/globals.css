@@ -420,6 +420,19 @@ html.ios {
     transition: scale 160ms var(--ease-out-quint), background-color 160ms ease-out, color 160ms ease-out, opacity 160ms ease-out, border-color 160ms ease-out;
     @apply active:scale-[0.97];
   }
+  /* A finger-sized tap area (44pt, Apple's minimum) around a control that looks smaller than that. */
+  .hit {
+    position: relative;
+  }
+  .hit::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 2.75rem);
+    height: max(100%, 2.75rem);
+    translate: -50% -50%;
+  }
   /* Type scale. Weight carries the hierarchy: titles and money are bold, supporting text stays regular. */
   /* Small all-caps labels that name a figure (NET WORTH, BALANCE, DUE). */
   .label-caps {
@@ -788,32 +801,28 @@ html.ios {
 }
 
 /*
-  First visit to a page: the header settles first (180ms), then each group below it follows at 60ms steps
-  (260ms each), and anything marked .cascade (rows, cards, tiles) flows in one after another at 45ms steps.
+  First visit to a page: the header settles first (160ms), then each group below it follows at 30ms steps
+  (220ms each), and anything marked .cascade (rows, cards, tiles) flows in one after another at 30ms steps.
+  The whole page is in place within about a third of a second: tabs are switched all day, so it never waits.
   Coming back to a page plays only a quick fade, so it still feels fast.
 */
 .page-enter > * > * {
-  animation: page-in 260ms var(--ease-out-quint) backwards;
-  animation-delay: 60ms;
+  animation: page-in 220ms var(--ease-out-quint) backwards;
+  animation-delay: 30ms;
 }
-.page-enter > * > *:first-child { animation-duration: 180ms; animation-delay: 0ms; }
-.page-enter > * > *:nth-child(3) { animation-delay: 120ms; }
-.page-enter > * > *:nth-child(4) { animation-delay: 180ms; }
-.page-enter > * > *:nth-child(n + 5) { animation-delay: 240ms; }
+.page-enter > * > *:first-child { animation-duration: 160ms; animation-delay: 0ms; }
+.page-enter > * > *:nth-child(3) { animation-delay: 60ms; }
+.page-enter > * > *:nth-child(n + 4) { animation-delay: 90ms; }
 /* The green bands (data-band) are the page's own backdrop: they are there at once, never faded in from white. */
 .page-enter > * > [data-band],
 .page-enter > * > * > [data-band] { animation: none; }
 
-.page-enter .cascade > * { animation: page-in 300ms var(--ease-out-quint) backwards; }
-.page-enter .cascade > :nth-child(1) { animation-delay: 90ms; }
-.page-enter .cascade > :nth-child(2) { animation-delay: 135ms; }
-.page-enter .cascade > :nth-child(3) { animation-delay: 180ms; }
-.page-enter .cascade > :nth-child(4) { animation-delay: 225ms; }
-.page-enter .cascade > :nth-child(5) { animation-delay: 270ms; }
-.page-enter .cascade > :nth-child(6) { animation-delay: 315ms; }
-.page-enter .cascade > :nth-child(7) { animation-delay: 360ms; }
-.page-enter .cascade > :nth-child(8) { animation-delay: 405ms; }
-.page-enter .cascade > :nth-child(n + 9) { animation-delay: 450ms; }
+.page-enter .cascade > * { animation: page-in 220ms var(--ease-out-quint) backwards; }
+.page-enter .cascade > :nth-child(1) { animation-delay: 40ms; }
+.page-enter .cascade > :nth-child(2) { animation-delay: 70ms; }
+.page-enter .cascade > :nth-child(3) { animation-delay: 100ms; }
+.page-enter .cascade > :nth-child(4) { animation-delay: 130ms; }
+.page-enter .cascade > :nth-child(n + 5) { animation-delay: 160ms; }
 
 @keyframes page-fade {
   from { opacity: 0; }
@@ -905,7 +914,7 @@ html.ios {
 }
 
 .splash-overlay {
-  animation: splash-out 420ms ease-in 2350ms both;
+  animation: splash-out 320ms var(--ease-out-quint) 2350ms both;
 }
 
 html[data-splash="skip"] .splash-overlay:not([data-force]),

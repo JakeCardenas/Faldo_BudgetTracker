@@ -21,7 +21,7 @@ export function ProgressBar({ value, status = "on_track", marker, className, lab
   return (
     <div className={cn("relative h-1.5 w-full overflow-hidden rounded-full bg-muted", className)} role="progressbar"
       aria-label={label} aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}>
-      <div className={cn("h-full rounded-full transition-[width] duration-500 ease-[var(--ease-out-quint)]", TONES[status] ?? TONES.on_track)} style={{ width: `${width}%` }} />
+      <div className={cn("h-full w-full rounded-full transition-transform duration-500 ease-[var(--ease-out-quint)]", TONES[status] ?? TONES.on_track)} style={{ transform: `translateX(${width - 100}%)` }} />
       {marker !== undefined && marker > 0 && marker < 100 && (
         <span className="absolute top-0 h-full w-0.5 bg-foreground/25" style={{ left: `${marker}%` }} aria-hidden />
       )}

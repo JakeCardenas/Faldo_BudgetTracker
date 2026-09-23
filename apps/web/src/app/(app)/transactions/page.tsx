@@ -128,7 +128,7 @@ function HistoryView() {
           <button type="button" onClick={() => setFiltersOpen(true)} aria-label="Filters"
             className="pressable relative flex size-10 items-center justify-center rounded-full hover:bg-accent">
             <SlidersHorizontal className="size-5 text-foreground" strokeWidth={1.8} />
-            {activeFilters > 0 && <span className="tabular absolute -top-1.5 -right-1.5 flex size-4.5 items-center justify-center rounded-full bg-primary text-[0.625rem] font-semibold text-primary-foreground">{activeFilters}</span>}
+            {activeFilters > 0 && <span className="tabular absolute -top-1.5 -right-1.5 flex size-4.5 items-center justify-center rounded-full bg-primary text-[0.6875rem] font-semibold text-primary-foreground">{activeFilters}</span>}
           </button>
         </div>
         <UnderlineTabs label="Transaction type" value={kind} onChange={setKind}
@@ -150,7 +150,7 @@ function HistoryView() {
             <Money minor={summary.total_income_minor} className={cn("font-medium", summary.total_income_minor > 0 ? "text-income" : "text-foreground")} /> in,{" "}
             <Money minor={summary.total_expense_minor} className="font-medium text-foreground" /> out
           </p>
-          <Link href="/reports" aria-label="Where it went" className="pressable flex size-9 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"><PieChart className="size-5" strokeWidth={1.8} /></Link>
+          <Link href="/reports" aria-label="Where it went" className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-accent"><PieChart className="size-5" strokeWidth={1.8} /></Link>
         </div>
       )}
 

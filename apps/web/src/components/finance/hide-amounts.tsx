@@ -12,7 +12,7 @@ export function HideAmountsButton({ className, tone = "default" }: { className?:
   return (
     <button type="button" aria-pressed={hidden} aria-label={hidden ? "Show amounts" : "Hide amounts"}
       onClick={() => { play(hidden ? "toggleOn" : "toggleOff"); setAmountsHidden(!hidden) }}
-      className={cn("pressable flex size-8 items-center justify-center rounded-full transition-colors",
+      className={cn("pressable hit flex size-8 items-center justify-center rounded-full transition-colors",
         tone === "light" ? "text-white/85 hover:bg-white/15 hover:text-white" : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground", className)}>
       <Icon className="size-[1.05rem]" strokeWidth={1.9} />
     </button>

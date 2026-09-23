@@ -146,7 +146,7 @@ export function MoneyInOut({ className }: { className?: string }) {
         {PERIODS.map((p) => (
           <button key={p.id} type="button" role="radio" aria-checked={p.id === period.id}
             onClick={() => { play("select"); setPeriod(p) }}
-            className={cn("pressable h-7 flex-1 rounded-full text-[0.6875rem] font-semibold transition-colors duration-200",
+            className={cn("pressable hit h-7 flex-1 rounded-full text-[0.6875rem] font-semibold transition-colors duration-200",
               p.id === period.id ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
             {p.label}
           </button>

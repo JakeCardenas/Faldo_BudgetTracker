@@ -8,7 +8,8 @@ import { useSyncExternalStore } from "react"
  * preferences, kept in this browser.
  */
 const SHOWN_KEY = "faldo:bubble"
-const SPOT_KEY = "faldo:bubble-spot"
+// Renamed when the resting spot moved to the bottom corner, so everyone starts from the new dock once.
+const SPOT_KEY = "faldo:bubble-dock"
 const HINT_KEY = "faldo:bubble-hint"
 const EVENT = "faldo:bubble"
 
@@ -51,7 +52,8 @@ export function readBubbleSpot(): BubbleSpot {
       return { side: spot.side, y: Math.min(1, Math.max(0, spot.y)) }
     }
   } catch {}
-  return { side: "right", y: 0.62 }
+  // Docked in the bottom-right corner, just above the tab bar, clear of the figures in the middle of the page.
+  return { side: "right", y: 1 }
 }
 
 export function saveBubbleSpot(spot: BubbleSpot) {

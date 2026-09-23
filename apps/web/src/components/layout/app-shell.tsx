@@ -15,6 +15,7 @@ import { CommandSearch } from "@/components/layout/command-search"
 import { FaldoBubble } from "@/components/layout/faldo-bubble"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { TopNav } from "@/components/layout/top-nav"
+import { useBubbleShown } from "@/lib/bubble"
 import { useAmountsHidden } from "@/lib/privacy"
 import { useSmoothTheme } from "@/lib/theme"
 import { useMe } from "@/lib/queries"
@@ -39,6 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { data: me, isLoading } = useMe()
   const hideAmounts = useAmountsHidden()
+  const bubble = useBubbleShown()
   const { setTheme } = useSmoothTheme()
   const [addOpen, setAddOpen] = useState(false)
   const [addMode, setAddMode] = useState<AddMode>("expense")
@@ -109,7 +111,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {!fullBleed && <TopNav />}
             <PageMain key={`${pathname}:${hideAmounts ? "hidden" : "shown"}`} pathname={pathname} className={fullBleed
               ? "w-full flex-1"
-              : "mx-auto w-full max-w-[1240px] flex-1 px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-20"}>
+              // With the Faldo bubble docked above the tab bar, the page scrolls far enough for its last row to clear it.
+              : cn("mx-auto w-full max-w-[1240px] flex-1 px-5 sm:px-6 lg:px-8 lg:pb-20",
+                bubble ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(6.5rem+env(safe-area-inset-bottom))]")}>
               {children}
             </PageMain>
           </div>

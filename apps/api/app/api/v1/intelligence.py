@@ -301,7 +301,8 @@ async def companion_now(ctx: CtxDep) -> dict[str, Any]:
     from app.services import companion
 
     found = await companion.signals(ctx.db, ctx.user_id, ctx.settings, ctx.today)
-    return {"checkins": [s.out() for s in found[:3]], "starters": companion.starters(found)}
+    # The chat shows two check-ins; the starters come from the rest, so nothing is offered twice.
+    return {"checkins": [s.out() for s in found[:2]], "starters": companion.starters(found[2:])}
 
 
 class PushKeys(ApiModel):

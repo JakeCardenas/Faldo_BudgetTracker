@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.factory import get_llm
 from app.ai.guardrails.numeric import check_numbers
 from app.ai.guardrails.output import sanitize_markdown
-from app.engine.money import format_money, percent_change
+from app.engine.money import format_money, pct_text, percent_change
 from app.engine.periods import add_months, month_end, month_start
 from app.models import AIInsight, BudgetCategory, GoalContribution, SavingsGoal, Transaction
 from app.models.enums import InsightSeverity, InsightStatus
@@ -64,7 +64,7 @@ def draft_pulse(facts: dict[str, Any], today: date) -> str:
     change = facts["spending_change_pct"]
     if change is not None and abs(change) >= 1:
         direction = "lower" if change < 0 else "higher"
-        sentences.append(f"Your spending is {abs(change):g}% {direction} than at this point last month")
+        sentences.append(f"Your spending is {pct_text(abs(change))}% {direction} than at this point last month")
     else:
         sentences.append(f"You've spent {facts['spent_this_month']} so far this month")
     if facts["goals_behind"]:
@@ -77,7 +77,7 @@ def draft_pulse(facts: dict[str, Any], today: date) -> str:
     issue = facts["budget_issue"]
     if issue:
         sentences.append(f"{issue['category']} is over budget." if issue["status"] == "over"
-                         else f"{issue['category']} is at {issue['pct_used']:g}% of its budget and may go over.")
+                         else f"{issue['category']} is at {pct_text(issue['pct_used'])}% of its budget and may go over.")
     elif facts["has_budgets"]:
         sentences.append("All budgets are on track.")
     bill = facts["next_bill"]

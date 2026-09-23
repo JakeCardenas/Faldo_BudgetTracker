@@ -68,7 +68,7 @@ export function AddMenu({ open, onOpenChange }: { open: boolean; onOpenChange: (
                   placeholder="₱180 Jollibee lunch via GCash"
                   className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/75 sm:text-[0.9375rem]" />
                 <button type="submit" disabled={!text.trim()} aria-label="Read it"
-                  className="pressable flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-35">
+                  className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-35">
                   <ArrowUp className="size-4.5" strokeWidth={2.3} />
                 </button>
               </div>

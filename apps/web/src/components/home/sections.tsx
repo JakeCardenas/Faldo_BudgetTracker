@@ -70,7 +70,7 @@ export function DateTile({ date, tone }: { date: string; tone: "overdue" | "soon
   return (
     <span className={cn("relative z-10 flex size-12 shrink-0 flex-col items-center justify-center rounded-[0.875rem] leading-none",
       tone === "overdue" ? "bg-danger-soft text-expense" : "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]")}>
-      <span className={cn("text-[0.5625rem] font-bold tracking-[0.08em] uppercase", tone === "overdue" ? "opacity-80" : "text-muted-foreground")}>{formatDate(date, "MMM")}</span>
+      <span className={cn("text-[0.6875rem] font-bold tracking-[0.08em] uppercase", tone === "overdue" ? "opacity-80" : "text-muted-foreground")}>{formatDate(date, "MMM")}</span>
       <span className="tabular mt-1 text-[1.1875rem] font-extrabold tracking-[-0.02em]">{d.getDate()}</span>
     </span>
   )

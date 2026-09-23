@@ -6,7 +6,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engine.analysis import robust_z
-from app.engine.money import format_money, percent, percent_change
+from app.engine.money import format_money, pct_text, percent, percent_change
 from app.engine.periods import add_months, month_end, month_key, month_start, resolve_period
 from app.models import AIInsight, Merchant, Transaction
 from app.models.enums import InsightSeverity, InsightStatus, TransactionType
@@ -48,7 +48,7 @@ async def detect(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, t
         elif line.status == "at_risk":
             found.append(_insight(
                 "budget_risk", InsightSeverity.warning, f"{line.category_name} may go over budget",
-                f"{line.pct_used:g}% used with {line.pct_month_elapsed:g}% of the month gone. At this pace you'd spend "
+                f"{pct_text(line.pct_used)}% used with {pct_text(line.pct_month_elapsed)}% of the month gone. At this pace you'd spend "
                 f"about {m(line.projected_minor)} against a {m(line.limit_minor)} budget.",
                 f"{period}:{line.category_id}", period, facts))
         elif line.status == "near_limit":
@@ -73,7 +73,7 @@ async def detect(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, t
         if avg > 0 and amount - avg >= MIN_SPIKE_MINOR and change is not None and change >= 30:
             name = meta[cid].name if cid in meta else "Uncategorized"
             found.append(_insight(
-                "spending_increase", InsightSeverity.warning, f"{name} spending is up {change:g}%",
+                "spending_increase", InsightSeverity.warning, f"{name} spending is up {pct_text(change)}%",
                 f"{m(amount)} so far this month, compared with a {m(avg)} average for the same days over the last "
                 "three months.",
                 f"{period}:{cid}", period,
@@ -88,12 +88,12 @@ async def detect(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, t
         facts = {"current_minor": this_total["expense"], "previous_minor": prev_total["expense"], "change_pct": change}
         if change <= -10:
             found.append(_insight(
-                "spending_decrease", InsightSeverity.positive, f"Spending is down {abs(change):g}% from last month",
+                "spending_decrease", InsightSeverity.positive, f"Spending is down {pct_text(abs(change))}% from last month",
                 f"{m(this_total['expense'])} spent so far versus {m(prev_total['expense'])} by this point last month.",
                 period, period, facts))
         elif change >= 15:
             found.append(_insight(
-                "spending_increase_total", InsightSeverity.warning, f"Spending is up {change:g}% from last month",
+                "spending_increase_total", InsightSeverity.warning, f"Spending is up {pct_text(change)}% from last month",
                 f"{m(this_total['expense'])} spent so far versus {m(prev_total['expense'])} by this point last month.",
                 period, period, facts))
 
@@ -180,7 +180,7 @@ async def detect(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, t
             milestone = max((p for p in (25, 50, 75) if goal.pct_complete >= p), default=None)
             if milestone:
                 found.append(_insight(
-                    "goal_progress", InsightSeverity.positive, f"{goal.name} is {goal.pct_complete:g}% funded",
+                    "goal_progress", InsightSeverity.positive, f"{goal.name} is {pct_text(goal.pct_complete)}% funded",
                     f"{m(goal.saved_minor)} saved of {m(goal.target_minor)}, on pace for your target date.",
                     f"{goal.id}:{milestone}", period, facts))
 
@@ -190,7 +190,7 @@ async def detect(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, t
         rate = percent(lm_totals["income"] - lm_totals["expense"], lm_totals["income"])
         if rate is not None and rate >= 20:
             found.append(_insight(
-                "savings_rate", InsightSeverity.positive, f"You kept {rate:g}% of your income in {last_month:%B}",
+                "savings_rate", InsightSeverity.positive, f"You kept {pct_text(rate)}% of your income in {last_month:%B}",
                 f"{m(lm_totals['income'])} earned and {m(lm_totals['expense'])} spent.",
                 month_key(last_month), period,
                 {"income_minor": lm_totals["income"], "expense_minor": lm_totals["expense"], "savings_rate": rate}))

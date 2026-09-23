@@ -186,9 +186,9 @@ export default function ReportsPage() {
 
   const switcher = (
     <div className="flex h-9 items-center rounded-full bg-card shadow-[inset_0_0_0_1px_var(--border)]">
-      <button type="button" className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" aria-label="Previous month" onClick={() => setMonth(monthKey(addMonths(monthDate, -1)))}><ChevronLeft className="size-4" /></button>
+      <button type="button" className="hit flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" aria-label="Previous month" onClick={() => setMonth(monthKey(addMonths(monthDate, -1)))}><ChevronLeft className="size-4" /></button>
       <span className="tabular w-20 text-center text-[0.8125rem] font-medium">{format(monthDate, "MMM yyyy")}</span>
-      <button type="button" className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30" aria-label="Next month" disabled={month >= monthKey()} onClick={() => setMonth(monthKey(addMonths(monthDate, 1)))}><ChevronRight className="size-4" /></button>
+      <button type="button" className="hit flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30" aria-label="Next month" disabled={month >= monthKey()} onClick={() => setMonth(monthKey(addMonths(monthDate, 1)))}><ChevronRight className="size-4" /></button>
     </div>
   )
 

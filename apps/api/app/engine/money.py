@@ -32,6 +32,11 @@ def format_money(amount_minor: int, currency: str = "PHP", *, signed: bool = Fal
     return f"{sign}{symbol}{body}"
 
 
+def pct_text(value: float) -> str:
+    """A percentage for people to read: whole numbers from 10% up (368%, not 368.2%), one decimal below."""
+    return f"{round(value) if abs(value) >= 10 else round(value, 1):g}"
+
+
 def percent(part: int | Decimal, whole: int | Decimal, places: int = 1) -> float | None:
     if not whole:
         return None

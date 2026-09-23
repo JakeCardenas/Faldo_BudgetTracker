@@ -46,7 +46,7 @@ export function EmergencyFund() {
       <section className="card-surface flex flex-col p-5">
         <p className="text-[0.8125rem] text-muted-foreground">Your emergency fund target</p>
         <p className="tabular mt-1 text-[2.25rem] leading-tight font-semibold tracking-[-0.03em]">{formatMoney(target)}</p>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${pct}%` }} /></div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-full rounded-full bg-primary transition-transform duration-700 ease-[var(--ease-out-quint)]" style={{ transform: `translateX(${Math.min(100, pct) - 100}%)` }} /></div>
         <p className="mt-1 text-xs text-muted-foreground">{pct.toFixed(0)}% funded</p>
         <div className="mt-4 flex-1">
           <ResultRow label="Still to save" value={formatMoney(gap)} />

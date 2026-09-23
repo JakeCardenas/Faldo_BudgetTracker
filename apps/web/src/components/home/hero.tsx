@@ -30,6 +30,16 @@ const RANGES = [
   { label: "1Y", days: 365, phrase: "past year" },
 ] as const
 
+/** Whole sentences only, as many as fit in about four lines, so the note never stops mid-word. */
+function firstSentences(text: string, max = 120) {
+  let out = ""
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    if (out && out.length + sentence.length + 1 > max) break
+    out = out ? `${out} ${sentence}` : sentence
+  }
+  return out
+}
+
 /** Faldo's speech bubble: the one thing worth knowing right now. */
 function FaldoBubble({ data, className }: { data: Dashboard; className?: string }) {
   const { note, isLoading } = useFaldoNote(data)
@@ -42,7 +52,7 @@ function FaldoBubble({ data, className }: { data: Dashboard; className?: string 
       ) : note ? (
         <div className="relative">
           {note.title && <p className="mt-0.5 text-[0.875rem] leading-snug font-semibold">{maskAmounts(note.title)}</p>}
-          <p className={cn("mt-0.5 text-[0.8125rem] leading-snug", note.title ? "text-muted-foreground" : "line-clamp-4 text-foreground/80")}>{maskAmounts(note.body)}</p>
+          <p className={cn("mt-0.5 text-[0.8125rem] leading-snug", note.title ? "text-muted-foreground" : "line-clamp-5 text-foreground/80")}>{maskAmounts(note.title ? note.body : firstSentences(note.body))}</p>
           <Link href={note.href} className="mt-1.5 inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
             {note.cta} <ArrowRight className="size-3.5" />
           </Link>
@@ -85,12 +95,12 @@ export function HomeBand({ data }: { data: Dashboard }) {
         </Link>
         <div className="glass-on-green flex items-center gap-0.5 rounded-full p-1">
           <button type="button" onClick={openSearch} aria-label="Search"
-            className="pressable flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15">
+            className="pressable hit flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15">
             <Search className="size-[1.1rem]" strokeWidth={2} />
           </button>
           <Notifications tone="light" />
           <Link href="/you" aria-label="Profile" onClick={() => play("tap")}
-            className="pressable flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15">
+            className="pressable hit flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15">
             <CircleUserRound className="size-[1.15rem]" strokeWidth={2} />
           </Link>
         </div>
@@ -174,7 +184,7 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
         {RANGES.map((r) => (
           <button key={r.label} type="button" role="radio" aria-checked={r.label === range.label}
             onClick={() => { play("select"); setRange(r); setHover(null) }}
-            className={cn("pressable h-8 flex-1 rounded-full text-[0.8125rem] font-semibold transition-colors duration-200",
+            className={cn("pressable hit h-9 flex-1 rounded-full text-[0.8125rem] font-semibold transition-colors duration-200",
               r.label === range.label ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
             {r.label}
           </button>

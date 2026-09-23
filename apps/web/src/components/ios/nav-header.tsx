@@ -72,7 +72,7 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
 /** A small floating header control: liquid glass, a circle when it only holds an icon. */
 export function HeaderButton({ className, children, ...props }: React.ComponentProps<"button">) {
   return (
-    <button type="button" className={cn("glass-control pressable inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground [&_svg]:size-[1.05rem] [&_svg]:text-foreground/75", className)} {...props}>
+    <button type="button" className={cn("glass-control pressable hit inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold text-foreground [&_svg]:size-[1.05rem] [&_svg]:text-foreground/75", className)} {...props}>
       {children}
     </button>
   )

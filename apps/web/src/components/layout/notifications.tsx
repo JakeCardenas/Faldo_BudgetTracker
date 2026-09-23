@@ -24,8 +24,8 @@ export function Notifications({ tone = "default" }: { tone?: "default" | "light"
     <Popover>
       <PopoverTrigger
         className={tone === "light"
-          ? "relative flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15 focus-visible:ring-3 focus-visible:ring-white/40 focus-visible:outline-none aria-expanded:bg-white/15"
-          : "relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none aria-expanded:bg-accent aria-expanded:text-foreground"}
+          ? "hit relative flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15 focus-visible:ring-3 focus-visible:ring-white/40 focus-visible:outline-none aria-expanded:bg-white/15"
+          : "hit relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none aria-expanded:bg-accent aria-expanded:text-foreground"}
         aria-label={count ? `Notifications, ${count} new` : "Notifications"}
       >
         <Bell className="size-[1.1rem]" strokeWidth={1.85} />

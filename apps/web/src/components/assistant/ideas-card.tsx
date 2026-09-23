@@ -19,7 +19,7 @@ type Ideas = Extract<Block, { type: "ideas" }>
 type Idea = Ideas["items"][number]
 
 function range(idea: Idea) {
-  return idea.low_minor === idea.high_minor ? formatMoney(idea.low_minor) : `${formatMoney(idea.low_minor)}–${formatMoney(idea.high_minor)}`
+  return idea.low_minor === idea.high_minor ? formatMoney(idea.low_minor) : `${formatMoney(idea.low_minor)} to ${formatMoney(idea.high_minor)}`
 }
 
 const pill = "pressable inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[0.8125rem] font-medium transition-colors disabled:opacity-60"

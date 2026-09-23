@@ -71,6 +71,7 @@ async def test_birthdays_you_told_faldo_become_check_ins(app):
     birthday = next(c for c in body["checkins"] if c["kind"] == "birthday")
     assert birthday["title"] == "A birthday is in 10 days" and "Tito Ben" in birthday["body"] and birthday["mood"] == "love"
     assert 1 <= len(body["starters"]) <= 4 and all(s["prompt"] for s in body["starters"])
+    assert len(body["checkins"]) <= 2 and not {c["prompt"] for c in body["checkins"]} & {s["prompt"] for s in body["starters"]}
 
 
 async def test_several_due_bills_become_one_check_in(app):

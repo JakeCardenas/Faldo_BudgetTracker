@@ -51,7 +51,7 @@ export function QuickNotes() {
                 <p className="mt-0.5 text-xs text-muted-foreground">{timeAgo(note.created_at)}</p>
               </div>
               <button type="button" aria-label="Delete note" onClick={async () => { await api.delete(`/notes/${note.id}`); void qc.invalidateQueries({ queryKey: ["notes"] }) }}
-                className="pressable flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"><Trash2 className="size-4" /></button>
+                className="pressable hit flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"><Trash2 className="size-4" /></button>
             </li>
           ))}
         </ul>

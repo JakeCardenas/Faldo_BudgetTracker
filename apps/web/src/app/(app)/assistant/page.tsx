@@ -19,6 +19,7 @@ import { api, streamPost } from "@/lib/api"
 import { formatDate, timeAgo } from "@/lib/format"
 import { replyMood, toolNames } from "@/lib/mood"
 import { readPhoto, type Photo } from "@/lib/photo"
+import { usePushEnabled } from "@/lib/push"
 import { maskAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useCompanion, useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
@@ -122,7 +123,7 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
                     <li key={s.ref}>
                       <button type="button" disabled={!txnId} onClick={() => txnId && onOpenTransaction(txnId)}
                         className="flex w-full items-start gap-2 rounded-md border bg-card p-2 text-left text-xs transition-colors enabled:hover:bg-accent/60">
-                        <span className="rounded bg-muted px-1 font-mono text-[0.625rem] text-muted-foreground">{s.ref}</span>
+                        <span className="rounded bg-muted px-1 font-mono text-[0.6875rem] text-muted-foreground">{s.ref}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{s.label}</span>
                           <span className="block truncate text-muted-foreground">{s.type.replace(/_/g, " ")}{s.date && `, ${formatDate(s.date, "MMM d, yyyy")}`}</span>
@@ -295,6 +296,7 @@ function AssistantView() {
   const [devProvider, setDevProvider] = useState<boolean | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [pushOn] = usePushEnabled()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const initialAsked = useRef(false)
   const dictation = useDictation((text) => setInput((current) => (current ? `${current} ${text}` : text)))
@@ -303,8 +305,9 @@ function AssistantView() {
     api.get<{ is_development: boolean }>("/assistant/status").then((s) => setDevProvider(s.is_development)).catch(() => undefined)
   }, [])
 
+  // Follow the conversation as it grows. A fresh chat stays at the top, on Faldo's greeting.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    if (messages.length) bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [messages])
 
   const latestReplyId = messages.findLast((m) => m.role === "assistant")?.id
@@ -429,7 +432,7 @@ function AssistantView() {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="glass z-10 flex items-center gap-2 border-b border-border/70 px-3 pt-safe sm:px-6">
           <div className="flex h-14 w-full items-center gap-2">
-            <Link href="/" aria-label="Back to home" className="pressable -ml-1 flex size-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-accent lg:hidden">
+            <Link href="/" aria-label="Back to home" className="pressable hit -ml-1 flex size-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-accent lg:hidden">
               <ChevronLeft className="size-5" />
             </Link>
             <div className="min-w-0 flex-1">
@@ -437,8 +440,8 @@ function AssistantView() {
               <p className="truncate text-xs text-muted-foreground">Ask questions or log money in plain language</p>
             </div>
             {devProvider && <span className="hidden rounded-md bg-warning-soft px-2 py-1 text-[0.6875rem] font-medium text-warning sm:inline">Dev AI</span>}
-            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"><History className="size-[1.1rem]" strokeWidth={1.85} /></button>
-            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><PenSquare className="size-[1.1rem]" strokeWidth={1.85} /></button>
+            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"><History className="size-[1.1rem]" strokeWidth={1.85} /></button>
+            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><PenSquare className="size-[1.1rem]" strokeWidth={1.85} /></button>
           </div>
         </div>
 
@@ -461,15 +464,17 @@ function AssistantView() {
                           <p className="text-[0.9375rem] font-semibold tracking-[-0.01em]">{maskAmounts(c.title)}</p>
                           <p className="mt-0.5 text-[0.875rem] leading-snug text-muted-foreground">{maskAmounts(c.body)}</p>
                           <button type="button" onClick={() => ask(c.prompt)}
-                            className="pressable mt-2.5 inline-flex h-8 items-center rounded-full bg-primary px-3.5 text-[0.8125rem] font-medium text-primary-foreground hover:bg-primary/90">
+                            className="pressable hit mt-2.5 inline-flex h-8 items-center rounded-full bg-primary px-3.5 text-[0.8125rem] font-medium text-primary-foreground hover:bg-primary/90">
                             Talk about it
                           </button>
                         </div>
                       </div>
                     ))}
-                    <Link href="/settings/appearance" className="ml-13 inline-block text-[0.8125rem] font-medium text-primary hover:opacity-80">
-                      Get check-ins on your phone
-                    </Link>
+                    {pushOn === false && (
+                      <Link href="/settings/appearance" className="ml-13 inline-block py-2 text-[0.8125rem] font-medium text-primary hover:opacity-80">
+                        Get check-ins on your phone
+                      </Link>
+                    )}
                   </section>
                 ) : null}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr]">
@@ -525,7 +530,7 @@ function AssistantView() {
                 {/* eslint-disable-next-line @next/next/no-img-element -- a local preview of the photo being sent */}
                 <img src={photo.preview} alt="Photo to send" className="h-20 w-auto rounded-lg border object-cover" />
                 <button type="button" onClick={() => setPhoto(null)} aria-label="Remove photo"
-                  className="pressable absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-foreground text-background shadow">
+                  className="pressable hit absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-foreground text-background shadow">
                   <X className="size-3.5" />
                 </button>
               </div>
@@ -555,12 +560,12 @@ function AssistantView() {
             />
             <div className="flex items-center justify-end gap-2">
               <button type="button" onClick={() => photoInput.current?.click()} aria-label="Add a photo"
-                className="pressable mr-auto flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
+                className="pressable hit mr-auto flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
                 <ImagePlus className="size-4.5" />
               </button>
               {dictation.supported && (
                 <button type="button" onClick={dictation.toggle} aria-label={dictation.listening ? "Stop dictation" : "Dictate"} aria-pressed={dictation.listening}
-                  className={cn("pressable flex size-9 items-center justify-center rounded-lg", dictation.listening ? "animate-pulse bg-expense-soft text-expense" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
+                  className={cn("pressable hit flex size-9 items-center justify-center rounded-lg", dictation.listening ? "animate-pulse bg-expense-soft text-expense" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
                   {dictation.listening ? <MicOff className="size-4.5" /> : <Mic className="size-4.5" />}
                 </button>
               )}

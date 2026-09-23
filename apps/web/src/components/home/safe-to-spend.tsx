@@ -76,7 +76,7 @@ export function SafeToSpendCard({ sts, className }: { sts: SafeToSpend; classNam
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="This week's share used"
           aria-valuenow={Math.round(used)} aria-valuemin={0} aria-valuemax={100}>
-          <div className={cn("h-full rounded-full transition-[width] duration-700 ease-[var(--ease-out-quint)]", used >= 100 ? "bg-warning" : "bg-primary")} style={{ width: `${used}%` }} />
+          <div className={cn("h-full w-full rounded-full transition-transform duration-700 ease-[var(--ease-out-quint)]", used >= 100 ? "bg-warning" : "bg-primary")} style={{ transform: `translateX(${Math.min(100, used) - 100}%)` }} />
         </div>
         {week.plan && (
           <p className="tabular mt-2 text-[0.8125rem] text-muted-foreground">

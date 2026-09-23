@@ -114,7 +114,7 @@ function StartChallengeSheet({ open, onOpenChange }: { open: boolean; onOpenChan
               <div className="flex gap-2" role="radiogroup" aria-label="How long">
                 {chosen.days.map((d) => (
                   <button key={d} type="button" role="radio" aria-checked={days === d} onClick={() => setDays(d)}
-                    className={cn("pressable h-9 flex-1 rounded-full text-[0.8125rem] font-semibold", days === d ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
+                    className={cn("pressable hit h-9 flex-1 rounded-full text-[0.8125rem] font-semibold", days === d ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
                     {d} days
                   </button>
                 ))}
@@ -174,9 +174,9 @@ export function ChallengesSection() {
               <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">{c.summary}{c.next_step ? ` · ${c.next_step}` : ""}</p>
               {c.state === "active" && c.status === "active" && (
                 <div className="mt-2 flex gap-2">
-                  {c.goal_id && <Link href="/goals" className="pressable inline-flex h-8 items-center rounded-full bg-primary px-3 text-[0.8125rem] font-medium text-primary-foreground">Add savings</Link>}
-                  <Link href={`/assistant?q=${encodeURIComponent(`How is my ${c.title} going?`)}`} className="pressable inline-flex h-8 items-center rounded-full bg-muted px-3 text-[0.8125rem] font-medium">Ask Faldo</Link>
-                  <button type="button" onClick={() => end(c.id)} className="pressable ml-auto inline-flex h-8 items-center rounded-full px-2.5 text-[0.8125rem] text-muted-foreground hover:bg-accent">End</button>
+                  {c.goal_id && <Link href="/goals" className="pressable hit inline-flex h-8 items-center rounded-full bg-primary px-3 text-[0.8125rem] font-medium text-primary-foreground">Add savings</Link>}
+                  <Link href={`/assistant?q=${encodeURIComponent(`How is my ${c.title} going?`)}`} className="pressable hit inline-flex h-8 items-center rounded-full bg-muted px-3 text-[0.8125rem] font-medium">Ask Faldo</Link>
+                  <button type="button" onClick={() => end(c.id)} className="pressable hit ml-auto inline-flex h-8 items-center rounded-full px-2.5 text-[0.8125rem] text-muted-foreground hover:bg-accent">End</button>
                 </div>
               )}
             </li>

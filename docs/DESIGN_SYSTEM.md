@@ -39,7 +39,8 @@ On phones and tablets, a floating chat head like Messenger's: Faldo waving (`cha
 - **Drag** it anywhere; let go and it springs to the nearer side with a little bounce, carried by how you threw it (the side it is heading for, and a quarter second of its speed along the edge).
 - **Tap** it to open Talk to Faldo (it hides there).
 - **Drag it down** and a × rises above the tab bar while the bottom of the screen darkens; within 84px the bubble is pulled onto it and the × grows. Let go there to put it away, with an Undo toast; the "Faldo bubble" switch in Settings brings it back.
-- It rests 8px from the side, below the status bar and above the tab bar, and remembers its side and height on this device. The first time it appears, Faldo says "Tap me to ask about your money" beside it.
+- It docks in the bottom-right corner, 8px from the side and just above the tab bar, and remembers where you leave it on this device. The first time it appears, Faldo says "Tap me to ask about your money" beside it. With the bubble on, pages scroll far enough for their last row to clear it.
+- **While the page scrolls** it tucks 60% of the way behind its edge (a spring with no bounce) and slides back out 600ms after scrolling stops. If its spot would cover a small control or an amount (a Check button, a chip, a `.tabular` figure), it stays tucked, peeking from the edge, until you scroll again. You can still tap or drag it while tucked.
 - It moves on springs, frame by frame (drag: stiff, no lag you notice; snap: a small overshoot; pull: quick, no bounce), and keeps moving with Reduce Motion on, like the tab bar.
 
 ## Page layouts
@@ -89,7 +90,7 @@ Only in the chat, Faldo's face on each reply is the mascot, not the app icon; ev
 
 Only the newest reply keeps moving; older ones rest. The empty chat shows `wave`. Reduce motion stops all of it.
 
-An empty chat opens with Faldo's check-ins (up to two, each with his pose and a "Talk about it" button), then "For you" starters from the user's own situation and "Log it" examples. Cards in chat follow one pattern: a title row, labelled rows, and pill buttons at the bottom. Confirm cards (`action`) show exactly what will change, with the primary button and "Not now"; nothing changes until the tap. Ideas cards offer "Plan it" and "Log it". Web sources are small globe chips under the answer. Photos show above the message they were sent with.
+An empty chat opens at the top, on Faldo's greeting, with his check-ins (up to two, each with his pose and a "Talk about it" button), then "For you" starters from the rest of the user's situation (never repeating a check-in) and "Log it" examples. "Get check-ins on your phone" shows only while phone notifications are off. Cards in chat follow one pattern: a title row, labelled rows, and pill buttons at the bottom. Confirm cards (`action`) show exactly what will change, with the primary button and "Not now"; nothing changes until the tap. Ideas cards offer "Plan it" and "Log it". Web sources are small globe chips under the answer. Photos show above the message they were sent with.
 
 Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts`) and its background ids unlock green environment themes (`BACKGROUND_INFO`). The chosen pose and theme appear in the Home hero.
 
@@ -142,7 +143,7 @@ Geist throughout. Money always uses tabular figures.
 | Section titles | `section-title` (16px bold) |
 | Card and row titles | 15px medium to semibold |
 | Body and supporting text | 13 to 14px |
-| Small labels | `eyebrow` (12px semibold, muted) or `label-caps` (11px bold, tracked capitals) |
+| Small labels | `eyebrow` (12px semibold, muted) or `label-caps` (11px bold, tracked capitals). Nothing is set below 11px. |
 
 Weight carries the hierarchy: titles and money are bold, supporting text stays regular. Negative amounts keep their sign and colour; positive money can use Faldo green.
 
@@ -154,13 +155,15 @@ Content is solid; controls float. `nav-glass` (the tab bar and its corner +) is 
 
 ## Spacing and alignment
 
+Every tappable control gets at least a 44pt tap area. Controls drawn smaller (the eye, header icons, chips, the range picker, sheet close buttons) add `.hit`, an invisible 44pt target around them.
+
 Phones use 20px page margins; tablets 24px; desktop 32px. The scale is 4, 8, 12, 16, 20, 24, 32, 40, 48. Section titles sit 12px above their content, sections are 24 to 32px apart, and cards pad 16 to 20px. Page titles, section titles, cards, the tab bar and the + share the same left and right edges; nothing is inset by a few pixels.
 
 ## Headers and menu rows (Threads style)
 
 On phones, a page reached from somewhere else has a Threads bar: a plain back chevron (no label), its title centred in bold, and its actions as icon circles on the right (Add, New goal, Edit and Refresh show their words on desktop only). Top-level pages keep a large title that the bar picks up on scroll. Descriptions under titles show on desktop only.
 
-Menus (Profile, Settings, Plan, Tools) are `ListRow`s straight on the canvas: a 24px outline icon and a short label, 52px tall. No descriptions, chevrons, icon tiles or card around them; groups are separated by a hairline, and a destructive action (Sign out, Delete account) is red text on its own. A row with a switch is its label, so tapping anywhere flips it.
+Menus (Profile, Settings, Plan, Tools) are `ListRow`s straight on the canvas: a 24px outline icon and a short label, 52px tall. No descriptions, chevrons, icon tiles or card around them, except on Plan, where each row adds one quiet line saying where things stand (`detail`: "₱1,462 left of ₱9,000", "Internet is overdue, ₱1,699"); groups are separated by a hairline, and a destructive action (Sign out, Delete account) is red text on its own. A row with a switch is its label, so tapping anywhere flips it.
 
 ## Lists before cards
 
@@ -180,10 +183,11 @@ Every chart answers one question, written as its section title.
 Fast and ordered, using transforms and opacity only.
 
 - **Tabs:** the lens glides to the new tab on a spring, filling the icons it passes over (see Navigation).
-- **Pages:** the first visit plays `page-enter`: the header settles in 180ms, then each group below follows at 60ms steps (260ms each: fade, a 6px rise, 3px blur to sharp), and anything marked `.cascade` (Plan rows, History days, Wallet groups, quick actions, Home cards) flows in one after another at 45ms steps. Coming back to a page plays a quick 180ms fade (`page-return`).
+- **Pages:** the first visit plays `page-enter`: the header settles in 160ms, then each group below follows at 30ms steps (220ms each: fade, a 6px rise, 3px blur to sharp), and anything marked `.cascade` (Plan rows, History days, Wallet groups, quick actions, Home cards) flows in one after another at 30ms steps, capped at 160ms. A page is in place within about a third of a second, because tabs are switched all day. Coming back to a page plays a quick 180ms fade (`page-return`).
+- **Sheets:** on phones every dialog is a bottom sheet (`IosSheet`, `SHEET_CLASSES`) that rises the full height in 400ms and leaves in 250ms on the iOS drawer curve, `cubic-bezier(0.32, 0.72, 0, 1)`, without fading. Pull it down by the grabber or header (`useSheetDrag`) and it follows the finger while the dim lifts; past 120px, or flicked, it closes from where you let go, otherwise it springs back. Pulled up, it resists.
 - **Scroll:** on scroll down the tab bar sinks away and turns into a glass + in the corner and the page header fades up out of the way; on scroll up both come back, the bar rising under the +, which fades into it.
 - **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
-- **Everything else:** sheets rise, money counts up, buttons press to 97%.
+- **Everything else:** money counts up, buttons press to 97%, progress bars fill with a transform (never `width`), and transitions name their properties (never `transition-all`).
 
 Headline money (balance, net worth, Safe to Spend) counts up from zero when it appears. Faldo animates fully by default, whatever the device's own Reduce Motion setting says (the owner's choice); "Reduce motion" in Settings > Appearance turns every animation into an instant change (`html[data-motion="reduced"]`, set before first paint). The green bands (`data-band`) never fade in, so switching pages never flashes white at the top.
 

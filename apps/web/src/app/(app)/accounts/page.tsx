@@ -117,7 +117,7 @@ function DailyBalance({ view }: { view: View }) {
                 <span className="flex h-16 w-full items-end justify-center">
                   <span className={cn("w-2 rounded-full", last ? "bg-primary" : "bg-primary/25")} style={{ height: `${height}%` }} />
                 </span>
-                <span className={cn("text-[0.625rem]", last ? "font-bold text-foreground" : "text-muted-foreground")}>{format(parseISO(p.date), "EEEEE")}</span>
+                <span className={cn("text-[0.6875rem]", last ? "font-bold text-foreground" : "text-muted-foreground")}>{format(parseISO(p.date), "EEEEE")}</span>
               </li>
             )
           })}
@@ -237,9 +237,9 @@ export default function AccountsPage() {
                 <div className="mt-2.5 flex gap-1.5" role="radiogroup" aria-label="Balance view">
                   {VIEWS.map((v) => (
                     <button key={v.value} type="button" role="radio" aria-checked={view === v.value} onClick={() => { play("select"); setView(v.value) }}
-                      className={cn("h-8 min-w-0 flex-1 truncate rounded-full px-1.5 text-[0.75rem] font-bold transition-colors",
+                      className={cn("pressable hit h-9 min-w-0 flex-1 rounded-full px-1.5 text-[0.75rem] font-bold transition-colors",
                         view === v.value ? "bg-white text-[#17462c] shadow-[0_2px_8px_-2px_rgb(0_0_0/0.35)]" : "glass-on-green text-white hover:bg-white/20")}>
-                      {v.label}
+                      <span className="block truncate">{v.label}</span>
                     </button>
                   ))}
                 </div>

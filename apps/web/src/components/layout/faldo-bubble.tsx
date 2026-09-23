@@ -7,6 +7,7 @@ import { X } from "lucide-react"
 import { toast } from "sonner"
 import { useNotifications } from "@/components/layout/notifications"
 import { bubbleHintSeen, markBubbleHintSeen, readBubbleSpot, saveBubbleSpot, setBubbleShown, useBubbleShown } from "@/lib/bubble"
+import { motionReduced } from "@/lib/motion"
 import { play } from "@/lib/sound"
 import { Spring, clamp, type SpringConfig } from "@/lib/spring"
 import { cn } from "@/lib/utils"
@@ -28,6 +29,11 @@ const SNAP: SpringConfig = { stiffness: 380, damping: 26 }
 const PULL: SpringConfig = { stiffness: 700, damping: 42 }
 /** Pressing, lifting and leaving. */
 const SCALE: SpringConfig = { stiffness: 520, damping: 30 }
+/** While the page scrolls, this share of the bubble slips behind the edge, on a spring with no bounce. */
+const TUCK = 0.6
+const TUCK_SPRING: SpringConfig = { stiffness: 420, damping: 40 }
+/** How long scrolling has to stop before the bubble slides back out. */
+const RETURN_AFTER = 600
 
 type Sample = { x: number; y: number; t: number }
 
@@ -35,8 +41,9 @@ type Sample = { x: number; y: number; t: number }
  * The Faldo bubble: a floating chat head, like Messenger's, with Faldo waving. Drag it anywhere; let go
  * and it springs to the nearer side, carried by how you threw it. Tap it to ask Faldo. Drag it onto
  * the × that rises at the bottom to put it away (Settings brings it back). A red badge counts what
- * needs a look, the same as the bell. It rests between the status bar and the tab bar, remembers where
- * you left it on this device, and moves on springs, frame by frame, like the tab bar's lens.
+ * needs a look, the same as the bell. It docks in the bottom-right corner above the tab bar, remembers
+ * where you left it on this device, and moves on springs, frame by frame, like the tab bar's lens. While
+ * the page scrolls it tucks mostly behind the edge, so it never sits on what you are reading.
  */
 export function FaldoBubble() {
   const pathname = usePathname()
@@ -60,6 +67,9 @@ export function FaldoBubble() {
   const press = useRef<{ start: Sample; dx: number; dy: number; samples: Sample[]; moved: boolean; over: boolean } | null>(null)
   const frame = useRef(0)
   const lastTick = useRef(0)
+  const restSide = useRef<"left" | "right">("right")
+  const tucked = useRef(false)
+  const untuck = useRef(0)
 
   const paint = useCallback(() => {
     // The holder rests in the bottom-left corner; y counts from the top of the screen.
@@ -116,6 +126,7 @@ export function FaldoBubble() {
       const nextX = spot.side === "left" ? b.left : b.right
       const nextY = b.top + spot.y * (b.bottom - b.top)
       setSide(spot.side)
+      restSide.current = spot.side
       if (animate) {
         x.current.config = SNAP
         y.current.config = SNAP
@@ -143,6 +154,63 @@ export function FaldoBubble() {
     return () => { window.clearTimeout(show); window.clearTimeout(hide) }
   }, [hidden])
 
+  // Scrolling tucks the bubble most of the way behind its edge; it slides back out once scrolling stops,
+  // unless its spot would sit on a button or an amount, and then it stays tucked until you scroll again.
+  useEffect(() => {
+    if (hidden) return
+    const sitsOnControl = (px: number, py: number) => {
+      const spot = { left: px + 6, right: px + SIZE - 6, top: py + 6, bottom: py + SIZE - 6 }
+      // Measured rather than hit-tested, so a disabled button (which ignores the pointer) still counts.
+      // Amounts are .tabular (see Money).
+      return [...document.querySelectorAll("main button, main a, main input, main select, main textarea, main [role=button], main .tabular")].some((el) => {
+        const box = el.getBoundingClientRect()
+        // Whole rows are links too; only something small enough to be hidden by the bubble counts.
+        return box.width > 0 && box.width < 200 && box.height < 80
+          && box.left < spot.right && box.right > spot.left && box.top < spot.bottom && box.bottom > spot.top
+      })
+    }
+    const slide = (to: number, config: SpringConfig) => {
+      if (motionReduced()) {
+        x.current.snap(to)
+        paint()
+        return
+      }
+      x.current.config = config
+      x.current.target = to
+      run()
+    }
+    const tuck = () => {
+      if (tucked.current) return
+      tucked.current = true
+      setHint(false)
+      const b = bounds()
+      slide(restSide.current === "left" ? -SIZE * TUCK : b.width - SIZE * (1 - TUCK), TUCK_SPRING)
+    }
+    const comeOut = () => {
+      if (press.current) return
+      const b = bounds()
+      const restX = restSide.current === "left" ? b.left : b.right
+      if (sitsOnControl(restX, y.current.target)) return tuck()
+      if (!tucked.current) return
+      tucked.current = false
+      slide(restX, SNAP)
+    }
+    const onScroll = () => {
+      if (press.current) return
+      window.clearTimeout(untuck.current)
+      untuck.current = window.setTimeout(comeOut, RETURN_AFTER)
+      tuck()
+    }
+    // Each page gets the same check once it has drawn.
+    untuck.current = window.setTimeout(comeOut, RETURN_AFTER)
+    // Capturing on the document hears every scroller, not only the page's own.
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true })
+    return () => {
+      document.removeEventListener("scroll", onScroll, { capture: true })
+      window.clearTimeout(untuck.current)
+    }
+  }, [hidden, pathname, bounds, paint, run])
+
   useEffect(() => () => {
     cancelAnimationFrame(frame.current)
     frame.current = 0
@@ -161,6 +229,8 @@ export function FaldoBubble() {
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* moves still arrive while over the bubble */ }
     const start = { x: e.clientX, y: e.clientY, t: performance.now() }
     press.current = { start, dx: e.clientX - x.current.value, dy: e.clientY - y.current.value, samples: [start], moved: false, over: false }
+    window.clearTimeout(untuck.current)
+    tucked.current = false
     setHint(false)
     scale.current.target = 0.9
     run()
@@ -213,6 +283,7 @@ export function FaldoBubble() {
     y.current.velocity = vy
     scale.current.target = 1
     setSide(nextSide)
+    restSide.current = nextSide
     saveBubbleSpot({ side: nextSide, y: b.bottom > b.top ? (nextY - b.top) / (b.bottom - b.top) : 0 })
   }
 
@@ -252,7 +323,13 @@ export function FaldoBubble() {
     setDragging(false)
     setOver(false)
     if (p.moved) settle(p)
-    else scale.current.target = 1
+    else {
+      // Pressed while tucked and then let go of: come back out.
+      const b = bounds()
+      x.current.config = SNAP
+      x.current.target = restSide.current === "left" ? b.left : b.right
+      scale.current.target = 1
+    }
     run()
   }
 

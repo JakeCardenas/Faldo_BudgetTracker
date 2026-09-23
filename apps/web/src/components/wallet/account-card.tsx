@@ -363,17 +363,17 @@ export function AccountTile({ account, index = 0, actions }: { account: Account;
           {isCredit && limit > 0 ? (
             <>
               <div className="flex items-center gap-2">
-                <span className={cn("text-[0.625rem] font-bold tracking-[0.08em] uppercase", soft)}>Used credit</span>
+                <span className={cn("text-[0.6875rem] font-bold tracking-[0.08em] uppercase", soft)}>Used credit</span>
                 <span className={cn("h-1 flex-1 overflow-hidden rounded-full", darkText ? "bg-black/15" : "bg-white/30")}>
                   <span className={cn("block h-full rounded-full", darkText ? "bg-[#101411]/80" : "bg-white")} style={{ width: `${usedPct}%` }} />
                 </span>
               </div>
-              <p className={cn("tabular mt-0.5 flex justify-between gap-2 text-[0.625rem]", soft)}>
+              <p className={cn("tabular mt-0.5 flex justify-between gap-2 text-[0.6875rem]", soft)}>
                 <span>{Math.round(usedPct)}% used</span><span className="truncate">{formatMoney(Math.max(0, limit - owed), account.currency)} left</span>
               </p>
             </>
           ) : (
-            <p className={cn("text-[0.625rem] font-bold tracking-[0.08em] uppercase", soft)}>{isCredit ? "Used" : plain ? "Saved" : "Balance"}</p>
+            <p className={cn("text-[0.6875rem] font-bold tracking-[0.08em] uppercase", soft)}>{isCredit ? "Used" : plain ? "Saved" : "Balance"}</p>
           )}
           <p className={cn("tabular truncate text-[1.1875rem] leading-tight font-extrabold tracking-[-0.03em]", plain && account.balance_minor < 0 && "text-expense")}>
             {formatMoney(isCredit ? owed : account.balance_minor, account.currency)}

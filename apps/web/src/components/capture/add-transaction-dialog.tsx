@@ -8,7 +8,7 @@ import { DraftCard } from "@/components/capture/draft-card"
 import { TransactionForm, type TransactionFormValues } from "@/components/finance/transaction-form"
 import { KeypadEntry, type EntryPreset, type EntryType } from "@/components/capture/keypad-entry"
 import { Panda } from "@/components/brand/panda"
-import { SHEET_CLASSES } from "@/components/ios/sheet"
+import { SHEET_CLASSES, SheetGrabber, useSheetDrag } from "@/components/ios/sheet"
 import { Segmented } from "@/components/ios/segmented"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -332,7 +332,7 @@ export function showLoggedToast(transactions: Transaction[], message: string, on
         } catch {
           toast.error("Couldn't undo that.")
         }
-      }} className="pressable h-8 shrink-0 rounded-md px-3 text-[0.8125rem] font-medium text-primary hover:bg-accent">Undo</button>
+      }} className="pressable hit h-8 shrink-0 rounded-md px-3 text-[0.8125rem] font-medium text-primary hover:bg-accent">Undo</button>
     </div>
   ), { duration: 6000 })
 }
@@ -351,6 +351,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
   const [manualInitial, setManualInitial] = useState<Partial<TransactionInput> | null>(null)
   const [lastEntry, setLastEntry] = useState<EntryType>("expense")
   const close = () => onOpenChange(false)
+  const { ref, handle } = useSheetDrag(() => { play("close"); setManualInitial(null); onOpenChange(false) })
   const keypad = mode === "expense" || mode === "income" || mode === "transfer"
   const entryType: EntryType = keypad ? (mode as EntryType) : lastEntry
 
@@ -363,19 +364,20 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) { play("close"); setManualInitial(null) } onOpenChange(next) }}>
-      <DialogContent showCloseButton={false} aria-describedby={undefined}
+      <DialogContent ref={ref} showCloseButton={false} aria-describedby={undefined}
         onOpenAutoFocus={(e) => { if (keypad) { e.preventDefault(); (e.currentTarget as HTMLElement).focus() } }}
         className={cn("flex flex-col gap-0 overflow-hidden bg-popover p-0 max-sm:h-[94dvh]", SHEET_CLASSES,
           keypad ? "sm:h-[min(52rem,94dvh)] sm:max-w-[27rem]" : "sm:max-h-[92dvh] sm:max-w-2xl")}>
         <DialogTitle className="sr-only">{title}</DialogTitle>
-        <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-foreground/15 sm:hidden" aria-hidden />
-        <div className="flex items-center gap-2 px-3 pt-2 pb-2 sm:px-4 sm:pt-4">
+        <div {...handle}>
+        <SheetGrabber />
+        <div className="flex items-center gap-2 px-3 pb-2 sm:px-4 sm:pt-4">
           {keypad ? (
-            <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
+            <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
               <X className="size-5" strokeWidth={1.85} />
             </button>
           ) : (
-            <button type="button" onClick={() => onModeChange(entryType)} className="pressable flex h-9 shrink-0 items-center gap-0.5 rounded-lg pr-2.5 pl-1 text-sm font-medium text-primary hover:bg-accent">
+            <button type="button" onClick={() => onModeChange(entryType)} className="pressable hit flex h-9 shrink-0 items-center gap-0.5 rounded-lg pr-2.5 pl-1 text-sm font-medium text-primary hover:bg-accent">
               <ChevronLeft className="size-5" /> Back
             </button>
           )}
@@ -388,11 +390,12 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
           {keypad ? (
             <div className="flex shrink-0 gap-1.5">
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
-                className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><MessageCircle className="size-[1.15rem]" strokeWidth={1.85} /></button>
+                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><MessageCircle className="size-[1.15rem]" strokeWidth={1.85} /></button>
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan receipt"
-                className="pressable flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><ScanLine className="size-[1.15rem]" strokeWidth={1.85} /></button>
+                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><ScanLine className="size-[1.15rem]" strokeWidth={1.85} /></button>
             </div>
           ) : <span className="w-[4.5rem]" />}
+        </div>
         </div>
         <DialogDescription className="sr-only">Log an expense, income or transfer.</DialogDescription>
         {keypad ? (

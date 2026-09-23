@@ -86,11 +86,11 @@ export function ActionCard({ block }: { block: Action }) {
         ) : (
           <>
             <button type="button" disabled={state === "working"} onClick={confirm}
-              className="pressable inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[0.875rem] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
+              className="pressable hit inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[0.875rem] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
               {state === "working" && <Loader2 className="size-3.5 animate-spin" />} {block.confirm}
             </button>
             <button type="button" onClick={() => setState("skipped")}
-              className="pressable inline-flex h-9 items-center rounded-full px-3 text-[0.875rem] text-muted-foreground hover:bg-accent hover:text-foreground">
+              className="pressable hit inline-flex h-9 items-center rounded-full px-3 text-[0.875rem] text-muted-foreground hover:bg-accent hover:text-foreground">
               Not now
             </button>
           </>

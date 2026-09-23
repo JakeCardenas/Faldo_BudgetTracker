@@ -80,7 +80,7 @@ export function LoggedCard({ transactions, onOpen }: { transactions: Transaction
               </button>
             ))}
           </div>
-          <button type="button" onClick={cancel} disabled={state === "cancelling"} className="pressable inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[0.8125rem] font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
+          <button type="button" onClick={cancel} disabled={state === "cancelling"} className="pressable hit inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[0.8125rem] font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
             {state === "cancelling" ? <Loader2 className="size-3.5 animate-spin" /> : <XCircle className="size-3.5" />} Cancel
           </button>
         </>

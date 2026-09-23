@@ -25,10 +25,12 @@ export function ListGroup({ title, divider, children, className }: {
  * One row: an outline icon and a short label, nothing else. No descriptions, chevrons or icon tiles;
  * a destructive row (Sign out) is red text on its own.
  */
-export function ListRow({ icon: Icon, leading, title, href, external, onClick, trailing, toggle, destructive, className }: {
+export function ListRow({ icon: Icon, leading, title, detail, href, external, onClick, trailing, toggle, destructive, className }: {
   icon?: LucideIcon
   leading?: React.ReactNode
   title: React.ReactNode
+  /** A second, quieter line under the title: where things stand. */
+  detail?: React.ReactNode
   href?: string
   /** A plain link (a download or an API route) instead of in-app navigation. */
   external?: boolean
@@ -43,7 +45,12 @@ export function ListRow({ icon: Icon, leading, title, href, external, onClick, t
   const body = (
     <>
       {!destructive && (leading ?? (Icon && <Icon className="size-6 shrink-0" strokeWidth={1.7} />))}
-      <span className={cn("min-w-0 flex-1 truncate text-[1.0625rem] tracking-[-0.01em]", destructive && "text-destructive")}>{title}</span>
+      {detail !== undefined ? (
+        <span className="min-w-0 flex-1 py-2">
+          <span className={cn("block truncate text-[1.0625rem] tracking-[-0.01em]", destructive && "text-destructive")}>{title}</span>
+          <span className="tabular mt-0.5 block min-h-[1.125rem] truncate text-[0.8125rem] leading-[1.125rem] text-muted-foreground">{detail}</span>
+        </span>
+      ) : <span className={cn("min-w-0 flex-1 truncate text-[1.0625rem] tracking-[-0.01em]", destructive && "text-destructive")}>{title}</span>}
       {trailing}
     </>
   )
