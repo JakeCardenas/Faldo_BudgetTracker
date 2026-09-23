@@ -1,5 +1,6 @@
 import hashlib
 import io
+import logging
 import re
 import uuid
 from datetime import date, timedelta
@@ -11,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.capture.service import build_context
-from app.ai.factory import get_llm
+from app.ai.factory import vision_readers
 from app.ai.providers.base import ProviderUnavailable
 from app.core.config import get_settings
 from app.core.errors import AppError, NotFound
@@ -23,6 +24,12 @@ from app.models.identity import UserSettings
 from app.schemas.ledger import TransactionIn
 from app.services.transactions import create_transaction
 from app.storage.files import get_storage, receipt_key
+
+logger = logging.getLogger(__name__)
+
+NOT_SET_UP = "Receipt reading isn't set up on this server. Your image is saved; fill in the details below."
+BUSY = ("Faldo couldn't read it just now: the AI is busy or at its free limit for the moment. Tap Read it again in a "
+        "minute, or fill in the details below.")
 
 ALLOWED_FORMATS = {"JPEG": ("image/jpeg", "jpg"), "PNG": ("image/png", "png"), "WEBP": ("image/webp", "webp")}
 MAX_DIMENSION = 2400
@@ -214,19 +221,18 @@ async def upload_receipt(db: AsyncSession, user_id: uuid.UUID, data: bytes) -> R
                                                        Receipt.status != ReceiptStatus.discarded))).scalars().first()
     if existing:
         return existing
-    provider = get_llm()
+    readers = vision_readers()
     receipt = Receipt(user_id=user_id, mime_type=mime, size_bytes=len(clean), sha256=digest,
-                      status=ReceiptStatus.processing if provider.supports_vision else ReceiptStatus.unavailable,
-                      provider=provider.name, validation_issues=[])
-    if not provider.supports_vision:
-        receipt.error = ("Automatic receipt reading isn't configured on this server. Your image is saved; enter the "
-                         "details manually to create the transaction.")
+                      status=ReceiptStatus.processing if readers else ReceiptStatus.unavailable,
+                      provider=readers[0].name if readers else "local", validation_issues=[])
+    if not readers:
+        receipt.error = NOT_SET_UP
     db.add(receipt)
     await db.flush()
     key = receipt_key(user_id, receipt.id, ext)
     await get_storage(db, user_id).put(key, clean, mime)
     receipt.storage_key = key
-    if provider.supports_vision:
+    if readers:
         await enqueue(db, "extract_receipt", user_id, {"receipt_id": str(receipt.id)})
     return receipt
 
@@ -235,13 +241,19 @@ async def process_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid
     receipt = await get_receipt(db, user_id, receipt_id)
     if receipt.status != ReceiptStatus.processing or not receipt.storage_key:
         return
-    provider = get_llm()
     context = await build_context(db, user_id, settings, today)
-    try:
-        raw = await provider.extract_receipt(await get_storage(db, user_id).get(receipt.storage_key), receipt.mime_type, context)
-    except ProviderUnavailable as exc:
+    image = await get_storage(db, user_id).get(receipt.storage_key)
+    raw: dict[str, Any] | None = None
+    for reader in vision_readers():
+        try:
+            raw = await reader.extract_receipt(image, receipt.mime_type, context)
+            receipt.provider = reader.name
+            break
+        except ProviderUnavailable as exc:
+            logger.warning("Receipt %s: %s couldn't read it: %s", receipt.id, reader.name, exc)
+    if raw is None:
         receipt.status = ReceiptStatus.failed
-        receipt.error = str(exc)
+        receipt.error = BUSY if vision_readers() else NOT_SET_UP
         return
     extraction, issues = validate_extraction(raw, today, settings.currency)
     kind = CategoryKind.income if extraction["type"] == "income" else CategoryKind.expense
@@ -264,10 +276,10 @@ async def retry_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid.U
     receipt = await get_receipt(db, user_id, receipt_id)
     if receipt.status not in {ReceiptStatus.failed, ReceiptStatus.unavailable, ReceiptStatus.needs_review} or not receipt.storage_key:
         raise AppError("This receipt can't be read again.")
-    provider = get_llm()
-    if not provider.supports_vision:
-        raise AppError("Automatic receipt reading isn't available right now. Enter the details manually.")
-    receipt.status, receipt.error, receipt.provider = ReceiptStatus.processing, None, provider.name
+    readers = vision_readers()
+    if not readers:
+        raise AppError(NOT_SET_UP)
+    receipt.status, receipt.error, receipt.provider = ReceiptStatus.processing, None, readers[0].name
     await enqueue(db, "extract_receipt", user_id, {"receipt_id": str(receipt.id)})
     return receipt
 

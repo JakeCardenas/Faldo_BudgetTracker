@@ -5,7 +5,7 @@ from typing import Any
 
 from PIL import Image
 
-from app.ai.providers.base import CaptureContext
+from app.ai.providers.base import CaptureContext, ProviderUnavailable
 from app.core.db import scoped_session
 from app.engine.periods import today_in
 from app.models import Account, UserSettings
@@ -103,7 +103,7 @@ async def test_a_scanned_transfer_becomes_income_into_the_right_account(app, mon
     reader = Reader({**BLANK, "document_type": "ewallet_transfer", "direction": "income", "merchant": "Ninong Ben", "total": 10_000,
                      "date": today_in("Asia/Manila").isoformat(), "paid_from": "GCash", "suggested_category": income[0]["name"],
                      "reference": "9001"})
-    monkeypatch.setattr(receipts, "get_llm", lambda: reader)
+    monkeypatch.setattr(receipts, "vision_readers", lambda: [reader])
     queued: list[Any] = []
 
     async def hold(*args: Any, **kwargs: Any) -> None:
@@ -127,4 +127,75 @@ async def test_a_scanned_transfer_becomes_income_into_the_right_account(app, mon
 
     retried = (await client.post(f"/api/v1/receipts/{receipt['id']}/retry")).json()
     assert retried["status"] == "processing" and len(queued) == 2
+    await client.aclose()
+
+
+class RestingReader(Reader):
+    """Gemini right after a refusal (its free limit): the chat skips it for a while, but a receipt still goes to it."""
+
+    def is_resting(self) -> bool:
+        return True
+
+
+class BusyReader(Reader):
+    async def extract_receipt(self, image: bytes, mime_type: str, context: CaptureContext) -> dict[str, Any]:
+        raise ProviderUnavailable("Gemini's free limit is used up for now.")
+
+
+async def _upload(client: Any) -> dict[str, Any]:
+    image = io.BytesIO()
+    Image.new("RGB", (60, 90), "white").save(image, format="PNG")
+    return (await client.post("/api/v1/receipts", files={"file": ("receipt.png", image.getvalue(), "image/png")})).json()
+
+
+async def _process(uid: uuid.UUID, receipt_id: str) -> None:
+    async with scoped_session(uid) as db:
+        settings = await db.get(UserSettings, uid)
+        assert settings is not None
+        await receipts.process_receipt(db, uid, uuid.UUID(receipt_id), settings, today_in(settings.timezone))
+
+
+async def test_a_receipt_is_read_even_while_the_ai_rests_from_chat(app, monkeypatch):
+    client = await make_user(app, "Resting")
+    uid = uuid.UUID((await client.get("/api/v1/me")).json()["id"])
+    await client.post("/api/v1/accounts", json={"name": "Cash", "type": "cash", "opening_balance_minor": 0})
+    reader = RestingReader({**BLANK, "merchant": "llaollao", "total": 229, "date": today_in("Asia/Manila").isoformat()})
+    monkeypatch.setattr(receipts, "vision_readers", lambda: [reader])
+
+    async def hold(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    monkeypatch.setattr(receipts, "enqueue", hold)
+    receipt = await _upload(client)
+    assert receipt["status"] == "processing" and receipt["error"] is None
+    await _process(uid, receipt["id"])
+    read = (await client.get(f"/api/v1/receipts/{receipt['id']}")).json()
+    assert read["status"] == "needs_review" and read["extraction"]["amount_minor"] == 22_900
+    await client.aclose()
+
+
+async def test_a_busy_ai_fails_honestly_and_can_be_retried(app, monkeypatch):
+    client = await make_user(app, "Busy")
+    uid = uuid.UUID((await client.get("/api/v1/me")).json()["id"])
+    monkeypatch.setattr(receipts, "vision_readers", lambda: [BusyReader(BLANK)])
+
+    async def hold(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    monkeypatch.setattr(receipts, "enqueue", hold)
+    receipt = await _upload(client)
+    await _process(uid, receipt["id"])
+    failed = (await client.get(f"/api/v1/receipts/{receipt['id']}")).json()
+    assert failed["status"] == "failed" and "Read it again" in failed["error"] and "configured" not in failed["error"]
+    retried = await client.post(f"/api/v1/receipts/{receipt['id']}/retry")
+    assert retried.status_code == 200 and retried.json()["status"] == "processing"
+    await client.aclose()
+
+
+async def test_only_a_server_without_any_reader_says_it_isnt_set_up(app, monkeypatch):
+    client = await make_user(app, "NoReader")
+    monkeypatch.setattr(receipts, "vision_readers", lambda: [])
+    receipt = await _upload(client)
+    assert receipt["status"] == "unavailable" and "isn't set up" in receipt["error"]
+    assert (await client.post(f"/api/v1/receipts/{receipt['id']}/retry")).status_code == 400
     await client.aclose()

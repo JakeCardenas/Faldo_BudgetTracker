@@ -170,7 +170,7 @@ async def test_receipt_without_vision_provider_is_honest(demo):
     r = await demo.post("/api/v1/receipts", files={"file": ("receipt.png", buf.getvalue(), "image/png")})
     assert r.status_code == 201, r.text
     body = r.json()
-    assert body["status"] == "unavailable" and body["extraction"] is None and "manually" in body["error"]
+    assert body["status"] == "unavailable" and body["extraction"] is None and "isn't set up" in body["error"]
     r = await demo.post("/api/v1/receipts", files={"file": ("bad.png", b"not an image", "image/png")})
     assert r.status_code == 415
 

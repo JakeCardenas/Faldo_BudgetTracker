@@ -51,6 +51,16 @@ def next_llm(after: str) -> LLMProvider:
     return _provider("local")
 
 
+def vision_readers() -> list[LLMProvider]:
+    """Every configured provider that can read images, in order, resting or not.
+
+    Resting keeps the chat from waiting on a provider that just refused; a receipt someone asked Faldo to read should
+    still go to it, since the free limit is often back by then, and the rest is only this server instance's memory.
+    """
+    readers = (_provider(name) for name in get_settings().ai_provider_chain if name != "local")
+    return [provider for provider in readers if provider.supports_vision]
+
+
 @lru_cache
 def get_embeddings() -> EmbeddingProvider:
     settings = get_settings()
