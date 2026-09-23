@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import { Plus, Wallet } from "lucide-react"
-import { bandTint, environmentStyle } from "@/components/brand/environment"
-import { BandScenery } from "@/components/brand/scenery"
+import { BAND_STYLE, BAND_TINT, BambooDecor } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
 import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { AccountDialog } from "@/components/finance/account-dialog"
@@ -18,11 +17,10 @@ import { greeting } from "@/lib/format"
 import { useDashboard, useMe } from "@/lib/queries"
 
 function HomeSkeleton() {
-  const { data: me } = useMe()
   return (
     <div aria-busy="true" aria-label="Loading your home screen">
-      <div style={environmentStyle(me?.settings.home_background)} className="relative isolate -mx-5 h-[20rem] overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:h-56 lg:rounded-[2rem] lg:px-10 lg:pt-8">
-        <BandScenery theme={me?.settings.home_background} />
+      <div style={BAND_STYLE} className="relative isolate -mx-5 h-[20rem] overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:h-56 lg:rounded-[2rem] lg:px-10 lg:pt-8">
+        <BambooDecor />
         <div className="flex justify-between lg:hidden"><Skeleton className="size-11 rounded-full bg-white/12" /><Skeleton className="h-11 w-32 rounded-full bg-white/12" /></div>
         <Skeleton className="mt-5 h-3 w-40 bg-white/15 lg:mt-0" /><Skeleton className="mt-2 h-7 w-56 bg-white/15" />
         <Skeleton className="mt-6 ml-36 h-24 rounded-[1.25rem] bg-white/15 lg:ml-0 lg:w-96" />
@@ -42,10 +40,10 @@ function Welcome() {
   const [adding, setAdding] = useState(false)
   const name = me?.display_name?.split(" ")[0]
   return (
-    <section data-band style={environmentStyle(me?.settings.home_background)}
+    <section data-band style={BAND_STYLE}
       className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(var(--top-inset)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
-      <StatusBarTint color={bandTint(me?.settings.home_background)} />
-      <BandScenery theme={me?.settings.home_background} />
+      <StatusBarTint color={BAND_TINT} />
+      <BambooDecor />
       <Panda pose="wave" priority sizes="192px" className="w-44 drop-shadow-[0_18px_28px_rgb(0_0_0/0.28)] sm:w-48" />
       <h1 className="mt-6 text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">{greeting()}{name ? `, ${name}` : ""}</h1>
       <p className="mt-2 max-w-sm text-[0.9375rem] leading-relaxed text-white/85">

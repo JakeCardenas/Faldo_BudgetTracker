@@ -1,12 +1,8 @@
-import {
-  BookOpenCheck, CalendarCheck, CalendarClock, CalendarDays, Calculator, Crown, Dumbbell, Flag, Flame, Medal, MessageCircle, ReceiptText, Sprout, Target,
-  type LucideIcon,
-} from "lucide-react"
 import type { PandaPose } from "@/components/brand/panda"
 
 /**
- * Unlockable Faldo poses. The ids are the backend's reward ids (they began as outfits); each now
- * unlocks one of the canonical panda artworks, shown on Home.
+ * Faldo's poses, in the order the Streaks page shows them. The ids are the backend's (they began as outfits); each is
+ * one of the canonical panda artworks, shown on Home. The hints match what unlocks them (`OUTFITS` in the API).
  */
 export const OUTFIT_INFO: Record<string, { name: string; hint: string; pose: PandaPose }> = {
   classic: { name: "Bamboo buddy", hint: "Always available", pose: "bamboo" },
@@ -21,37 +17,4 @@ export const OUTFIT_INFO: Record<string, { name: string; hint: string; pose: Pan
 
 export function poseFor(outfit?: string | null): PandaPose {
   return OUTFIT_INFO[outfit ?? "classic"]?.pose ?? "bamboo"
-}
-
-/**
- * Home environments: Faldo's panda habitat, then landmarks across Asia, unlocked with badges. Each is drawn by
- * `components/brand/scenery.tsx` over its sky (`components/brand/environment.tsx`). The ids are the original theme
- * ids, kept so saved choices still work.
- */
-export const BACKGROUND_INFO: Record<string, { name: string; place: string; hint: string }> = {
-  meadow: { name: "Bamboo valley", place: "Faldo's home", hint: "Always available" },
-  sunrise: { name: "Mayon Volcano", place: "Philippines", hint: "Log two days in a row" },
-  terraces: { name: "Banaue Rice Terraces", place: "Philippines", hint: "Keep a 7-day streak" },
-  lagoon: { name: "Marina Bay", place: "Singapore", hint: "Set up a budget" },
-  hills: { name: "Mount Fuji", place: "Japan", hint: "Keep a 14-day streak" },
-  bay_sunset: { name: "Wat Arun", place: "Thailand", hint: "Track a recurring bill" },
-  seoul: { name: "Gyeongbokgung", place: "Korea", hint: "Create a savings goal" },
-  night_market: { name: "Taipei 101", place: "Taiwan", hint: "Keep a 30-day streak" },
-}
-
-export const BADGE_ART: Record<string, { icon: LucideIcon }> = {
-  first_sprout: { icon: Sprout },
-  two_in_a_row: { icon: CalendarCheck },
-  warming_up: { icon: Flame },
-  full_week: { icon: CalendarDays },
-  fortnight_focus: { icon: Target },
-  monthly_habit: { icon: Medal },
-  sixty_strong: { icon: Dumbbell },
-  hundred_club: { icon: Crown },
-  budget_builder: { icon: Calculator },
-  goal_setter: { icon: Flag },
-  bill_planner: { icon: CalendarClock },
-  receipt_ranger: { icon: ReceiptText },
-  curious_mind: { icon: MessageCircle },
-  scholar: { icon: BookOpenCheck },
 }

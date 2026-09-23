@@ -33,7 +33,6 @@ class SettingsOut(OutModel):
     onboarding_completed_at: datetime | None
     theme: str
     mascot_outfit: str
-    home_background: str
     quick_actions: list[str]
     completed_lessons: list[str]
 
@@ -49,7 +48,6 @@ class SettingsUpdate(ApiModel):
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)] | None = None
     theme: Literal["system", "light", "dark"] | None = None
     mascot_outfit: Slug | None = None
-    home_background: Slug | None = None
     quick_actions: list[Slug] | None = Field(default=None, max_length=12)
     completed_lessons: list[Slug] | None = Field(default=None, max_length=100)
 

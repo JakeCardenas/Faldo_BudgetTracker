@@ -32,7 +32,7 @@ def test_best_streak():
     assert best_streak(set()) == 0
 
 
-async def test_engagement_badges_and_rewards(client):
+async def test_engagement_streak_and_poses(client):
     account = (await client.post("/api/v1/accounts", json={"name": "Cash", "type": "cash"})).json()
     for offset in range(3):
         await client.post("/api/v1/transactions", json={
@@ -40,21 +40,23 @@ async def test_engagement_badges_and_rewards(client):
             "occurred_on": (TODAY - timedelta(days=offset)).isoformat()})
     data = (await client.get("/api/v1/engagement")).json()
     assert data["current_streak"] == 3 and data["logged_today"] and data["best_streak"] == 3
-    earned = {b["id"] for b in data["badges"] if b["earned"]}
-    assert {"first_sprout", "two_in_a_row", "warming_up"} <= earned and "full_week" not in earned
-    assert data["next_badge"]["id"] == "full_week" and data["next_badge"]["progress"] == 3
+    assert "badges" not in data and "backgrounds" not in data
+    poses = {o["id"]: o for o in data["outfits"]}
+    assert poses["classic"]["unlocked"] and poses["bucket_hat"]["unlocked"]
+    assert poses["scarf"] == {"id": "scarf", "unlocked": False, "progress": 3, "target": 7}
+    assert poses["headphones"] == {"id": "headphones", "unlocked": False, "progress": 0, "target": 1}
     assert [d["logged"] for d in data["week"]][-3:] == [True, True, True]
 
     assert (await client.patch("/api/v1/me/settings", json={"mascot_outfit": "bucket_hat"})).status_code == 200
     locked = await client.patch("/api/v1/me/settings", json={"mascot_outfit": "crown"})
     assert locked.status_code == 400
-    assert (await client.patch("/api/v1/me/settings", json={"home_background": "atlantis"})).status_code == 400
+    assert (await client.patch("/api/v1/me/settings", json={"mascot_outfit": "tuxedo"})).status_code == 400
     r = await client.patch("/api/v1/me/settings", json={"theme": "dark", "quick_actions": ["budgets", "goals"],
                                                         "completed_lessons": ["budget-50-30-20", "budget-50-30-20"]})
     assert r.status_code == 200
     settings = r.json()["settings"]
     assert settings["theme"] == "dark" and settings["mascot_outfit"] == "bucket_hat"
-    assert settings["completed_lessons"] == ["budget-50-30-20"]
+    assert settings["completed_lessons"] == ["budget-50-30-20"] and "home_background" not in settings
     assert (await client.patch("/api/v1/me/settings", json={"theme": "neon"})).status_code == 422
 
 

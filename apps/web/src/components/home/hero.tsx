@@ -4,8 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleUserRound, Flame, Search } from "lucide-react"
-import { bandTint, environmentStyle } from "@/components/brand/environment"
-import { BandScenery } from "@/components/brand/scenery"
+import { BAND_STYLE, BAND_TINT, BambooDecor } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
 import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { BalanceLine, type BalancePointValue } from "@/components/charts/charts"
@@ -79,10 +78,10 @@ export function HomeBand({ data }: { data: Dashboard }) {
   const streak = engagement?.current_streak ?? 0
 
   return (
-    <section data-band aria-label="Welcome" style={environmentStyle(me?.settings.home_background)}
+    <section data-band aria-label="Welcome" style={BAND_STYLE}
       className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:flex lg:min-h-56 lg:flex-col lg:justify-end lg:rounded-[2rem] lg:px-10 lg:pt-8">
-      <StatusBarTint color={bandTint(me?.settings.home_background)} />
-      <BandScenery theme={me?.settings.home_background} />
+      <StatusBarTint color={BAND_TINT} />
+      <BambooDecor />
 
       <div className="flex items-center justify-between lg:hidden">
         <Link href="/streaks" onClick={() => play("tap")} className={bandButton}
@@ -108,7 +107,7 @@ export function HomeBand({ data }: { data: Dashboard }) {
       </div>
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-10">
-        <div className="pt-5 [text-shadow:0_1px_2px_rgb(4_24_12/0.55)] lg:pt-0 lg:pb-9">
+        <div className="pt-5 lg:pt-0 lg:pb-9">
           <p className="text-[0.6875rem] font-semibold tracking-[0.08em] text-white/90 uppercase">{formatDate(new Date().toISOString(), "EEEE, MMMM d")}</p>
           <h1 className="mt-1 truncate text-[1.625rem] leading-tight font-normal tracking-[-0.03em] lg:text-[2.125rem]">
             {greeting()}{name ? <>, <span className="font-extrabold">{name}</span>!</> : ""}

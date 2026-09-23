@@ -15,7 +15,6 @@ export interface Settings {
   onboarding_completed_at: string | null
   theme: "system" | "light" | "dark"
   mascot_outfit: string
-  home_background: string
   quick_actions: string[]
   completed_lessons: string[]
 }
@@ -620,20 +619,12 @@ export interface SearchResults {
   memory: { entity_type: string; entity_id: string; title: string; snippet: string; date: string | null }[]
 }
 
-export interface Badge {
-  id: string
-  name: string
-  description: string
-  group: "streak" | "milestone"
-  threshold: number
-  earned: boolean
-  progress: number
-}
-
+/** A Faldo pose and how close it is to unlocking: `progress` of `target` (days of streak, or things done). */
 export interface Reward {
   id: string
-  required_badge: string | null
   unlocked: boolean
+  progress: number
+  target: number
 }
 
 export interface Engagement {
@@ -644,11 +635,7 @@ export interface Engagement {
   restores_per_month: number
   logged_days_total: number
   week: { date: string; logged: boolean }[]
-  badges: Badge[]
-  earned_count: number
-  next_badge: Badge | null
   outfits: Reward[]
-  backgrounds: Reward[]
 }
 
 export interface BalancePoint {

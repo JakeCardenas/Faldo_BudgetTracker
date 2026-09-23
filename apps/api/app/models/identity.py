@@ -35,7 +35,6 @@ class UserSettings(Timestamps, Base):
     onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     theme: Mapped[str] = mapped_column(String(10), default="system", server_default="system")
     mascot_outfit: Mapped[str] = mapped_column(String(40), default="classic", server_default="classic")
-    home_background: Mapped[str] = mapped_column(String(40), default="meadow", server_default="meadow")
     quick_actions: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
     completed_lessons: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
 

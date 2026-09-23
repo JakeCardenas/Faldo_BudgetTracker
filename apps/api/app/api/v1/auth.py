@@ -38,7 +38,7 @@ from app.schemas.auth import (
 )
 from app.services.categories import create_default_categories
 from app.services.email import send_email
-from app.services.engagement import check_reward
+from app.services.engagement import check_outfit
 from app.services.transactions import TransactionFilters, list_transactions
 
 router = APIRouter(tags=["auth"])
@@ -138,9 +138,7 @@ async def update_settings(data: SettingsUpdate, ctx: CtxDep) -> MeOut:
         if has_accounts:
             raise AppError("Currency can't be changed after accounts are created.")
     if "mascot_outfit" in updates:
-        await check_reward(ctx.db, ctx.user_id, ctx.settings, ctx.today, "outfits", updates["mascot_outfit"])
-    if "home_background" in updates:
-        await check_reward(ctx.db, ctx.user_id, ctx.settings, ctx.today, "backgrounds", updates["home_background"])
+        await check_outfit(ctx.db, ctx.user_id, ctx.settings, ctx.today, updates["mascot_outfit"])
     if "completed_lessons" in updates:
         updates["completed_lessons"] = list(dict.fromkeys(updates["completed_lessons"]))
     for key, value in updates.items():

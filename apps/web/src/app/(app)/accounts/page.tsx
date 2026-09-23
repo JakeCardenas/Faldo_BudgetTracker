@@ -7,8 +7,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { format, parseISO } from "date-fns"
 import { ArrowDownRight, ArrowUpRight, ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, FileUp, LayoutGrid, List, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
-import { bandTint, environmentStyle } from "@/components/brand/environment"
-import { BandScenery } from "@/components/brand/scenery"
+import { BAND_STYLE, BAND_TINT, BambooDecor } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
 import { StatusBarTint } from "@/components/brand/status-bar-tint"
 import { AccountDialog } from "@/components/finance/account-dialog"
@@ -208,10 +207,10 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6 pb-2">
-      <section data-band aria-label="Wallet" style={environmentStyle(me?.settings.home_background)}
+      <section data-band aria-label="Wallet" style={BAND_STYLE}
         className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
-        <StatusBarTint color={bandTint(me?.settings.home_background)} />
-        <BandScenery theme={me?.settings.home_background} />
+        <StatusBarTint color={BAND_TINT} />
+        <BambooDecor />
         <div className="flex items-center justify-between gap-2">
           {arranging ? <span /> : (
             <button type="button" onClick={() => router.push("/import")} aria-label="Import a statement" className={bandButton}><FileUp /></button>
@@ -230,7 +229,7 @@ export default function AccountsPage() {
             )}
           </div>
         </div>
-        <div className="[text-shadow:0_1px_2px_rgb(4_24_12/0.55)]">
+        <div>
           <h1 className="mt-4 text-[1.625rem] leading-tight font-extrabold tracking-[-0.03em] lg:text-[2rem]">Wallet</h1>
           <p className="mt-0.5 text-[0.8125rem] text-white/85">Cash, e-wallets, banks and cards you track by hand</p>
         </div>
