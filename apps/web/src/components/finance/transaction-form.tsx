@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { AmountInput } from "@/components/finance/amount-input"
+import { BalanceNote } from "@/components/finance/balance-note"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -46,8 +47,10 @@ function Field({ label, htmlFor, children, highlight, hint }: { label: string; h
   )
 }
 
-export function TransactionForm({ initial, onSubmit, submitLabel = "Save transaction", busy, onCancel, highlights = {}, extraActions }: {
+export function TransactionForm({ initial, saved, onSubmit, submitLabel = "Save transaction", busy, onCancel, highlights = {}, extraActions }: {
   initial?: Partial<TransactionFormValues>
+  /** Editing a transaction already recorded, so its amount already came out of its account. */
+  saved?: boolean
   onSubmit: (input: TransactionInput) => void
   submitLabel?: string
   busy?: boolean
@@ -128,6 +131,8 @@ export function TransactionForm({ initial, onSubmit, submitLabel = "Save transac
             <SelectTrigger className="w-full"><SelectValue placeholder="Choose account" /></SelectTrigger>
             <SelectContent>{activeAccounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
           </Select>
+          {type !== "income" && <BalanceNote account={activeAccounts.find((a) => a.id === accountId)} amountMinor={amountMinor ?? 0}
+            returning={saved && start.account_id === accountId && start.type !== "income" ? start.amount_minor ?? 0 : 0} />}
         </Field>
         {type === "transfer" ? (
           <Field label="To account" highlight={!!highlights.to_account_id} hint={highlights.to_account_id}>

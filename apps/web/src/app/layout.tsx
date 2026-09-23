@@ -49,7 +49,8 @@ const IOS_EDGE = `if(/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.plat
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} ${jakarta.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+    // data-scroll-behavior: in-page scrolling stays smooth, but a new page starts at its top at once.
+    <html lang="en" data-scroll-behavior="smooth" className={`${geist.variable} ${jakarta.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: SPLASH_GATE }} />
         {/* iPhone and iPad blur the top ~40pt under the status bar (iOS 26 scroll edge effect); mark them before first paint. */}

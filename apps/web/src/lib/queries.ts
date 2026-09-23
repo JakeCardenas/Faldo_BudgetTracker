@@ -51,11 +51,14 @@ export const keys = {
   moneyPlan: ["money-plan"] as const,
 }
 
-export async function invalidateFinancialData(qc: QueryClient) {
+export async function invalidateFinancialData(qc: QueryClient, deletedId?: string) {
   const roots = ["dashboard", "pulse", "accounts", "transactions", "budget", "goals", "recurring", "upcoming", "debts",
     "insights", "forecast", "report", "health", "account-history", "tags", "receipts", "engagement", "balance-history", "planned", "money-plan",
     "challenges", "companion"]
-  for (const root of roots) void qc.invalidateQueries({ queryKey: [root] })
+  // A record that was just deleted isn't fetched again: it would only come back "not found", and its sheet, still
+  // sliding away, would flash to a loading state.
+  const predicate = deletedId ? (query: { queryKey: readonly unknown[] }) => !query.queryKey.includes(deletedId) : undefined
+  for (const root of roots) void qc.invalidateQueries({ queryKey: [root], predicate })
 }
 
 export function useMe() {
@@ -152,7 +155,7 @@ export function useDeleteTransaction() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.delete(`/transactions/${id}`),
-    onSuccess: () => invalidateFinancialData(qc),
+    onSuccess: (_, id) => invalidateFinancialData(qc, id),
   })
 }
 

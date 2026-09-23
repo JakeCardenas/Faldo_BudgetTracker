@@ -1,7 +1,7 @@
 import base64
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
 
@@ -228,7 +228,14 @@ def _items(user_id: uuid.UUID, data: TransactionIn) -> list[TransactionItem]:
     return items
 
 
+def _check_date(occurred_on: date) -> None:
+    # Money that already moved: nothing dated after today. Today in UTC plus a day covers every timezone's today.
+    if occurred_on > datetime.now(UTC).date() + timedelta(days=1):
+        raise AppError("A transaction can't be dated in the future. Plan it as a bill or planned purchase instead.")
+
+
 async def _validate_refs(db: AsyncSession, user_id: uuid.UUID, data: TransactionIn) -> tuple[Account, Category | None, Category | None]:
+    _check_date(data.occurred_on)
     account = await get_owned(db, Account, data.account_id, user_id, "Account")
     if data.to_account_id:
         await get_owned(db, Account, data.to_account_id, user_id, "Destination account")

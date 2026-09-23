@@ -114,7 +114,7 @@ function HistoryView() {
       {/* Search and filters step aside with the header while you scroll down (phones only). */}
       <div data-away={away} onFocus={() => setChromeAway(false)} className="glass chrome-hide sticky top-[calc(2.75rem+var(--top-inset))] z-20 -mx-5 space-y-2.5 px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
         <div className="flex gap-2">
-          <label className="flex h-10 flex-1 items-center gap-2 rounded-full bg-muted px-4 transition-shadow focus-within:ring-2 focus-within:ring-ring/40">
+          <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-muted px-4 transition-shadow focus-within:ring-2 focus-within:ring-ring/40">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <span className="sr-only">Search transactions</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search transactions"

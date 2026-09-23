@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -42,7 +42,18 @@ def _anchor(frequency: str, due: date) -> int | None:
     return due.day if frequency in {"monthly", "quarterly", "yearly"} else None
 
 
+def _check_due(next_due_on: date) -> None:
+    # Up to a year overdue, up to five years ahead. Anything else is a mistyped year, and the forecast would count every
+    # missed occurrence since then.
+    today = datetime.now(UTC).date()
+    if next_due_on < today - timedelta(days=366):
+        raise AppError("That due date is more than a year ago. Pick the next date it's actually due.")
+    if next_due_on > today + timedelta(days=5 * 366):
+        raise AppError("That due date is more than five years away. Check the year.")
+
+
 async def create_recurring(db: AsyncSession, user_id: uuid.UUID, currency: str, data: RecurringIn) -> RecurringPayment:
+    _check_due(data.next_due_on)
     if data.account_id:
         await get_owned(db, Account, data.account_id, user_id, "Account")
     if data.category_id:
@@ -64,6 +75,8 @@ async def create_recurring(db: AsyncSession, user_id: uuid.UUID, currency: str, 
 async def update_recurring(db: AsyncSession, user_id: uuid.UUID, rid: uuid.UUID, data: RecurringUpdate) -> RecurringPayment:
     item = await get_owned(db, RecurringPayment, rid, user_id, "Recurring payment")
     updates = data.model_dump(exclude_unset=True)
+    if updates.get("next_due_on"):
+        _check_due(updates["next_due_on"])
     if updates.get("account_id"):
         await get_owned(db, Account, updates["account_id"], user_id, "Account")
     if updates.get("category_id"):

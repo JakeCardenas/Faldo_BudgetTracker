@@ -221,3 +221,24 @@ async def test_card_last4_is_optional_and_only_four_digits(client):
     assert cleared.status_code == 200 and cleared.json()["card_last4"] is None
     cash = await _account(client, "Pitaka", "cash", 1_000)
     assert cash["card_last4"] is None
+
+
+async def test_mistyped_dates_are_refused(client):
+    account = await _account(client)
+    base = {"type": "expense", "amount_minor": 1000, "account_id": account["id"]}
+    future = await client.post("/api/v1/transactions", json={**base, "occurred_on": (TODAY + timedelta(days=30)).isoformat()})
+    assert future.status_code == 400 and "future" in future.json()["detail"]
+    ok = await client.post("/api/v1/transactions", json={**base, "occurred_on": TODAY.isoformat()})
+    assert ok.status_code == 201
+    later = await client.put(f"/api/v1/transactions/{ok.json()['id']}", json={**base, "occurred_on": "2099-01-01"})
+    assert later.status_code == 400
+
+    bill = {"name": "Internet", "kind": "bill", "amount_minor": 1699_00, "frequency": "monthly"}
+    ancient = await client.post("/api/v1/recurring", json={**bill, "next_due_on": "1900-01-01"})
+    assert ancient.status_code == 400 and "year ago" in ancient.json()["detail"]
+    far = await client.post("/api/v1/recurring", json={**bill, "next_due_on": (TODAY + timedelta(days=6 * 366)).isoformat()})
+    assert far.status_code == 400
+    overdue = await client.post("/api/v1/recurring", json={**bill, "next_due_on": (TODAY - timedelta(days=10)).isoformat()})
+    assert overdue.status_code == 201
+    moved = await client.patch(f"/api/v1/recurring/{overdue.json()['id']}", json={"next_due_on": "1900-01-01"})
+    assert moved.status_code == 400

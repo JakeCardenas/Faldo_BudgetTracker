@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { CalendarClock, Check, MoreHorizontal, Plus, SkipForward } from "lucide-react"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
+import { BalanceNote } from "@/components/finance/balance-note"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
 import { DateTile } from "@/components/home/sections"
@@ -74,7 +75,7 @@ function RecurringDialog({ item, onOpenChange }: { item?: Recurring; onOpenChang
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>{item ? "Edit recurring payment" : "Add recurring payment"}</DialogTitle><DialogDescription>Bills, subscriptions, loans and income feed your forecast. Expected income is never counted as spendable until you record it.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-[1fr_9rem] gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label htmlFor="r-name">Name</Label><Input id="r-name" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Meralco" /></div>
             <div className="space-y-1.5"><Label>Type</Label>
               <Select value={kind} onValueChange={(v) => { setKind(v as RecurringKind); setCategoryId(NONE) }}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -138,6 +139,7 @@ function PayDialog({ item, onOpenChange }: { item: Recurring; onOpenChange: (ope
             <div className="space-y-1.5"><Label htmlFor="p-date">Date</Label><Input id="p-date" type="date" max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Account</Label><Select value={accountId} onValueChange={setAccountId}><SelectTrigger className="w-full"><SelectValue placeholder="Account" /></SelectTrigger><SelectContent>{accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent></Select></div>
           </div>
+          {item.kind !== "income" && <BalanceNote account={accounts.find((a) => a.id === accountId)} amountMinor={toMinor(amount) ?? 0} />}
           <Button type="submit" className="w-full" disabled={busy}>{busy ? "Saving…" : "Confirm"}</Button>
         </form>
       </DialogContent>

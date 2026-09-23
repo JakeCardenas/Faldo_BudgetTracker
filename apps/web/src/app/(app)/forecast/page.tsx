@@ -108,13 +108,13 @@ function Simulator() {
               )}
             </div>
           ))}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Select value={horizon} onValueChange={(v) => setHorizon(v as Horizon)}>
               <SelectTrigger className="w-36" aria-label="Look ahead to"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(HORIZON_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
             </Select>
             {drafts.length < 5 && <Button variant="ghost" onClick={() => setDrafts([...drafts, { ...EMPTY }])}><Plus /> Add change</Button>}
-            <Button className="ml-auto" onClick={() => run.mutate()} disabled={run.isPending || !drafts.some((d) => toMinor(d.amount))}>{run.isPending ? "Simulating…" : "Run simulation"}</Button>
+            <Button className="max-sm:w-full sm:ml-auto" onClick={() => run.mutate()} disabled={run.isPending || !drafts.some((d) => toMinor(d.amount))}>{run.isPending ? "Simulating…" : "Run simulation"}</Button>
           </div>
         </div>
 

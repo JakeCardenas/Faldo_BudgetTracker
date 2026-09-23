@@ -291,6 +291,20 @@ html.ios {
       font-size: max(16px, 1em);
     }
   }
+  /*
+    iOS draws date and time fields its own way: wider and taller than a text field, ignoring the width they are
+    given, so they spill into the next column. Without the native look they size like every other field; tapping
+    still opens the picker.
+  */
+  input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"]) {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
+  input::-webkit-date-and-time-value {
+    margin: 0;
+    text-align: left;
+  }
 }
 
 /* Component classes sit below utilities so a utility on the same element always wins. */
@@ -314,6 +328,23 @@ html.ios {
   }
   .rail > * {
     @apply snap-start;
+  }
+  /*
+    A finger-sized tap area (44pt, Apple's minimum) around a control that looks smaller than that. A component,
+    not a utility, so a control placed with absolute, fixed or sticky keeps its place (its own box still anchors
+    the tap area).
+  */
+  .hit {
+    position: relative;
+  }
+  .hit::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 2.75rem);
+    height: max(100%, 2.75rem);
+    translate: -50% -50%;
   }
 }
 
@@ -434,19 +465,6 @@ html.ios {
   .pressable {
     transition: scale 160ms var(--ease-out-quint), background-color 160ms ease-out, color 160ms ease-out, opacity 160ms ease-out, border-color 160ms ease-out;
     @apply active:scale-[0.97];
-  }
-  /* A finger-sized tap area (44pt, Apple's minimum) around a control that looks smaller than that. */
-  .hit {
-    position: relative;
-  }
-  .hit::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: max(100%, 2.75rem);
-    height: max(100%, 2.75rem);
-    translate: -50% -50%;
   }
   /* Type scale. Weight carries the hierarchy: titles and money are bold, supporting text stays regular. */
   /* Small all-caps labels that name a figure (NET WORTH, BALANCE, DUE). */

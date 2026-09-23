@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { format, subDays } from "date-fns"
 import { ArrowRight, CalendarDays, Check, ChevronDown, Delete, Grid3x3, NotebookPen, Plus, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
+import { BalanceNote } from "@/components/finance/balance-note"
 import { CategoryIcon } from "@/components/finance/category-icon"
 import { Chip } from "@/components/ios/segmented"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -277,7 +278,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4 sm:px-5">
+      <div className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-4 sm:px-5">
         <div className="flex min-h-24 flex-col items-center justify-center pt-3 pb-2" aria-live="polite">
           {hasOperation(expr) && <p className="tabular mb-1 text-sm text-muted-foreground">{formatExpression(expr)}</p>}
           <p className={cn("tabular flex items-start font-semibold tracking-[-0.035em]", amountMinor >= 1_000_000_00 ? "text-[2.5rem] leading-none" : "text-[3.25rem] leading-none")}>
@@ -306,7 +307,8 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
         {templates.length > 0 && (
           <div className="space-y-2">
             <p className="text-[0.8125rem] font-medium text-muted-foreground">Recent {type === "income" ? "income" : type === "transfer" ? "transfers" : "expenses"}</p>
-            <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 scrollbar-none">
+            {/* Bleeds to the sheet's edges: exactly its padding, or the whole sheet would scroll sideways. */}
+            <div className="-mx-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 scrollbar-none sm:-mx-5 sm:px-5">
               {templates.map((t) => (
                 <button key={t.id} type="button" onClick={() => {
                   play("select")
@@ -394,6 +396,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
             ))}
           </div>
         )}
+        {type !== "income" && <BalanceNote account={active.find((a) => a.id === fromId)} amountMinor={amountMinor} className="px-1 pb-2.5" />}
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setKeypad((k) => !k)} aria-label={keypad ? "Hide keypad" : "Show keypad"} aria-pressed={keypad}
             className="pressable flex size-12 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-accent/60 aria-pressed:text-foreground">

@@ -110,7 +110,7 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
         {isLoading || !t ? (
           <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-40 w-full" /></div>
         ) : editing ? (
-          <TransactionForm
+          <TransactionForm saved
             initial={{ ...t, items: t.items.map((i) => ({ name: i.name, amount_minor: i.amount_minor })) }}
             busy={save.isPending}
             onCancel={() => setEditing(false)}
