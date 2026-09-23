@@ -503,12 +503,20 @@ export interface Receipt {
   status: "processing" | "needs_review" | "confirmed" | "failed" | "unavailable" | "discarded"
   provider: string | null
   extraction: {
+    type?: "expense" | "income" | "transfer"
+    document_type?: string
+    document_label?: string
     merchant: string | null
     occurred_on: string
     amount_minor: number | null
     items: { name: string; quantity: number; amount_minor: number }[]
     payment_method: string | null
     category_id: string | null
+    subcategory_id?: string | null
+    account_id?: string | null
+    notes?: string | null
+    due_date?: string | null
+    reference?: string | null
   } | null
   issues: { field: string; code: string; message: string }[]
   error: string | null

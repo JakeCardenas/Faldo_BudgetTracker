@@ -215,6 +215,11 @@ async def get_receipt(receipt_id: uuid.UUID, ctx: CtxDep) -> dict[str, Any]:
     return _receipt_out(await receipts.get_receipt(ctx.db, ctx.user_id, receipt_id))
 
 
+@router.post("/receipts/{receipt_id}/retry", tags=["receipts"])
+async def retry_receipt(receipt_id: uuid.UUID, ctx: CtxDep) -> dict[str, Any]:
+    return _receipt_out(await receipts.retry_receipt(ctx.db, ctx.user_id, receipt_id))
+
+
 @router.get("/receipts/{receipt_id}/image", tags=["receipts"])
 async def receipt_image(receipt_id: uuid.UUID, ctx: CtxDep) -> Response:
     receipt = await receipts.get_receipt(ctx.db, ctx.user_id, receipt_id)

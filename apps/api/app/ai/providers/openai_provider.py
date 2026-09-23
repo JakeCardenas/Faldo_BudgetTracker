@@ -23,14 +23,38 @@ Rules:
 - Transfers move money between two of the user's accounts.
 - Text may be English, Filipino, or Taglish."""
 
-RECEIPT_INSTRUCTIONS = """Extract data from this receipt image for a personal finance app.
+RECEIPT_INSTRUCTIONS = """Read this image for a personal finance app in the Philippines and extract the money it shows.
+It can be any money document: a store or restaurant receipt, an official receipt (OR) or sales invoice, a Shopee or
+Lazada order, a GCash, Maya or bank app screenshot (sent, received, paid a bill, InstaPay or PESONet), a utility or
+phone bill (Meralco, Maynilad, PLDT, Globe), a fuel slip, a Grab or food delivery receipt, an ATM slip, a payslip, or a
+handwritten receipt. It may be a photo at an angle, a screenshot, crumpled or faded.
+
 Rules:
-- Copy values exactly as printed. Never guess missing numbers; use null.
-- Amounts are in major currency units.
-- Items are purchased goods or services only. Do not list VAT, VATable sales, VAT-exempt sales, subtotal, change,
-  cash tendered, or discounts as items.
-- Set is_receipt to false if the image is not a receipt.
-- suggested_category must be one of the provided category names or null."""
+- Copy values exactly as shown. Never invent a number; use null when it isn't there or can't be read.
+- Amounts are in major currency units (₱1,299.50 is 1299.5). Read "1.299,50"-style numbers carefully.
+- total is the money that actually moved: the "Total", "Amount Due", "Total Payment", "Order Total", "Amount Sent",
+  "You paid" or "Net Pay" line, after discounts and vouchers. Never use Cash tendered, Change, VATable Sales, VAT
+  Amount or VAT-Exempt Sales as the total. For an unpaid bill, total is the amount due and due_date is set.
+- direction: expense when the user paid, bought or sent money; income when they received money (a "Received from"
+  transfer, a refund, a payslip's net pay); transfer when money moved between the user's own accounts (cash in,
+  top-up, move to savings).
+- merchant: the store, restaurant, biller or shop name. For a person-to-person transfer, the other person's name
+  as shown (masked names like "JU*N D*** C." are fine).
+- Items are only the goods or services bought, with their line amounts. Never list VAT, subtotal, change, cash,
+  discounts or fees as items. Leave items empty for transfers and bills.
+- Dates: this is the Philippines, so 09/10/2026 usually means September 10. Use today's date to rule out the future.
+- paid_from is the wallet, bank or card shown as the source (for income, where the money arrived). Match it to one of
+  the user's account names when it clearly is one.
+- suggested_category must be one of the provided category names for that direction, or null.
+- Set is_receipt to false and document_type to not_financial if the image shows no money movement at all."""
+
+def receipt_meta(context: CaptureContext) -> dict[str, Any]:
+    """What the model gets alongside the image: today, the currency, the user's accounts and categories."""
+    return {"today": context.today, "currency": context.currency,
+            "accounts": [a["name"] for a in context.accounts],
+            "expense_categories": [c["name"] for c in context.expense_categories],
+            "income_categories": [c["name"] for c in context.income_categories]}
+
 
 SUMMARY_INSTRUCTIONS = """Rewrite the draft into a short, calm, specific note for the user.
 Rules:
@@ -152,11 +176,7 @@ class OpenAIProvider:
 
     async def extract_receipt(self, image: bytes, mime_type: str, context: CaptureContext) -> dict[str, Any]:
         data_url = f"data:{mime_type};base64,{base64.b64encode(image).decode()}"
-        meta = {
-            "today": context.today,
-            "currency": context.currency,
-            "categories": [c["name"] for c in context.expense_categories],
-        }
+        meta = receipt_meta(context)
         try:
             response = await self.client.responses.create(
                 model=self.vision_model,

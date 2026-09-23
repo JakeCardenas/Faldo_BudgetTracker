@@ -185,12 +185,23 @@ function DescribeTab({ onDone, initialText }: { onDone: () => void; initialText?
   )
 }
 
+/** What the scan found, in one line: "Read a GCash transfer: ₱500 in from Juan. Check it before saving." */
+function readSummary(extraction: Receipt["extraction"]) {
+  if (!extraction) return "Couldn't read this one. Fill in the details below."
+  const what = extraction.document_label ?? "a receipt"
+  const money = extraction.amount_minor ? formatMoney(extraction.amount_minor) : null
+  const flow = extraction.type === "income" ? "in" : extraction.type === "transfer" ? "moved" : "spent"
+  const who = extraction.merchant ? (extraction.type === "income" ? ` from ${extraction.merchant}` : ` at ${extraction.merchant}`) : ""
+  return `Read ${what}${money ? `: ${money} ${flow}${who}` : ""}. Check it before saving.`
+}
+
 function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialReceipt?: Receipt | null }) {
   const qc = useQueryClient()
   const [receipt, setReceipt] = useState<Receipt | null>(initialReceipt ?? null)
   const [preview, setPreview] = useState<string | null>(initialReceipt?.has_image ? `/api/v1/receipts/${initialReceipt.id}/image` : null)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [retrying, setRetrying] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
 
@@ -244,11 +255,25 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
       <div className="space-y-2">
         {preview && <img src={preview} alt="Receipt preview" className="max-h-80 w-full rounded-lg border bg-muted object-contain" />}
         <p className="text-xs text-muted-foreground">
-          {receipt.status === "processing" && "Reading merchant, date, items and total…"}
-          {receipt.status === "needs_review" && `Extracted${extraction?.amount_minor ? `, total ${formatMoney(extraction.amount_minor)}` : ""}. Review before saving.`}
+          {receipt.status === "processing" && "Reading the amount, who it's from, the date and the items…"}
+          {receipt.status === "needs_review" && readSummary(extraction)}
           {receipt.status === "unavailable" && receipt.error}
           {receipt.status === "failed" && receipt.error}
         </p>
+        {(receipt.status === "failed" || receipt.status === "unavailable") && receipt.has_image && (
+          <Button variant="secondary" size="sm" className="w-full" disabled={retrying} onClick={async () => {
+            setRetrying(true)
+            try {
+              setReceipt(await api.post<Receipt>(`/receipts/${receipt.id}/retry`))
+            } catch (error) {
+              toast.error(error instanceof ApiError ? error.message : "Couldn't read it again.")
+            } finally {
+              setRetrying(false)
+            }
+          }}>
+            {retrying ? <Loader2 className="animate-spin" /> : <RotateCcw />} Read it again
+          </Button>
+        )}
       </div>
       {receipt.status === "processing" ? (
         <div className="flex items-center justify-center gap-2 rounded-xl border bg-muted/30 p-10 text-sm text-muted-foreground">
@@ -257,8 +282,10 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
       ) : (
         <TransactionForm
           initial={extraction ? {
-            type: "expense", amount_minor: extraction.amount_minor, occurred_on: extraction.occurred_on, merchant: extraction.merchant,
-            category_id: extraction.category_id, payment_method: extraction.payment_method, items: extraction.items,
+            type: extraction.type ?? "expense", amount_minor: extraction.amount_minor, occurred_on: extraction.occurred_on,
+            merchant: extraction.merchant, category_id: extraction.category_id, subcategory_id: extraction.subcategory_id ?? null,
+            account_id: extraction.account_id ?? undefined, payment_method: extraction.payment_method, notes: extraction.notes ?? null,
+            items: extraction.type === "expense" || !extraction.type ? extraction.items : [],
           } : undefined}
           highlights={issues}
           busy={saving}

@@ -16,7 +16,12 @@ from typing import Any
 import httpx
 
 from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, TextDelta, ToolCall, TranscriptItem
-from app.ai.providers.openai_provider import CAPTURE_INSTRUCTIONS, RECEIPT_INSTRUCTIONS, SUMMARY_INSTRUCTIONS
+from app.ai.providers.openai_provider import (
+    CAPTURE_INSTRUCTIONS,
+    RECEIPT_INSTRUCTIONS,
+    SUMMARY_INSTRUCTIONS,
+    receipt_meta,
+)
 from app.ai.schemas import CAPTURE_SCHEMA, RECEIPT_SCHEMA
 from app.core.config import Settings
 
@@ -277,8 +282,7 @@ class AnthropicProvider:
             return None
 
     async def extract_receipt(self, image: bytes, mime_type: str, context: CaptureContext) -> dict[str, Any]:
-        meta = {"today": context.today, "currency": context.currency,
-                "categories": [c["name"] for c in context.expense_categories]}
+        meta = receipt_meta(context)
         content: list[dict[str, Any]] = [
             {"type": "image", "source": {"type": "base64", "media_type": mime_type, "data": base64.b64encode(image).decode()}},
             {"type": "text", "text": json.dumps(meta)},
