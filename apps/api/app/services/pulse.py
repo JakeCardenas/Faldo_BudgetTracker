@@ -1,6 +1,6 @@
 import hashlib
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, func, select
@@ -19,6 +19,7 @@ from app.services.budgets import budget_status
 from app.services.goals import list_goals
 from app.services.recurring import upcoming
 
+AI_REWRITE_EVERY = timedelta(hours=1)
 
 async def data_version(db: AsyncSession, user_id: uuid.UUID, today: date) -> str:
     parts = []
@@ -100,17 +101,23 @@ async def get_pulse(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings
                 "cached": True}
     facts = await pulse_facts(db, user_id, settings, today)
     draft = draft_pulse(facts, today)
-    provider = get_llm()
+    # The AI only rewords the draft, so it's asked at most once an hour; in between, the draft keeps the numbers
+    # current and the free AI limits go to chats and receipts.
+    previous = (await db.execute(select(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type == "pulse"))).scalars().first()
+    last_ai = previous.facts.get("_ai_at") if previous else None
+    cooling = bool(last_ai) and datetime.fromisoformat(str(last_ai)) > datetime.now(UTC) - AI_REWRITE_EVERY
     text, generated_by = draft, "template"
-    if facts["transaction_count"]:
+    if facts["transaction_count"] and not cooling:
+        provider = get_llm()
         rewritten = await provider.write_summary("pulse", facts, draft)
         if rewritten:
             rewritten = sanitize_markdown(rewritten)
             if check_numbers(rewritten, [facts, draft], "").ok and len(rewritten) <= 320:
                 text, generated_by = rewritten, provider.name
+                last_ai = datetime.now(UTC).isoformat()
     await db.execute(delete(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type == "pulse"))
     db.add(AIInsight(user_id=user_id, type="pulse", severity=InsightSeverity.info, title="Financial pulse", body=text,
-                     facts={**facts, "_generated_by": generated_by}, evidence=[], dedupe_key=key,
+                     facts={**facts, "_generated_by": generated_by, "_ai_at": last_ai}, evidence=[], dedupe_key=key,
                      period_key=today.isoformat(), status=InsightStatus.active))
     await db.flush()
     return {"text": text, "facts": facts, "generated_by": generated_by, "cached": False}

@@ -1,8 +1,13 @@
-"""Any model behind an OpenAI-compatible Chat Completions API, over plain HTTP. Faldo uses it for Google's Gemini.
+"""Any model behind an OpenAI-compatible Chat Completions API, over plain HTTP. Faldo uses it for Google's Gemini and,
+as the free backup, Groq.
 
 Gemini has a free tier (unpaid quota in Google AI Studio) that reads photos, calls tools and streams, so Faldo can be a
 real chatbot without paying for Claude. On the free tier Google may use prompts and answers to improve its products,
 and human reviewers may read them; a paid Gemini key or Claude avoids that.
+
+Free limits are per model, so each job has a list of models. One that runs out waits as long as the service says
+(seconds for a per-minute limit, an hour for a daily one) while the next answers; one that no longer exists is skipped
+from then on. Only when every model is out does the provider rest, and Faldo moves to the next provider.
 
 Tool schemas are simplified for Gemini: optional fields are left out of "required" rather than typed as nullable, and
 any extra data Gemini attaches to a tool call (Gemini 3's thought signatures) is sent back exactly as it came.
@@ -12,8 +17,9 @@ import asyncio
 import base64
 import json
 import logging
+import re
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
 import httpx
@@ -30,8 +36,38 @@ from app.core.config import Settings
 
 logger = logging.getLogger("faldo.ai.compatible")
 UNAVAILABLE = "The AI service is temporarily unavailable."
-REST_SECONDS = {"quota": 10 * 60, "key": 30 * 60}
+KEY_REST_SECONDS = 30 * 60
 RETRY_STATUSES = {500, 502, 503, 504}
+MISSING_MODEL = re.compile(r"not (be )?found|does not exist|decommissioned|no longer supported|model_not_found", re.I)
+
+
+def rest_seconds(headers: Mapping[str, str], body: bytes) -> float:
+    """How long a model waits after its free limit: what the service says, else a minute, or an hour for a daily limit."""
+    text = body.decode("utf-8", "ignore")
+    wait: float | None = None
+    if headers.get("retry-after"):
+        try:
+            wait = float(headers["retry-after"])
+        except ValueError:
+            wait = None
+    if wait is None and (found := re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', text)):
+        wait = float(found.group(1))
+    if wait is None and (found := re.search(r"(?:retry|try again) in (?:(\d+)h)?(?:(\d+)m)?(\d+(?:\.\d+)?)s", text, re.I)):
+        hours, minutes, seconds = found.groups()
+        wait = int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(seconds)
+    if wait is None:
+        wait = 3600 if re.search(r"per ?day|PerDay|\bRPD\b|daily", text, re.I) else 60
+    return min(max(wait, 5), 6 * 3600)
+
+
+def _models(*groups: str | list[str]) -> list[str]:
+    """Model names from settings (comma-separated), in order, each once."""
+    names: list[str] = []
+    for group in groups:
+        for name in group.split(",") if isinstance(group, str) else group:
+            if name.strip() and name.strip() not in names:
+                names.append(name.strip())
+    return names
 
 
 def _error_message(body: bytes) -> str:
@@ -107,7 +143,18 @@ def _tools(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [_function(s["name"], s["description"], s["parameters"]) for s in specs]
 
 
-def _messages(system: str, transcript: list[TranscriptItem]) -> list[dict[str, Any]]:
+def _standard(message: dict[str, Any]) -> dict[str, Any]:
+    """An assistant turn with only the standard fields, for services that reject Gemini's extras (thought signatures)."""
+    clean: dict[str, Any] = {"role": message.get("role", "assistant"), "content": message.get("content")}
+    if message.get("tool_calls"):
+        clean["tool_calls"] = [{"id": c.get("id"), "type": "function",
+                                "function": {"name": c.get("function", {}).get("name", ""),
+                                             "arguments": c.get("function", {}).get("arguments") or "{}"}}
+                               for c in message["tool_calls"]]
+    return clean
+
+
+def _messages(system: str, transcript: list[TranscriptItem], standard: bool = False) -> list[dict[str, Any]]:
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
     for entry in transcript:
         if entry.kind == "user" and entry.images:
@@ -120,7 +167,7 @@ def _messages(system: str, transcript: list[TranscriptItem]) -> list[dict[str, A
         elif entry.kind == "assistant" and entry.text:
             messages.append({"role": "assistant", "content": entry.text})
         elif entry.kind == "model_output":
-            messages.extend(entry.raw)
+            messages.extend(_standard(m) if standard else m for m in entry.raw)
         elif entry.kind == "tool_result" and entry.call:
             messages.append({"role": "tool", "tool_call_id": entry.call.id,
                              "content": json.dumps(entry.output, default=str, ensure_ascii=False)})
@@ -145,31 +192,55 @@ def _merge(target: dict[str, Any], delta: dict[str, Any]) -> None:
 
 
 class CompatibleProvider:
-    """Gemini (or another OpenAI-compatible service) as Faldo's model."""
+    """Gemini or Groq (or another OpenAI-compatible service) as Faldo's model."""
 
     is_development = False
-    supports_vision = True
 
-    def __init__(self, *, name: str, label: str, base_url: str, api_key: str, chat_model: str, fast_model: str):
+    def __init__(self, *, name: str, label: str, base_url: str, api_key: str, key_setting: str, chat_models: list[str],
+                 fast_models: list[str], vision_models: list[str] | None = None, standard_messages: bool = False):
         self.name = name
         self.label = label
         self.base_url = base_url.rstrip("/")
         self._key = api_key
-        self.chat_model = chat_model
-        self.fast_model = fast_model
+        self.key_setting = key_setting
+        self.chat_models = chat_models
+        self.fast_models = fast_models or chat_models
+        self.vision_models = chat_models if vision_models is None else vision_models
+        self.supports_vision = bool(self.vision_models)
+        self.standard_messages = standard_messages
         self._client: httpx.AsyncClient | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
-        self.rest_until = 0.0
+        self.rest_until = 0.0  # the whole service (a bad key)
+        self.model_rest: dict[str, float] = {}  # a model that ran out, until when
+        self.missing: set[str] = set()  # models the service doesn't have (any more)
 
     @classmethod
     def gemini(cls, settings: Settings) -> "CompatibleProvider":
         assert settings.gemini_api_key is not None
-        return cls(name="gemini", label="Gemini", base_url=settings.gemini_base_url,
-                   api_key=settings.gemini_api_key.get_secret_value(), chat_model=settings.gemini_chat_model,
-                   fast_model=settings.gemini_fast_model)
+        fallbacks = _models(settings.gemini_fallback_models)
+        return cls(name="gemini", label="Gemini", base_url=settings.gemini_base_url, key_setting="GEMINI_API_KEY",
+                   api_key=settings.gemini_api_key.get_secret_value(),
+                   chat_models=_models(settings.gemini_chat_model, fallbacks),
+                   fast_models=_models(settings.gemini_fast_model, fallbacks, settings.gemini_chat_model))
+
+    @classmethod
+    def groq(cls, settings: Settings) -> "CompatibleProvider":
+        assert settings.groq_api_key is not None
+        return cls(name="groq", label="Groq", base_url=settings.groq_base_url, key_setting="GROQ_API_KEY",
+                   api_key=settings.groq_api_key.get_secret_value(), chat_models=_models(settings.groq_chat_models),
+                   fast_models=_models(settings.groq_fast_models, settings.groq_chat_models),
+                   vision_models=_models(settings.groq_vision_models), standard_messages=True)
+
+    @property
+    def chat_model(self) -> str:
+        return (self._ready(self.chat_models) or self.chat_models)[0]
+
+    def _ready(self, models: list[str]) -> list[str]:
+        now = time.monotonic()
+        return [m for m in models if m not in self.missing and self.model_rest.get(m, 0.0) <= now]
 
     def is_resting(self) -> bool:
-        return time.monotonic() < self.rest_until
+        return time.monotonic() < self.rest_until or not self._ready(self.chat_models)
 
     def _http(self) -> httpx.AsyncClient:
         loop = asyncio.get_running_loop()
@@ -182,25 +253,39 @@ class CompatibleProvider:
     def _headers(self) -> dict[str, str]:
         return {"authorization": f"Bearer {self._key}", "content-type": "application/json"}
 
-    def _refused(self, status: int, body: bytes) -> ProviderUnavailable:
+    def _refused(self, model: str, status: int, body: bytes, headers: Mapping[str, str]) -> tuple[ProviderUnavailable, bool]:
+        """What went wrong, and whether the next model should try (it can't fix a bad key or a bad request)."""
         message = _error_message(body)
-        logger.warning("%s request refused: %s %s", self.label, status, message)
+        logger.warning("%s (%s) request refused: %s %s", self.label, model, status, message)
         if status == 429:
-            self.rest_until = time.monotonic() + REST_SECONDS["quota"]
-            hint = f"{self.label}'s free limit is used up for now. Faldo will try it again in a few minutes."
-        elif status in {401, 403} or "api key" in message.lower():
-            self.rest_until = time.monotonic() + REST_SECONDS["key"]
-            hint = f"{self.label} isn't answering: the API key isn't valid. Check GEMINI_API_KEY in Vercel."
-        elif status == 404:
-            hint = f"{self.label} couldn't find the model ({message[:90] or 'not found'}). Check GEMINI_CHAT_MODEL."
-        elif status >= 500:
-            hint = f"{self.label} had a problem answering (error {status}{': ' + message[:90] if message else ''}). Try again shortly."
-        else:
-            hint = f"{self.label} refused the request (error {status}{': ' + message[:120] if message else ''})."
-        return ProviderUnavailable(UNAVAILABLE, hint)
+            self.model_rest[model] = time.monotonic() + rest_seconds(headers, body)
+            return ProviderUnavailable(UNAVAILABLE, self._out_hint()), True
+        if status in {401, 403} or "api key" in message.lower():
+            self.rest_until = time.monotonic() + KEY_REST_SECONDS
+            return ProviderUnavailable(UNAVAILABLE, f"{self.label} isn't answering: the API key isn't valid. "
+                                                    f"Check {self.key_setting} in Vercel."), False
+        if status == 404 or (status == 400 and MISSING_MODEL.search(message) and "model" in message.lower()):
+            self.missing.add(model)
+            return ProviderUnavailable(UNAVAILABLE, f"{self.label} doesn't have the model {model}."), True
+        if status >= 500:
+            return ProviderUnavailable(UNAVAILABLE, f"{self.label} had a problem answering (error {status}"
+                                                    f"{': ' + message[:90] if message else ''}). Try again shortly."), True
+        return ProviderUnavailable(UNAVAILABLE, f"{self.label} refused the request (error {status}"
+                                                f"{': ' + message[:120] if message else ''})."), False
+
+    def _out_hint(self) -> str:
+        waits = [until - time.monotonic() for until in self.model_rest.values() if until > time.monotonic()]
+        soonest = min(waits) if waits else 60
+        when = "in a minute" if soonest <= 90 else f"in about {round(soonest / 60)} minutes" if soonest < 3000 else "in about an hour"
+        return f"{self.label}'s free limit is used up for now. Faldo will try it again {when}."
+
+    def _none_ready(self) -> ProviderUnavailable:
+        if time.monotonic() < self.rest_until:
+            return ProviderUnavailable(UNAVAILABLE, f"{self.label} isn't answering: the API key isn't valid. Check {self.key_setting} in Vercel.")
+        return ProviderUnavailable(UNAVAILABLE, self._out_hint())
 
     async def _post_stream(self, body: dict[str, Any]) -> Any:
-        """Open the stream, retrying once when Gemini is briefly overloaded (500/503)."""
+        """Open the stream, retrying once when the service is briefly overloaded (500/503)."""
         for attempt in range(2):
             request = self._http().build_request("POST", f"{self.base_url}/chat/completions", headers=self._headers, json=body)
             response = await self._http().send(request, stream=True)
@@ -211,18 +296,34 @@ class CompatibleProvider:
             return response
         return response
 
+    async def _open_stream(self, body: dict[str, Any], models: list[str]) -> Any:
+        """The first model that accepts the request, its stream open; the rest step in when one has run out."""
+        if time.monotonic() < self.rest_until:
+            raise self._none_ready()
+        refused: ProviderUnavailable | None = None
+        for model in self._ready(models):
+            response = await self._post_stream({**body, "model": model})
+            if response.status_code < 400:
+                return response
+            content = await response.aread()
+            await response.aclose()
+            refused, next_model = self._refused(model, response.status_code, content, response.headers)
+            if not next_model:
+                raise refused
+        raise refused or self._none_ready()
+
     async def stream_turn(self, *, system: str, transcript: list[TranscriptItem],
                           tools: list[dict[str, Any]]) -> AsyncIterator[TextDelta | ModelTurn]:
-        body: dict[str, Any] = {"model": self.chat_model, "messages": _messages(system, transcript), "stream": True}
+        # A photo in the conversation goes to a model that can see it.
+        models = self.vision_models if any(entry.images for entry in transcript) else self.chat_models
+        body: dict[str, Any] = {"messages": _messages(system, transcript, self.standard_messages), "stream": True}
         if tools:
             body["tools"] = _tools(tools)
         text: list[str] = []
         calls: dict[int, dict[str, Any]] = {}
         try:
-            response = await self._post_stream(body)
+            response = await self._open_stream(body, models)
             try:
-                if response.status_code >= 400:
-                    raise self._refused(response.status_code, await response.aread())
                 async for line in response.aiter_lines():
                     if not line.startswith("data:"):
                         continue
@@ -278,26 +379,34 @@ class CompatibleProvider:
             raise ProviderUnavailable(UNAVAILABLE)
         return final
 
-    async def _complete(self, body: dict[str, Any]) -> dict[str, Any]:
-        try:
-            response = await self._http().post(f"{self.base_url}/chat/completions", headers=self._headers, json=body)
-            if response.status_code in RETRY_STATUSES:
-                await asyncio.sleep(1.2)
-                response = await self._http().post(f"{self.base_url}/chat/completions", headers=self._headers, json=body)
-        except httpx.HTTPError as exc:
-            raise ProviderUnavailable(UNAVAILABLE) from exc
-        if response.status_code >= 400:
-            raise self._refused(response.status_code, response.content)
-        data: dict[str, Any] = response.json()
-        return data
+    async def _complete(self, body: dict[str, Any], models: list[str] | None = None) -> dict[str, Any]:
+        if time.monotonic() < self.rest_until:
+            raise self._none_ready()
+        refused: ProviderUnavailable | None = None
+        for model in self._ready(models or self.chat_models):
+            payload = {**body, "model": model}
+            try:
+                response = await self._http().post(f"{self.base_url}/chat/completions", headers=self._headers, json=payload)
+                if response.status_code in RETRY_STATUSES:
+                    await asyncio.sleep(1.2)
+                    response = await self._http().post(f"{self.base_url}/chat/completions", headers=self._headers, json=payload)
+            except httpx.HTTPError as exc:
+                raise ProviderUnavailable(UNAVAILABLE) from exc
+            if response.status_code < 400:
+                data: dict[str, Any] = response.json()
+                return data
+            refused, next_model = self._refused(model, response.status_code, response.content, response.headers)
+            if not next_model:
+                raise refused
+        raise refused or self._none_ready()
 
-    async def _structured(self, instructions: str, content: Any, name: str, schema: dict[str, Any]) -> dict[str, Any]:
+    async def _structured(self, instructions: str, content: Any, name: str, schema: dict[str, Any],
+                          models: list[str] | None = None) -> dict[str, Any]:
         data = await self._complete({
-            "model": self.chat_model,
             "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": content}],
             "tools": [_function(name, "Record the result.", schema)],
             "tool_choice": {"type": "function", "function": {"name": name}},
-        })
+        }, models)
         for choice in data.get("choices", []):
             for call in (choice.get("message") or {}).get("tool_calls") or []:
                 try:
@@ -322,13 +431,13 @@ class CompatibleProvider:
         content = [{"type": "text", "text": json.dumps(meta)},
                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{base64.b64encode(image).decode()}"}}]
         try:
-            return await self._structured(RECEIPT_INSTRUCTIONS, content, "record_receipt", RECEIPT_SCHEMA)
+            return await self._structured(RECEIPT_INSTRUCTIONS, content, "record_receipt", RECEIPT_SCHEMA, self.vision_models)
         except ProviderUnavailable as exc:
-            raise ProviderUnavailable("Receipt reading failed. Try again or enter the details manually.") from exc
+            raise ProviderUnavailable("Receipt reading failed. Try again or enter the details manually.", exc.hint) from exc
 
     async def _text(self, messages: list[dict[str, Any]]) -> str | None:
         try:
-            data = await self._complete({"model": self.fast_model, "messages": messages})
+            data = await self._complete({"messages": messages}, self.fast_models)
         except ProviderUnavailable:
             return None
         choices = data.get("choices") or [{}]

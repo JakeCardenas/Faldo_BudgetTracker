@@ -16,6 +16,10 @@ def _provider(name: str) -> LLMProvider:
         from app.ai.providers.compatible_provider import CompatibleProvider
 
         return CompatibleProvider.gemini(settings)
+    if name == "groq":
+        from app.ai.providers.compatible_provider import CompatibleProvider
+
+        return CompatibleProvider.groq(settings)
     if name == "openai":
         from app.ai.providers.openai_provider import OpenAIProvider
 

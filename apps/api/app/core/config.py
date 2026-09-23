@@ -7,6 +7,7 @@ from pydantic import Field, SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ON_VERCEL = bool(os.environ.get("VERCEL"))
+FREE_PROVIDERS = ("gemini", "groq")  # free tiers, in the order they back each other up
 
 
 def _origin(value: str) -> str:
@@ -35,7 +36,7 @@ class Settings(BaseSettings):
     trust_proxy_headers: bool = ON_VERCEL
 
     # "auto" picks Claude when an Anthropic key is set, then OpenAI, then the local development provider.
-    ai_provider: Literal["auto", "anthropic", "gemini", "openai", "local"] = "auto"
+    ai_provider: Literal["auto", "anthropic", "gemini", "groq", "openai", "local"] = "auto"
     anthropic_api_key: SecretStr | None = None
     ai_web_search: bool = True
     gemini_api_key: SecretStr | None = None
@@ -44,6 +45,14 @@ class Settings(BaseSettings):
     gemini_chat_model: str = "gemini-flash-latest"
     gemini_fast_model: str = "gemini-3.5-flash-lite"
     """Conversation summaries and short notes; its own free allowance leaves more of the chat model's for answers."""
+    gemini_fallback_models: str = "gemini-flash-lite-latest,gemini-2.5-flash,gemini-2.5-flash-lite"
+    """Comma-separated. Each Gemini model has its own free limit, so when one runs out the next takes over."""
+    groq_api_key: SecretStr | None = None
+    """Groq (console.groq.com): a free tier of open models over the same OpenAI-compatible API, Faldo's free backup."""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_chat_models: str = "openai/gpt-oss-120b,llama-3.3-70b-versatile"
+    groq_fast_models: str = "llama-3.1-8b-instant,openai/gpt-oss-20b"
+    groq_vision_models: str = "meta-llama/llama-4-scout-17b-16e-instruct,meta-llama/llama-4-maverick-17b-128e-instruct"
     """Let Claude search the web for current prices, rates and news (Anthropic bills each search)."""
     anthropic_chat_model: str = "claude-sonnet-5"
     anthropic_fast_model: str = "claude-haiku-4-5-20251001"
@@ -109,17 +118,21 @@ class Settings(BaseSettings):
     def ai_provider_chain(self) -> list[str]:
         """Providers to try in order, ending with the local rules.
 
-        A chosen provider (AI_PROVIDER=gemini, say) is the only model Faldo uses, so answers stay consistent; the local
-        rules step in only when it can't answer. With "auto", every provider that has a key is tried, best first.
+        A chosen provider (AI_PROVIDER=gemini, say) goes first. When its free limits run out, the other free provider
+        with a key (Groq, say) answers, then the local rules. A paid provider only answers when it's chosen or with
+        "auto", where every provider that has a key is tried, best first.
         """
         keyed = [name for name, key in (("anthropic", self.anthropic_api_key), ("gemini", self.gemini_api_key),
-                                         ("openai", self.openai_api_key)) if key and key.get_secret_value()]
+                                         ("groq", self.groq_api_key), ("openai", self.openai_api_key))
+                 if key and key.get_secret_value()]
         if self.ai_provider == "local":
             return ["local"]
         if self.ai_provider == "auto" or self.ai_provider not in keyed:
             # A chosen provider without its key (say, a preview deployment) falls back to the keys that are there.
             return [*keyed, "local"]
-        return [self.ai_provider, "local"]
+        # The free ones back each other up when their limits run out; a paid one never steps in uninvited.
+        backups = [name for name in FREE_PROVIDERS if name in keyed and name != self.ai_provider]
+        return [self.ai_provider, *backups, "local"]
 
     @computed_field  # type: ignore[prop-decorator]
     @property

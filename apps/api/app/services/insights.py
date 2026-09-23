@@ -17,6 +17,8 @@ from app.services.forecast import forecast
 from app.services.goals import list_goals
 from app.services.recurring import upcoming
 
+# AI-written texts kept for reuse (the Home pulse, report summaries); not insight cards.
+NOT_CARDS = ("pulse", "report_summary")
 MIN_SPIKE_MINOR = 50_000
 MIN_UNUSUAL_MINOR = 100_000
 
@@ -203,7 +205,7 @@ async def refresh_insights(db: AsyncSession, user_id: uuid.UUID, settings: UserS
     detected = await detect(db, user_id, settings, today)
     existing = {
         i.dedupe_key: i
-        for i in (await db.execute(select(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type != "pulse"))).scalars().all()
+        for i in (await db.execute(select(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type.not_in(NOT_CARDS)))).scalars().all()
     }
     now = datetime.now(UTC)
     keys = set()
@@ -225,7 +227,7 @@ SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2, "positive": 3}
 
 
 async def list_insights(db: AsyncSession, user_id: uuid.UUID, include_dismissed: bool = False) -> list[AIInsight]:
-    stmt = select(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type != "pulse")
+    stmt = select(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type.not_in(NOT_CARDS))
     if not include_dismissed:
         stmt = stmt.where(AIInsight.status == InsightStatus.active)
     rows = list((await db.execute(stmt)).scalars().all())

@@ -2,10 +2,13 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engine.money import pct_text, percent, percent_change
 from app.engine.periods import Period, add_months, month_end, month_key, month_start
+from app.models import AIInsight
+from app.models.enums import InsightSeverity, InsightStatus
 from app.services.analytics import (
     category_meta,
     category_rows,
@@ -103,12 +106,20 @@ async def report_summary(db: AsyncSession, user_id: uuid.UUID, month: date, toda
     from app.ai.factory import get_llm
     from app.ai.guardrails.numeric import check_numbers
     from app.ai.guardrails.output import sanitize_markdown
+    from app.services.pulse import data_version
+
+    # An AI-written summary is kept until the data changes, so opening Reports again doesn't spend free AI limits.
+    period = month.isoformat()[:7]
+    key = f"report:{period}:{await data_version(db, user_id, today)}"
+    saved = (await db.execute(select(AIInsight).where(AIInsight.user_id == user_id, AIInsight.dedupe_key == key))).scalar_one_or_none()
+    if saved:
+        return {"month": saved.facts["month"], "text": saved.body, "generated_by": saved.facts["_generated_by"]}
 
     report = await monthly_report(db, user_id, month, today)
     draft = draft_report_summary(report, currency)
-    provider = get_llm()
     text, generated_by = draft, "template"
     if report["summary"]["transaction_count"]:
+        provider = get_llm()
         facts = {"summary": report["summary"], "top_categories": report["spending_by_category"][:5],
                  "category_changes": report["category_changes"][:5], "top_merchants": report["top_merchants"][:3]}
         rewritten = await provider.write_summary("report", facts, draft)
@@ -116,4 +127,11 @@ async def report_summary(db: AsyncSession, user_id: uuid.UUID, month: date, toda
             rewritten = sanitize_markdown(rewritten)
             if check_numbers(rewritten, [facts, draft], "").ok:
                 text, generated_by = rewritten, provider.name
+    if generated_by != "template":
+        await db.execute(delete(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type == "report_summary",
+                                                 AIInsight.period_key == period))
+        db.add(AIInsight(user_id=user_id, type="report_summary", severity=InsightSeverity.info, title="Report summary",
+                         body=text, facts={"month": report["month"], "_generated_by": generated_by}, evidence=[],
+                         dedupe_key=key, period_key=period, status=InsightStatus.active))
+        await db.flush()
     return {"month": report["month"], "text": text, "generated_by": generated_by}
