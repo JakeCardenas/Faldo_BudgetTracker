@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowUp, Camera, ChevronLeft, FileImage, Loader2, MessageCircle, RotateCcw, ScanLine, X } from "lucide-react"
+import { ArrowUp, ChevronLeft, FileImage, Loader2, MessageCircle, RotateCcw, ScanLine, X } from "lucide-react"
 import { toast } from "sonner"
 import { DraftCard } from "@/components/capture/draft-card"
 import { TransactionForm, type TransactionFormValues } from "@/components/finance/transaction-form"
 import { KeypadEntry, type EntryPreset, type EntryType } from "@/components/capture/keypad-entry"
+import { Scanner, type ScanResult } from "@/components/capture/scanner"
 import { Panda } from "@/components/brand/panda"
 import { SHEET_CLASSES, SheetGrabber, useSheetDrag } from "@/components/ios/sheet"
 import { Segmented } from "@/components/ios/segmented"
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { api, ApiError } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
+import { parseQrPh, type QrPh } from "@/lib/qrph"
 import { play } from "@/lib/sound"
 import { invalidateFinancialData, useSaveTransaction } from "@/lib/queries"
 import type { CaptureDraft, CaptureResult, Receipt, Transaction, TransactionInput } from "@/lib/types"
@@ -195,15 +197,17 @@ function readSummary(extraction: Receipt["extraction"]) {
   return `Read ${what}${money ? `: ${money} ${flow}${who}` : ""}. Check it before saving.`
 }
 
-function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialReceipt?: Receipt | null }) {
+function ReceiptTab({ onDone, initialReceipt, onPayment }: { onDone: () => void; initialReceipt?: Receipt | null; onPayment: (qr: QrPh) => void }) {
   const qc = useQueryClient()
+  // On phones the scanner opens straight away; on a computer it's a button next to drag and drop.
+  const [scanning, setScanning] = useState(() => !initialReceipt && window.matchMedia("(pointer: coarse)").matches)
+  const [code, setCode] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(initialReceipt ?? null)
   const [preview, setPreview] = useState<string | null>(initialReceipt?.has_image ? `/api/v1/receipts/${initialReceipt.id}/image` : null)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const cameraRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!receipt || receipt.status !== "processing") return
@@ -231,11 +235,20 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
     }
   }
 
+  function scanned(result: ScanResult) {
+    setScanning(false)
+    if (result.kind === "photo") return void upload(result.file)
+    const payment = parseQrPh(result.text)
+    if (payment) onPayment(payment)
+    else setCode(result.text)
+  }
+
   if (!receipt) {
     return (
       <div className="space-y-3">
+        <Scanner open={scanning} onOpenChange={setScanning} onResult={scanned} />
+        {code && <CodeCard text={code} onAgain={() => { setCode(null); setScanning(true) }} />}
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
         <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) upload(f) }}
           className="flex w-full flex-col items-center gap-3 rounded-xl border border-dashed border-input bg-muted/30 px-6 py-12 text-center transition-colors hover:border-ring hover:bg-muted/50">
@@ -243,7 +256,7 @@ function ReceiptTab({ onDone, initialReceipt }: { onDone: () => void; initialRec
           <span className="text-sm font-medium">{uploading ? "Uploading securely…" : "Drop a receipt photo or browse"}</span>
           <span className="text-xs text-muted-foreground">JPEG, PNG or WebP up to 8 MB. Location data is removed.</span>
         </button>
-        <Button variant="outline" className="w-full sm:hidden" onClick={() => cameraRef.current?.click()}><Camera /> Take a photo</Button>
+        <Button variant="outline" className="w-full" onClick={() => { play("open"); setScanning(true) }} disabled={uploading}><ScanLine /> Open the scanner</Button>
       </div>
     )
   }
@@ -337,6 +350,29 @@ export function showLoggedToast(transactions: Transaction[], message: string, on
   ), { duration: 6000 })
 }
 
+/** A QR code that isn't a payment: what it says, and a link to open when it is one (its site named first). */
+function CodeCard({ text, onAgain }: { text: string; onAgain: () => void }) {
+  let link: URL | null = null
+  try {
+    const url = new URL(text)
+    if (url.protocol === "https:" || url.protocol === "http:") link = url
+  } catch { /* plain text */ }
+  return (
+    <div className="space-y-3 rounded-2xl bg-muted/50 p-4">
+      <div>
+        <p className="text-[0.8125rem] font-medium text-muted-foreground">{link ? `A link to ${link.hostname}` : "This QR code says"}</p>
+        <p className="mt-1 text-[0.9375rem] break-all">{text}</p>
+      </div>
+      <p className="text-xs text-muted-foreground">It isn&apos;t a payment code, so nothing was filled in.</p>
+      <div className="flex flex-wrap gap-2">
+        {link && <Button asChild size="sm"><a href={link.href} target="_blank" rel="noopener noreferrer">Open link</a></Button>}
+        <Button size="sm" variant="secondary" onClick={() => navigator.clipboard.writeText(text).then(() => toast.success("Copied"), () => toast.error("Couldn't copy."))}>Copy</Button>
+        <Button size="sm" variant="ghost" onClick={onAgain}>Scan again</Button>
+      </div>
+    </div>
+  )
+}
+
 export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, receipt, preset, text }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -350,8 +386,21 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
   const save = useSaveTransaction()
   const [manualInitial, setManualInitial] = useState<Partial<TransactionInput> | null>(null)
   const [lastEntry, setLastEntry] = useState<EntryType>("expense")
-  const close = () => onOpenChange(false)
-  const { ref, handle } = useSheetDrag(() => { play("close"); setManualInitial(null); onOpenChange(false) })
+  const [scanPreset, setScanPreset] = useState<EntryPreset | undefined>()
+  const close = () => { setScanPreset(undefined); onOpenChange(false) }
+  const { ref, handle } = useSheetDrag(() => { play("close"); setManualInitial(null); close() })
+
+  // A store's payment QR: a new expense with the store, and the amount when the code has one. The account stays the
+  // usual one: the code says which bank the store uses, not which wallet pays.
+  const paid = (qr: QrPh) => {
+    const who = qr.merchant ?? "this store"
+    setScanPreset({ amount_minor: qr.amountMinor, note: qr.merchant, merchant: qr.merchant, payment_method: "QR Ph" })
+    setLastEntry("expense")
+    onModeChange("expense")
+    toast(qr.amountMinor ? `${formatMoney(qr.amountMinor)} to ${who}` : `Paying ${who}`, {
+      description: qr.amountMinor ? "From the payment QR. Check it and save." : "From the payment QR. Enter what you paid.",
+    })
+  }
   const keypad = mode === "expense" || mode === "income" || mode === "transfer"
   const entryType: EntryType = keypad ? (mode as EntryType) : lastEntry
 
@@ -360,10 +409,10 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
     showLoggedToast([transaction], feedback, () => void invalidateFinancialData(qc))
   }
 
-  const title = mode === "describe" ? "Type it out" : mode === "receipt" ? "Scan a receipt" : mode === "manual" ? "All details" : "New transaction"
+  const title = mode === "describe" ? "Type it out" : mode === "receipt" ? "Scan" : mode === "manual" ? "All details" : "New transaction"
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) { play("close"); setManualInitial(null) } onOpenChange(next) }}>
+    <Dialog open={open} onOpenChange={(next) => { if (!next) { play("close"); setManualInitial(null); setScanPreset(undefined) } onOpenChange(next) }}>
       <DialogContent ref={ref} showCloseButton={false} aria-describedby={undefined}
         onOpenAutoFocus={(e) => { if (keypad) { e.preventDefault(); (e.currentTarget as HTMLElement).focus() } }}
         className={cn("flex flex-col gap-0 overflow-hidden bg-popover p-0 max-sm:h-[94dvh]", SHEET_CLASSES,
@@ -391,7 +440,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
             <div className="flex shrink-0 gap-1.5">
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
                 className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><MessageCircle className="size-[1.15rem]" strokeWidth={2} /></button>
-              <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan receipt"
+              <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan a receipt or QR"
                 className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><ScanLine className="size-[1.15rem]" strokeWidth={2} /></button>
             </div>
           ) : <span className="w-[4.5rem]" />}
@@ -399,12 +448,12 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
         </div>
         <DialogDescription className="sr-only">Log an expense, income or transfer.</DialogDescription>
         {keypad ? (
-          <KeypadEntry key={mode} type={mode as EntryType} preset={preset} onSaved={saved}
+          <KeypadEntry key={scanPreset ? `${mode}-scan` : mode} type={mode as EntryType} preset={scanPreset ?? preset} onSaved={saved}
             onMoreDetails={(values) => { setLastEntry(values.type); setManualInitial(values); onModeChange("manual") }} />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6">
             {mode === "describe" && <DescribeTab key={text ?? ""} onDone={close} initialText={text} />}
-            {mode === "receipt" && <ReceiptTab key={receipt?.id ?? "new"} onDone={close} initialReceipt={receipt} />}
+            {mode === "receipt" && <ReceiptTab key={receipt?.id ?? "new"} onDone={close} initialReceipt={receipt} onPayment={paid} />}
             {mode === "manual" && (
               <TransactionForm initial={manualInitial ? {
                 type: manualInitial.type, amount_minor: manualInitial.amount_minor ?? null, occurred_on: manualInitial.occurred_on,

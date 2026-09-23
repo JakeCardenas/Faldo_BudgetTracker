@@ -25,6 +25,7 @@ web:
 
 test:
 	cd apps/api && uv run pytest -q
+	cd apps/web && npm test
 
 lint:
 	cd apps/api && uv run ruff check app tests

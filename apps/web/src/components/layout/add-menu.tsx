@@ -87,7 +87,7 @@ export function AddMenu({ open, onOpenChange }: { open: boolean; onOpenChange: (
             </div>
 
             <div className="-mx-1 overflow-hidden rounded-2xl bg-muted/40 dark:bg-muted/50">
-              <Row icon={ScanLine} title="Scan a receipt" subtitle="Faldo reads the items and total" onClick={() => then(() => openAddTransaction({ mode: "receipt" }))} />
+              <Row icon={ScanLine} title="Scan a receipt or QR" subtitle="Receipts, bills and store payment codes" onClick={() => then(() => openAddTransaction({ mode: "receipt" }))} />
               <Row icon={PiggyBank} title="Add to a goal" subtitle="Put money toward something you're saving for" onClick={() => setStep("goal")} />
               <Row icon={MoneyOwedIcon} title="Money owed" subtitle="Utang, loans and split bills" onClick={() => then(() => router.push("/debts?new=1"))} />
               <Row icon={ShoppingBag} title="Plan a purchase" subtitle="Faldo tells you when it fits" onClick={() => then(() => setPlanning(true))} />

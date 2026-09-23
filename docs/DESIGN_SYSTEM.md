@@ -15,7 +15,7 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 
 **Settings** is a short list, each row its own screen (`/settings/[section]`): Appearance (theme, hide amounts, sounds, Faldo bubble), Preferences (name, pay frequency, monthly income, safety buffer, default account, timezone), Categories, Faldo's memory, Password and devices, and Your data (download, delete account).
 
-The **+** (the middle of the tab bar on phones, and a glass circle in the corner while the bar is away; "Add" on desktop) opens one menu: type it like a text, Expense, Income, Transfer, then receipt (photo or camera), goal, money owed, planned purchase, Faldo Check and import.
+The **+** (the middle of the tab bar on phones, and a glass circle in the corner while the bar is away; "Add" on desktop) opens one menu: type it like a text, Expense, Income, Transfer, then the scanner (receipts and QR codes: the live camera full screen with rounded corner brackets that close in on a QR code and turn green, a white shutter, Photos and the light; `components/capture/scanner.tsx`), goal, money owed, planned purchase, Faldo Check and import.
 
 ## Navigation
 

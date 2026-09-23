@@ -22,6 +22,9 @@ export type EntryType = "expense" | "income" | "transfer"
 export interface EntryPreset {
   amount_minor?: number | null
   note?: string | null
+  /** Who was paid, when it's known for sure (a scanned payment QR). */
+  merchant?: string | null
+  payment_method?: string | null
   category_id?: string | null
   account_id?: string | null
   to_account_id?: string | null
@@ -153,7 +156,8 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
   const { data: recent } = useTransactions({ type: [type], limit: 30 })
   const active = useMemo(() => accounts.filter((a) => !a.archived), [accounts])
 
-  const [expr, setExpr] = useState(preset?.amount_minor ? String(preset.amount_minor / 100) : "")
+  // A preset amount shows as money: ₱150.50, not ₱150.5.
+  const [expr, setExpr] = useState(preset?.amount_minor ? (preset.amount_minor / 100).toFixed(preset.amount_minor % 100 ? 2 : 0) : "")
   const [note, setNote] = useState(preset?.note ?? "")
   const [categoryId, setCategoryId] = useState(preset?.category_id ?? "")
   const [subcategoryId, setSubcategoryId] = useState("")
@@ -224,6 +228,8 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
       category_id: type === "transfer" ? null : categoryId || null,
       subcategory_id: type === "transfer" ? null : subcategoryId || null,
       notes: note.trim() || null,
+      merchant: type === "expense" ? preset?.merchant ?? null : null,
+      payment_method: preset?.payment_method ?? null,
     }
     try {
       const transaction = await api.post<Transaction>("/transactions", input)
