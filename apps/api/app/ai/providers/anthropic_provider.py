@@ -9,6 +9,7 @@ import asyncio
 import base64
 import json
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -114,6 +115,17 @@ class AnthropicProvider:
         self._client: httpx.AsyncClient | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self.web_search = settings.ai_web_search
+        self.rest_until = 0.0
+
+    def is_resting(self) -> bool:
+        return time.monotonic() < self.rest_until
+
+    def _refusal(self, status: int, body: bytes) -> ProviderUnavailable:
+        hint = _hint(status, body)
+        if status in {401, 403, 404} or "credit balance" in body.decode("utf-8", "ignore").lower():
+            # These don't fix themselves in a minute: skip Claude for half an hour instead of failing every answer.
+            self.rest_until = time.monotonic() + 30 * 60
+        return ProviderUnavailable(UNAVAILABLE, hint)
 
     def _http(self) -> httpx.AsyncClient:
         # One pooled client per event loop, so connections stay warm between turns.
@@ -135,7 +147,7 @@ class AnthropicProvider:
             raise ProviderUnavailable(UNAVAILABLE, NETWORK_HINT) from exc
         if response.status_code >= 400:
             logger.warning("Anthropic request refused: %s", _reason(response.status_code, response.content))
-            raise ProviderUnavailable(UNAVAILABLE, _hint(response.status_code, response.content))
+            raise self._refusal(response.status_code, response.content)
         data: dict[str, Any] = response.json()
         return data
 
@@ -166,7 +178,7 @@ class AnthropicProvider:
                             yield item
                         return
                     logger.warning("Anthropic assistant call refused: %s", _reason(response.status_code, refusal))
-                    raise ProviderUnavailable(UNAVAILABLE, _hint(response.status_code, refusal))
+                    raise self._refusal(response.status_code, refusal)
                 async for line in response.aiter_lines():
                     if not line.startswith("data: "):
                         continue

@@ -35,9 +35,15 @@ class Settings(BaseSettings):
     trust_proxy_headers: bool = ON_VERCEL
 
     # "auto" picks Claude when an Anthropic key is set, then OpenAI, then the local development provider.
-    ai_provider: Literal["auto", "anthropic", "openai", "local"] = "auto"
+    ai_provider: Literal["auto", "anthropic", "gemini", "openai", "local"] = "auto"
     anthropic_api_key: SecretStr | None = None
     ai_web_search: bool = True
+    gemini_api_key: SecretStr | None = None
+    """Google Gemini through its OpenAI-compatible API. Free tier available; see the README for the data trade-off."""
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    gemini_chat_model: str = "gemini-flash-latest"
+    gemini_fast_model: str = "gemini-3.5-flash-lite"
+    """Conversation summaries and short notes; its own free allowance leaves more of the chat model's for answers."""
     """Let Claude search the web for current prices, rates and news (Anthropic bills each search)."""
     anthropic_chat_model: str = "claude-sonnet-5"
     anthropic_fast_model: str = "claude-haiku-4-5-20251001"
@@ -96,12 +102,24 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def resolved_ai_provider(self) -> Literal["anthropic", "openai", "local"]:
+    def ai_provider_chain(self) -> list[str]:
+        """Providers to try in order, ending with the local rules.
+
+        A chosen provider (AI_PROVIDER=gemini, say) is the only model Faldo uses, so answers stay consistent; the local
+        rules step in only when it can't answer. With "auto", every provider that has a key is tried, best first.
+        """
+        keyed = [name for name, key in (("anthropic", self.anthropic_api_key), ("gemini", self.gemini_api_key),
+                                         ("openai", self.openai_api_key)) if key and key.get_secret_value()]
+        if self.ai_provider == "local":
+            return ["local"]
         if self.ai_provider == "auto":
-            if self.anthropic_api_key and self.anthropic_api_key.get_secret_value():
-                return "anthropic"
-            return "openai" if self.openai_api_key and self.openai_api_key.get_secret_value() else "local"
-        return self.ai_provider
+            return [*keyed, "local"]
+        return [self.ai_provider, "local"]
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def resolved_ai_provider(self) -> Literal["anthropic", "gemini", "openai", "local"]:
+        return self.ai_provider_chain[0]  # type: ignore[return-value]
 
     @computed_field  # type: ignore[prop-decorator]
     @property

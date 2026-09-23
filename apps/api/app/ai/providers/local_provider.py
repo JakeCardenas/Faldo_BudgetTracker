@@ -144,6 +144,9 @@ def _ideas(question: str) -> dict[str, Any]:
     return {"topic": topic, "budget": budget, "ideas": ideas}
 
 
+# "Can I afford it?", in English and Taglish.
+AFFORD_RE = re.compile(r"\bafford\b|can i (buy|get)|should i (buy|get)|\bkaya (ko|ba|kaya)\b|kakayanin|\bafford ko\b|"
+                       r"mabibili ko ba|mabili ko ba|kaya ng budget|pasok (ba )?sa budget", re.IGNORECASE)
 REMEMBER_RE = re.compile(r"^(?:please\s+)?(?:remember|tandaan(?: mo)?)(?:\s+(?:that|na))?[:,]?\s+(.+)$", re.IGNORECASE)
 CHALLENGE_RE = re.compile(r"\bchallenge\b|\bipon challenge\b|\bno[- ]spend\b", re.IGNORECASE)
 GOAL_ACTION_RE = re.compile(r"\b(?:make|create|set up|start|gawa(?:n|in)?)\b.*\bgoal\b|\bmake it a goal\b", re.IGNORECASE)
@@ -299,9 +302,12 @@ def plan(question: str, today: date | None = None) -> tuple[str, list[ToolCall]]
         horizon = "12_months" if repeat == "monthly" else ("90_days" if repeat == "weekly" else "end_of_month")
         return "scenario", [_call("simulate_scenario", adjustments=[
             {"kind": kind, "amount": amount, "repeat": repeat, "date": None, "label": None}], horizon=horizon)]
-    if re.search(r"\bafford\b|can i (buy|get)|should i (buy|get)", q):
-        if amount:
-            return "afford", [_call("calculate_affordability", amount=amount, description=None, category=None, date=None)]
+    if AFFORD_RE.search(q):
+        # Dates aren't prices: "kaya ko ba ₱4,496 sa birthday ko october 14?" is about ₱4,496.
+        _, _, undated = _when(question, today or date.today())
+        price = _amount(re.sub(r"\b20\d\d\b", " ", undated))
+        if price:
+            return "afford", [_call("calculate_affordability", amount=price, description=None, category=None, date=None)]
         goal = GOAL_RE.search(question)
         return "goal", [_call("get_goal_progress", goal_name=goal.group(1).strip() if goal else None)]
     if re.search(r"running out|run out of money|always broke|short on (cash|money)|why am i (broke|short)|money disappear", q):
@@ -430,6 +436,11 @@ class LocalDevelopmentProvider:
         stated = re.search(r"Today is (\d{4}-\d{2}-\d{2})", system)
         today = date.fromisoformat(stated.group(1)) if stated else date.today()
         intent, calls = plan(question, today)
+        photo = bool(transcript[last_user].images)
+        if photo and not results and intent in {"goal", "memory"}:
+            # Basic mode can't read the price off a photo; asking beats searching old records for the wrong thing.
+            return ModelTurn(text="I can't read photos in basic mode. Type the price in your message and I'll check it "
+                                  "against your Safe to Spend.")
         pending = [c for c in calls if c.name not in results]
         if pending:
             return ModelTurn(text=None, tool_calls=pending)

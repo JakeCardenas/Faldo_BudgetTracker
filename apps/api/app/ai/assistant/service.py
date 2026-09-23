@@ -10,11 +10,10 @@ from sqlalchemy import func, select
 
 import app.ai.tools.definitions  # noqa: F401
 from app.ai.assistant.snapshot import money_snapshot
-from app.ai.factory import get_llm
+from app.ai.factory import get_llm, next_llm
 from app.ai.guardrails.numeric import check_numbers
 from app.ai.guardrails.output import ADVICE_NOTE, cited_refs, needs_advice_note, sanitize_markdown, strip_unknown_refs
 from app.ai.providers.base import ModelTurn, ProviderUnavailable, TextDelta, TranscriptItem
-from app.ai.providers.local_provider import LocalDevelopmentProvider
 from app.ai.tools.registry import TOOLS, ToolContext, run_tool, tool_specs
 from app.core.db import scoped_session
 from app.core.errors import NotFound
@@ -319,29 +318,36 @@ async def stream_answer(
                     yield _event("status", {"id": call.id, "tool": call.name, "label": label,
                                             "state": "done" if record["ok"] else "error"})
 
-        try:
-            async for event in run_rounds(MAX_ROUNDS, live=True):
-                yield event
-        except ProviderUnavailable as exc:
-            if provider.is_development:
-                failed = True
-                final_text = str(exc)
-            else:
-                # The AI service refused or failed (no credits, a bad key, an outage): answer from Faldo's own
-                # calculations with the local provider instead, reusing any lookups already made.
-                logger.warning("%s unavailable; answering with the local provider", provider.name)
-                fallback_hint = exc.hint or "The AI service isn't answering right now, so this is Faldo's basic answer."
-                provider = LocalDevelopmentProvider()
-                stream = None
+        while True:
+            try:
+                async for event in run_rounds(MAX_ROUNDS, live=True):
+                    yield event
+                break
+            except ProviderUnavailable as exc:
+                if provider.is_development:
+                    failed = True
+                    final_text = str(exc)
+                    break
+                # This model refused or failed (no credits, a used-up free limit, an outage): the next one answers, ending
+                # with Faldo's own calculations from the local provider.
+                logger.warning("%s unavailable; trying the next provider", provider.name)
+                hint = exc.hint or "The AI service isn't answering right now, so this is Faldo's basic answer."
+                provider = next_llm(provider.name)
+                stream = getattr(provider, "stream_turn", None)
                 if shown:
                     shown = ""
                     yield _event("reset", {})
-                try:
-                    async for event in run_rounds(MAX_ROUNDS, live=True):
-                        yield event
-                except ProviderUnavailable as local_exc:
-                    failed = True
-                    final_text = str(local_exc)
+                if provider.is_development:
+                    fallback_hint = hint  # the local provider reuses any lookups already made
+                else:
+                    # A different model starts over; it can't read the failed model's own turns.
+                    first = next((i for i, item in enumerate(transcript) if item.kind in {"model_output", "tool_result"}), None)
+                    if first is not None:
+                        del transcript[first:]
+                    blocks.clear()
+                    tool_outputs.clear()
+                    records.clear()
+                    web.clear()
 
         # The snapshot and Faldo's own check-ins are evidence too: figures quoted from them are real. Saved memory and
         # earlier summaries are not: they're text the user (or an import) wrote, so a figure in them proves nothing.
@@ -374,12 +380,8 @@ async def stream_answer(
         if failed:
             validation = "unavailable"
 
-        if image and not getattr(provider, "supports_vision", False):
-            if text.startswith("I couldn't find anything"):
-                text = ("I can't look at photos in basic mode. Type the price and ask again, and I'll check it against "
-                        "your Safe to Spend.")
-            else:
-                text = f"I can't look at photos in basic mode, so this answer is from your message only.\n\n{text}"
+        if image and not getattr(provider, "supports_vision", False) and not text.startswith("I can't read photos"):
+            text = f"I can't look at photos in basic mode, so this answer is from your message only.\n\n{text}"
         text = strip_unknown_refs(text, set(ctx.refs))
         if needs_advice_note(text):
             text = f"{text}\n\n{ADVICE_NOTE}"

@@ -250,7 +250,7 @@ async def test_photos_reach_the_model_and_basic_mode_says_it_cannot_see_them(app
     assert content[0] == {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": "A" * 200}}
     events = await _ask(uid, LocalDevelopmentProvider(), "kaya ko ba 'to?", image=photo)
     text = "".join(e["data"]["text"] for e in events if e["event"] == "delta")
-    assert text.startswith("I can't look at photos in basic mode")
+    assert text.startswith("I can't read photos in basic mode. Type the price")
 
 
 # Web search ------------------------------------------------------------------------------------------------------------

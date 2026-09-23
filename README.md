@@ -142,6 +142,8 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 
 **Ideas and conversation:** Faldo chats like a friend who is good with money (gifts, what to buy, money concepts in the Philippines), not only about the user's records. Suggestions go through `suggest_ideas`, so their price ranges pass the numeric guardrail and appear as a card where each idea can be planned (a planned purchase) or logged after buying (the expense form opens prefilled). Nothing is saved automatically, and chat never auto-logs a message that asks for something ("suggest…", "what can I buy…", "budget is…"); the capture parser refuses those too. The rule-based fallback suggests from a small catalogue of typical Philippine prices. When Claude refuses, the fallback answer shows why (no API credits, invalid key, busy) so it can be fixed.
 
+**Free option (Gemini):** Faldo can run on Google Gemini's free tier. Create a key in Google AI Studio (no billing), set `GEMINI_API_KEY` and `AI_PROVIDER=gemini`. Gemini chats, reads photos (screenshots of shops included) and calls every Faldo tool; tool schemas are simplified for it and Gemini 3's thought signatures are sent back unchanged. The trade-off: on the free tier Google may use prompts and answers, which include the money snapshot, to improve its products, and people may review them. Claude or a paid Gemini key avoids that. Web search is Claude-only. When a provider refuses for a lasting reason (no credits, a bad key, a used-up free limit), it sits out for a while instead of failing every answer.
+
 **Companion:** Faldo acts like a friend who keeps an eye on your money.
 
 - **Actions, confirmed:** `propose_action` prepares a goal, a monthly budget, logged income or an expense, a planned purchase, a paid bill, a memory or a challenge as a card; only the user's tap calls the app's own endpoint (the card allows a fixed list of paths). Setting one budget keeps the others.
@@ -166,9 +168,11 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 | `PUBLIC_APP_URL` | `http://localhost:3000` | **required** | web URL; used for reset links and added to allowed origins |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | optional | comma-separated extra origins |
 | `COOKIE_SECURE` | `false` | `true` | |
-| `AI_PROVIDER` | `auto` | `auto` | `anthropic`, `openai` or `local`; auto picks Claude, then OpenAI, by which key is present |
+| `AI_PROVIDER` | `auto` | `auto` | `anthropic`, `gemini`, `openai` or `local`. A chosen provider is the only model used (the local rules step in when it can't answer); `auto` tries every provider with a key: Claude, then Gemini, then OpenAI |
 | `ANTHROPIC_API_KEY` | — | recommended | server-side only; makes Claude the assistant |
 | `ANTHROPIC_CHAT_MODEL` / `ANTHROPIC_FAST_MODEL` / `ANTHROPIC_VISION_MODEL` | `claude-sonnet-5` / `claude-haiku-4-5-20251001` / `claude-sonnet-5` | same | |
+| `GEMINI_API_KEY` | — | optional | server-side only; Google Gemini through its OpenAI-compatible API. The free tier needs no billing, but Google may use free-tier prompts and answers to improve its products |
+| `GEMINI_CHAT_MODEL` / `GEMINI_FAST_MODEL` | `gemini-flash-latest` / `gemini-3.5-flash-lite` | same | the fast model writes summaries, on its own free allowance |
 | `OPENAI_API_KEY` | — | recommended | server-side only; the assistant when there is no Anthropic key, and search embeddings |
 | `OPENAI_CHAT_MODEL` / `OPENAI_FAST_MODEL` / `OPENAI_VISION_MODEL` / `OPENAI_EMBEDDING_MODEL` | `gpt-5-mini` / `gpt-5-nano` / `gpt-5-mini` / `text-embedding-3-small` | same | |
 | `JOB_MODE` | `worker` | `inline` | inline processes queued jobs right after each write |
@@ -241,7 +245,7 @@ Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the
 ## Quality checks
 
 ```bash
-make test        # 168 backend tests
+make test        # 175 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build
