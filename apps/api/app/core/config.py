@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     @model_validator(mode="before")
     @classmethod
     def split_origins(cls, data: dict) -> dict:
+        # "Gemini" or " gemini " in the dashboard means gemini; a typo mustn't stop the API from starting.
+        for key in ("ai_provider", "AI_PROVIDER"):
+            if isinstance(data.get(key), str):
+                data[key] = data[key].strip().lower() or "auto"
         raw = data.get("allowed_origins") or data.get("ALLOWED_ORIGINS")
         if isinstance(raw, str):
             value = raw.strip()
@@ -112,7 +116,8 @@ class Settings(BaseSettings):
                                          ("openai", self.openai_api_key)) if key and key.get_secret_value()]
         if self.ai_provider == "local":
             return ["local"]
-        if self.ai_provider == "auto":
+        if self.ai_provider == "auto" or self.ai_provider not in keyed:
+            # A chosen provider without its key (say, a preview deployment) falls back to the keys that are there.
             return [*keyed, "local"]
         return [self.ai_provider, "local"]
 

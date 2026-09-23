@@ -95,6 +95,8 @@ def test_a_chosen_ai_is_the_only_one_used():
     assert Settings(ai_provider="gemini", **both).ai_provider_chain == ["gemini", "local"]  # type: ignore[arg-type]
     assert Settings(ai_provider="auto", **both).ai_provider_chain == ["anthropic", "gemini", "local"]  # type: ignore[arg-type]
     assert Settings(ai_provider="auto", gemini_api_key="g").resolved_ai_provider == "gemini"  # type: ignore[arg-type]
+    assert Settings(ai_provider="Gemini ", **both).ai_provider_chain == ["gemini", "local"]  # type: ignore[arg-type]
+    assert Settings(ai_provider="gemini", anthropic_api_key="a").ai_provider_chain == ["anthropic", "local"], "no key, no Gemini"  # type: ignore[arg-type]
 
 
 def test_claude_without_credits_rests_instead_of_failing_every_answer():
@@ -150,3 +152,54 @@ async def test_basic_mode_asks_for_the_price_when_it_cannot_read_a_photo(app, mo
     text = "".join(e["data"]["text"] for e in events if e["event"] == "delta")
     assert text.startswith("I can't read photos in basic mode. Type the price") and "Samsung" not in text
     assert uuid.UUID(next(e["data"]["id"] for e in events if e["event"] == "conversation"))
+
+
+def test_every_faldo_tool_is_described_the_way_gemini_accepts():
+    import app.ai.tools.definitions  # noqa: F401
+    from app.ai.providers.compatible_provider import GEMINI_KEYS, _tools
+    from app.ai.tools.registry import tool_specs
+
+    tools = {t["function"]["name"]: t["function"] for t in _tools(tool_specs())}
+    assert "parameters" not in tools["get_current_balance"] and "parameters" not in tools["get_challenges"]
+
+    def keys(node: Any) -> set[str]:
+        if isinstance(node, list):
+            return set().union(*(keys(v) for v in node)) if node else set()
+        if not isinstance(node, dict):
+            return set()
+        found = set(node) - {"properties"}
+        for name, value in node.items():
+            found |= set().union(*(keys(v) for v in value.values())) if name == "properties" else keys(value)
+        return found
+
+    used = set().union(*(keys(fn.get("parameters", {})) for fn in tools.values()))
+    assert used <= GEMINI_KEYS, used - GEMINI_KEYS
+    for fn in tools.values():
+        params = fn.get("parameters")
+        if params:
+            assert params["type"] == "object" and params["properties"], fn["name"]
+
+
+async def test_a_brief_gemini_overload_is_retried_once():
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return httpx.Response(503, json={"error": {"code": 503, "message": "The model is overloaded. Please try again later."}})
+        return httpx.Response(200, text=_sse([{"choices": [{"index": 0, "delta": {"content": "Kaya mo 'yan."}}]}]),
+                              headers={"content-type": "text/event-stream"})
+
+    provider = _gemini(handler)
+    items = [i async for i in provider.stream_turn(system="s", transcript=[TranscriptItem("user", text="hi")], tools=[])]
+    assert calls["n"] == 2 and isinstance(items[-1], ModelTurn) and items[-1].text == "Kaya mo 'yan."
+
+
+async def test_gemini_errors_say_what_went_wrong():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json=[{"error": {"code": 400, "message": "Invalid JSON payload received. Unknown name \"pattern\"."}}])
+
+    provider = _gemini(handler)
+    with pytest.raises(ProviderUnavailable) as caught:
+        [i async for i in provider.stream_turn(system="s", transcript=[TranscriptItem("user", text="hi")], tools=[])]
+    assert "error 400: Invalid JSON payload received" in (caught.value.hint or "") and not provider.is_resting()

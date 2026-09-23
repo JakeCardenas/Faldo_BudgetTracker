@@ -26,6 +26,22 @@ from app.core.config import Settings
 logger = logging.getLogger("faldo.ai.compatible")
 UNAVAILABLE = "The AI service is temporarily unavailable."
 REST_SECONDS = {"quota": 10 * 60, "key": 30 * 60}
+RETRY_STATUSES = {500, 502, 503, 504}
+
+
+def _error_message(body: bytes) -> str:
+    """Gemini's own words for an error, whichever shape it comes in."""
+    try:
+        error: Any = json.loads(body)
+    except ValueError:
+        return body.decode("utf-8", "ignore")[:200].strip()
+    if isinstance(error, list) and error:
+        error = error[0]
+    if isinstance(error, dict):
+        inner = error.get("error", error)
+        if isinstance(inner, dict):
+            return str(inner.get("message", ""))[:200]
+    return ""
 
 
 def plain_schema(node: Any) -> Any:
@@ -50,9 +66,40 @@ def plain_schema(node: Any) -> Any:
     return out
 
 
+# Gemini reads a subset of JSON Schema (OpenAPI 3.0 style); anything else can make it reject the whole request.
+GEMINI_KEYS = {"type", "description", "enum", "properties", "required", "items", "minimum", "maximum", "minItems",
+               "maxItems", "nullable", "format"}
+
+
+def gemini_schema(node: Any) -> Any:
+    """Keep only what Gemini understands: exclusive bounds become plain ones, other keywords are dropped."""
+    if isinstance(node, list):
+        return [gemini_schema(v) for v in node]
+    if not isinstance(node, dict):
+        return node
+    out: dict[str, Any] = {}
+    for key, value in node.items():
+        if key == "properties" and isinstance(value, dict):
+            out[key] = {name: gemini_schema(spec) for name, spec in value.items()}
+        elif key in {"exclusiveMinimum", "exclusiveMaximum"} and isinstance(value, int | float):
+            out.setdefault("minimum" if key == "exclusiveMinimum" else "maximum", value)
+        elif key in GEMINI_KEYS:
+            out[key] = gemini_schema(value)
+    if out.get("format") not in {None, "date-time", "enum", "int32", "int64", "float", "double"}:
+        out.pop("format")
+    return out
+
+
+def _function(name: str, description: str, parameters: dict[str, Any]) -> dict[str, Any]:
+    schema = gemini_schema(plain_schema(parameters))
+    fn: dict[str, Any] = {"name": name, "description": description}
+    if schema.get("properties"):
+        fn["parameters"] = schema  # a tool without inputs has no parameters at all; Gemini rejects an empty object
+    return {"type": "function", "function": fn}
+
+
 def _tools(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [{"type": "function", "function": {"name": s["name"], "description": s["description"],
-                                              "parameters": plain_schema(s["parameters"])}} for s in specs]
+    return [_function(s["name"], s["description"], s["parameters"]) for s in specs]
 
 
 def _messages(system: str, transcript: list[TranscriptItem]) -> list[dict[str, Any]]:
@@ -131,12 +178,7 @@ class CompatibleProvider:
         return {"authorization": f"Bearer {self._key}", "content-type": "application/json"}
 
     def _refused(self, status: int, body: bytes) -> ProviderUnavailable:
-        try:
-            error = json.loads(body)
-            error = error[0] if isinstance(error, list) and error else error
-            message = str(error.get("error", {}).get("message", ""))[:200]
-        except (ValueError, AttributeError):
-            message = ""
+        message = _error_message(body)
         logger.warning("%s request refused: %s %s", self.label, status, message)
         if status == 429:
             self.rest_until = time.monotonic() + REST_SECONDS["quota"]
@@ -144,11 +186,25 @@ class CompatibleProvider:
         elif status in {401, 403} or "api key" in message.lower():
             self.rest_until = time.monotonic() + REST_SECONDS["key"]
             hint = f"{self.label} isn't answering: the API key isn't valid. Check GEMINI_API_KEY in Vercel."
+        elif status == 404:
+            hint = f"{self.label} couldn't find the model ({message[:90] or 'not found'}). Check GEMINI_CHAT_MODEL."
         elif status >= 500:
-            hint = f"{self.label} is busy right now. Try again shortly."
+            hint = f"{self.label} had a problem answering (error {status}{': ' + message[:90] if message else ''}). Try again shortly."
         else:
-            hint = f"{self.label} refused the request ({status})."
+            hint = f"{self.label} refused the request (error {status}{': ' + message[:120] if message else ''})."
         return ProviderUnavailable(UNAVAILABLE, hint)
+
+    async def _post_stream(self, body: dict[str, Any]) -> Any:
+        """Open the stream, retrying once when Gemini is briefly overloaded (500/503)."""
+        for attempt in range(2):
+            request = self._http().build_request("POST", f"{self.base_url}/chat/completions", headers=self._headers, json=body)
+            response = await self._http().send(request, stream=True)
+            if response.status_code in RETRY_STATUSES and attempt == 0:
+                await response.aclose()
+                await asyncio.sleep(1.2)
+                continue
+            return response
+        return response
 
     async def stream_turn(self, *, system: str, transcript: list[TranscriptItem],
                           tools: list[dict[str, Any]]) -> AsyncIterator[TextDelta | ModelTurn]:
@@ -158,7 +214,8 @@ class CompatibleProvider:
         text: list[str] = []
         calls: dict[int, dict[str, Any]] = {}
         try:
-            async with self._http().stream("POST", f"{self.base_url}/chat/completions", headers=self._headers, json=body) as response:
+            response = await self._post_stream(body)
+            try:
                 if response.status_code >= 400:
                     raise self._refused(response.status_code, await response.aread())
                 async for line in response.aiter_lines():
@@ -168,9 +225,13 @@ class CompatibleProvider:
                     if data == "[DONE]":
                         break
                     chunk = json.loads(data)
+                    if isinstance(chunk, list):
+                        chunk = chunk[0] if chunk else {}
                     if chunk.get("error"):
-                        logger.warning("%s stream error: %s", self.label, str(chunk["error"])[:200])
-                        raise ProviderUnavailable(UNAVAILABLE, f"{self.label} is busy right now. Try again shortly.")
+                        message = _error_message(json.dumps(chunk).encode())
+                        logger.warning("%s stream error: %s", self.label, message)
+                        raise ProviderUnavailable(UNAVAILABLE, f"{self.label} had a problem answering ({message[:90] or 'stream error'}). "
+                                                               "Try again shortly.")
                     for choice in chunk.get("choices", []):
                         delta = choice.get("delta") or {}
                         if delta.get("content"):
@@ -178,6 +239,8 @@ class CompatibleProvider:
                             yield TextDelta(delta["content"])
                         for part in delta.get("tool_calls") or []:
                             _merge(calls.setdefault(int(part.get("index", len(calls))), {"type": "function"}), part)
+            finally:
+                await response.aclose()
         except httpx.HTTPError as exc:
             logger.warning("%s stream failed: %s", self.label, exc.__class__.__name__)
             raise ProviderUnavailable(UNAVAILABLE, f"Faldo couldn't reach {self.label}. Try again shortly.") from exc
@@ -213,6 +276,9 @@ class CompatibleProvider:
     async def _complete(self, body: dict[str, Any]) -> dict[str, Any]:
         try:
             response = await self._http().post(f"{self.base_url}/chat/completions", headers=self._headers, json=body)
+            if response.status_code in RETRY_STATUSES:
+                await asyncio.sleep(1.2)
+                response = await self._http().post(f"{self.base_url}/chat/completions", headers=self._headers, json=body)
         except httpx.HTTPError as exc:
             raise ProviderUnavailable(UNAVAILABLE) from exc
         if response.status_code >= 400:
@@ -224,7 +290,7 @@ class CompatibleProvider:
         data = await self._complete({
             "model": self.chat_model,
             "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": content}],
-            "tools": [{"type": "function", "function": {"name": name, "description": "Record the result.", "parameters": plain_schema(schema)}}],
+            "tools": [_function(name, "Record the result.", schema)],
             "tool_choice": {"type": "function", "function": {"name": name}},
         })
         for choice in data.get("choices", []):
