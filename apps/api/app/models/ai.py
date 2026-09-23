@@ -89,6 +89,35 @@ class AIConversation(UUIDPk, UserOwned, Timestamps, Base):
     __tablename__ = "ai_conversations"
 
     title: Mapped[str] = mapped_column(String(120))
+    summary: Mapped[str | None] = mapped_column(Text)
+    """A few lines on what was discussed, so Faldo can recall it in later conversations."""
+    summarized_messages: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class AppKey(Base):
+    """Keys the server makes for itself once and keeps (the web push signing key). A system table, never per user."""
+
+    __tablename__ = "app_keys"
+
+    name: Mapped[str] = mapped_column(String(40), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PushSubscription(Base):
+    """A phone or browser that gets Faldo's daily check-in. A system table like jobs: the daily run reads every row,
+    and the API only ever touches a user's own rows."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(String(200))
+    auth: Mapped[str] = mapped_column(String(64))
+    last_signal_key: Mapped[str | None] = mapped_column(String(160))
+    last_sent_on: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AIMessage(UUIDPk, UserOwned, Base):

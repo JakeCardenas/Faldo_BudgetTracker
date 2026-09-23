@@ -29,6 +29,10 @@ class ModelTurn:
     text: str | None
     tool_calls: list[ToolCall] = field(default_factory=list)
     raw: list[Any] = field(default_factory=list)
+    paused: bool = False
+    """The service paused a long turn (web searches); send it back to continue."""
+    citations: list[dict[str, Any]] = field(default_factory=list)
+    """Web pages the answer quoted: url, title and the cited text."""
 
 
 @dataclass
@@ -38,6 +42,8 @@ class TranscriptItem:
     call: ToolCall | None = None
     output: dict[str, Any] | None = None
     raw: list[Any] = field(default_factory=list)
+    images: list[dict[str, str]] = field(default_factory=list)
+    """Photos sent with a user message: media_type and base64 data."""
 
 
 @dataclass

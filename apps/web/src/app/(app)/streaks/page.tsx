@@ -5,6 +5,7 @@ import { Award, Check, Flame, Lock } from "lucide-react"
 import { toast } from "sonner"
 import { BambooDecor, environmentStyle } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
+import { ChallengesSection } from "@/components/challenges/challenges-section"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BACKGROUND_INFO, BADGE_ART, OUTFIT_INFO, poseFor } from "@/lib/catalog"
@@ -113,6 +114,8 @@ export default function StreaksPage() {
           </section>
         </div>
       </div>
+
+      <ChallengesSection />
 
       <section className="card-surface p-4 sm:p-5">
         <div className="flex items-baseline justify-between">

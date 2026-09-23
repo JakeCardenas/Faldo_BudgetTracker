@@ -287,3 +287,12 @@ class MoneyPlanIn(ApiModel):
     buffer_minor: PlanMoney = 0
     needs_minor: PlanMoney | None = Field(None, description="Empty means needs get whatever is left.")
     template: Literal["custom", "60_20_20"] = "custom"
+
+
+class ChallengeIn(ApiModel):
+    kind: Literal["ipon_daily", "ipon_52", "no_spend", "spend_cap"]
+    title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=80)] | None = None
+    amount_minor: Annotated[int, Field(gt=0, le=10_000_000_00)] | None = None
+    """The daily amount (daily ipon), the base amount (52-week), or the cap (spending cap)."""
+    category_id: uuid.UUID | None = None
+    days: Annotated[int, Field(ge=3, le=366)] = 30

@@ -235,10 +235,17 @@ async def discard_receipt(receipt_id: uuid.UUID, ctx: CtxDep) -> Response:
     return Response(status_code=204)
 
 
+class PhotoIn(ApiModel):
+    media_type: Literal["image/jpeg", "image/png", "image/webp"]
+    data: Annotated[str, StringConstraints(min_length=100, max_length=3_000_000, pattern=r"^[A-Za-z0-9+/=]+$")]
+    """Base64, already downsized by the app (a phone photo at about 1600px is well under the limit)."""
+
+
 class AskIn(ApiModel):
     message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
     conversation_id: uuid.UUID | None = None
     page_context: Annotated[str, StringConstraints(max_length=120)] | None = None
+    image: PhotoIn | None = None
 
 
 @router.post("/assistant/messages", tags=["assistant"])
@@ -250,7 +257,8 @@ async def ask(data: AskIn, ctx: CtxDep) -> StreamingResponse:
 
     async def events() -> AsyncIterator[str]:
         try:
-            async for event in stream_answer(user_id, settings, today, data.message, data.conversation_id, data.page_context):
+            image = data.image.model_dump() if data.image else None
+            async for event in stream_answer(user_id, settings, today, data.message, data.conversation_id, data.page_context, image):
                 yield f"event: {event['event']}\ndata: {json.dumps(event['data'], default=str)}\n\n"
         except Exception:
             import logging
@@ -280,6 +288,63 @@ async def delete_conversation(conversation_id: uuid.UUID, ctx: CtxDep) -> Respon
     conversation = await get_owned(ctx.db, AIConversation, conversation_id, ctx.user_id, "Conversation")
     await ctx.db.delete(conversation)
     return Response(status_code=204)
+
+
+@router.get("/assistant/companion", tags=["assistant"])
+async def companion_now(ctx: CtxDep) -> dict[str, Any]:
+    """Faldo's check-ins (what he'd bring up first) and chat starters from the user's own situation."""
+    from app.services import companion
+
+    found = await companion.signals(ctx.db, ctx.user_id, ctx.settings, ctx.today)
+    return {"checkins": [s.out() for s in found[:3]], "starters": companion.starters(found)}
+
+
+class PushKeys(ApiModel):
+    p256dh: Annotated[str, StringConstraints(min_length=20, max_length=200)]
+    auth: Annotated[str, StringConstraints(min_length=8, max_length=64)]
+
+
+class PushSubscriptionIn(ApiModel):
+    endpoint: Annotated[str, StringConstraints(min_length=20, max_length=1000, pattern=r"^https://")]
+    keys: PushKeys
+
+
+class PushEndpointIn(ApiModel):
+    endpoint: Annotated[str, StringConstraints(min_length=20, max_length=1000)] | None = None
+
+
+@router.get("/push/key", tags=["push"])
+async def push_key(ctx: CtxDep) -> dict[str, str]:
+    from app.services import push
+
+    return {"public_key": await push.public_key(ctx.db)}
+
+
+@router.post("/push/subscriptions", status_code=204, tags=["push"])
+async def push_subscribe(data: PushSubscriptionIn, ctx: CtxDep) -> Response:
+    from app.services import push
+
+    await push.subscribe(ctx.db, ctx.user_id, data.endpoint, data.keys.p256dh, data.keys.auth)
+    return Response(status_code=204)
+
+
+@router.post("/push/unsubscribe", status_code=204, tags=["push"])
+async def push_unsubscribe(data: PushEndpointIn, ctx: CtxDep) -> Response:
+    from app.services import push
+
+    await push.unsubscribe(ctx.db, ctx.user_id, data.endpoint)
+    return Response(status_code=204)
+
+
+@router.post("/push/test", tags=["push"])
+async def push_test(ctx: CtxDep) -> dict[str, int]:
+    """Send a hello right away, so people see check-ins work on this phone."""
+    from app.services import push
+
+    await limiter.hit(f"push-test:{ctx.user_id}", 5, 3600)
+    sent = await push.send_to_user(ctx.user_id, {"title": "Check-ins are on", "tag": "hello", "url": "/assistant",
+                                                 "body": "I'll check in once a day when something's worth knowing."})
+    return {"sent": sent}
 
 
 @router.get("/assistant/status", tags=["assistant"])

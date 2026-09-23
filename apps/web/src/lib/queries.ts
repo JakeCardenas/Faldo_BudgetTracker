@@ -7,6 +7,7 @@ import type {
   BalancePoint,
   Budget,
   Category,
+  ChallengeProgress,
   Dashboard,
   Debt,
   Engagement,
@@ -46,12 +47,14 @@ export const keys = {
   balanceHistory: (days: number) => ["balance-history", days] as const,
   notes: ["notes"] as const,
   planned: ["planned"] as const,
+  challenges: ["challenges"] as const,
   moneyPlan: ["money-plan"] as const,
 }
 
 export async function invalidateFinancialData(qc: QueryClient) {
   const roots = ["dashboard", "pulse", "accounts", "transactions", "budget", "goals", "recurring", "upcoming", "debts",
-    "insights", "forecast", "report", "health", "account-history", "tags", "receipts", "engagement", "balance-history", "planned", "money-plan"]
+    "insights", "forecast", "report", "health", "account-history", "tags", "receipts", "engagement", "balance-history", "planned", "money-plan",
+    "challenges", "companion"]
   for (const root of roots) void qc.invalidateQueries({ queryKey: [root] })
 }
 
@@ -174,6 +177,21 @@ export function useUpdateSettings() {
       void qc.invalidateQueries({ queryKey: keys.engagement })
     },
   })
+}
+
+export interface Checkin { key: string; kind: string; priority: number; title: string; body: string; prompt: string; mood: string; href: string | null }
+
+/** What Faldo would bring up first, and chat starters from the user's own situation. */
+export function useCompanion() {
+  return useQuery({
+    queryKey: ["companion"],
+    queryFn: () => api.get<{ checkins: Checkin[]; starters: { prompt: string; label: string; mood: string }[] }>("/assistant/companion"),
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useChallenges() {
+  return useQuery({ queryKey: keys.challenges, queryFn: () => api.get<ChallengeProgress[]>("/challenges") })
 }
 
 export function usePlanned() {

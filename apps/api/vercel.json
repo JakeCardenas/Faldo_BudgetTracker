@@ -4,6 +4,10 @@
     {
       "path": "/api/v1/internal/jobs/run",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/v1/internal/checkins/run",
+      "schedule": "0 1 * * *"
     }
   ]
 }

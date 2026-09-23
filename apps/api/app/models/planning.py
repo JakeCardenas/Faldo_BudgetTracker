@@ -214,3 +214,26 @@ class MoneyPlan(Timestamps, Base):
     needs_minor: Mapped[int | None] = mapped_column(BigInteger)  # None: whatever is left
     template: Mapped[str] = mapped_column(String(20), default="custom", server_default="custom")
 
+
+
+class Challenge(UUIDPk, UserOwned, Timestamps, Base):
+    """A money challenge Faldo tracks with the user: a daily or 52-week ipon, a no-spend stretch, or a spending cap.
+
+    Ipon challenges save into their own savings goal; progress is always worked out from real records.
+    """
+
+    __tablename__ = "challenges"
+    __table_args__ = (
+        CheckConstraint("kind IN ('ipon_daily', 'ipon_52', 'no_spend', 'spend_cap')", name="kind_known"),
+        CheckConstraint("status IN ('active', 'ended')", name="status_known"),
+        CheckConstraint("end_on >= start_on", name="dates_ordered"),
+    )
+
+    kind: Mapped[str] = mapped_column(String(16))
+    title: Mapped[str] = mapped_column(String(80))
+    amount_minor: Mapped[int | None] = mapped_column(BigInteger)
+    category_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"))
+    goal_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("savings_goals.id", ondelete="SET NULL"))
+    start_on: Mapped[date] = mapped_column(Date)
+    end_on: Mapped[date] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(8), default="active")

@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # "auto" picks Claude when an Anthropic key is set, then OpenAI, then the local development provider.
     ai_provider: Literal["auto", "anthropic", "openai", "local"] = "auto"
     anthropic_api_key: SecretStr | None = None
+    ai_web_search: bool = True
+    """Let Claude search the web for current prices, rates and news (Anthropic bills each search)."""
     anthropic_chat_model: str = "claude-sonnet-5"
     anthropic_fast_model: str = "claude-haiku-4-5-20251001"
     anthropic_vision_model: str = "claude-sonnet-5"

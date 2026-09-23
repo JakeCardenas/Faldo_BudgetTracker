@@ -4,7 +4,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Brain, Database, Download, EyeOff, KeyRound, Monitor, Moon, Palette, Plus, SlidersHorizontal, Smartphone, Sun, Tags, Trash2, Volume2, Wind, type LucideIcon } from "lucide-react"
+import { Bell, Brain, Database, Download, EyeOff, KeyRound, Monitor, Moon, Palette, Plus, SlidersHorizontal, Smartphone, Sun, Tags, Trash2, Volume2, Wind, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
@@ -23,6 +23,7 @@ import { setBubbleShown, useBubbleShown } from "@/lib/bubble"
 import { FREQUENCY_LABELS, minorToInput, timeAgo, toMinor } from "@/lib/format"
 import { setMotionReduced, useMotionReduced } from "@/lib/motion"
 import { setAmountsHidden, useAmountsHidden } from "@/lib/privacy"
+import { disablePush, enablePush, needsHomeScreen, pushSupported, usePushEnabled } from "@/lib/push"
 import { invalidateFinancialData, useAccounts, useCategories, useUpdateSettings } from "@/lib/queries"
 import { setSoundsEnabled, soundsEnabled } from "@/lib/sound"
 import { useSmoothTheme } from "@/lib/theme"
@@ -38,6 +39,24 @@ function Appearance({ me }: { me: Me }) {
   const hideAmounts = useAmountsHidden()
   const bubble = useBubbleShown()
   const reduced = useMotionReduced()
+  const [checkins, setCheckins] = usePushEnabled()
+  const [switching, setSwitching] = useState(false)
+  async function toggleCheckins(on: boolean) {
+    setSwitching(true)
+    try {
+      if (on) {
+        await enablePush()
+        toast.success("Check-ins are on. Faldo just sent a hello.")
+      } else {
+        await disablePush()
+      }
+      setCheckins(on)
+    } catch (error) {
+      toast.error((error as Error).message || "Couldn't change that.")
+    } finally {
+      setSwitching(false)
+    }
+  }
   return (
     <div className="space-y-5">
       <Segmented label="Theme" className="w-full" value={me.settings.theme} onChange={(theme) => {
@@ -55,7 +74,14 @@ function Appearance({ me }: { me: Me }) {
         <ListRow className="lg:hidden" title="Faldo bubble" toggle
           leading={<span className="size-6 shrink-0 overflow-hidden rounded-full bg-[linear-gradient(160deg,#6cbf86_0%,#3c8d5c_55%,#2c6a45_100%)]"><Image src="/brand/panda/chat-head.png" alt="" width={210} height={210} sizes="24px" quality={90} className="size-full" /></span>}
           trailing={<Switch checked={bubble} onCheckedChange={setBubbleShown} aria-label="Faldo bubble" />} />
+        <ListRow icon={Bell} title="Daily check-ins" toggle
+          trailing={<Switch checked={Boolean(checkins)} disabled={switching} onCheckedChange={toggleCheckins} aria-label="Daily check-ins" />} />
       </ListGroup>
+      <p className="px-1 text-[0.8125rem] leading-snug text-muted-foreground">
+        {pushSupported() || !needsHomeScreen()
+          ? "Once a day, when something is worth knowing (a bill due, a budget running low, payday, a goal or a challenge), Faldo sends one short note to this phone."
+          : "Check-ins need Faldo on your Home Screen. In Safari, tap Share, then Add to Home Screen, and turn this on from there."}
+      </p>
     </div>
   )
 }

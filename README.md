@@ -142,6 +142,17 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 
 **Ideas and conversation:** Faldo chats like a friend who is good with money (gifts, what to buy, money concepts in the Philippines), not only about the user's records. Suggestions go through `suggest_ideas`, so their price ranges pass the numeric guardrail and appear as a card where each idea can be planned (a planned purchase) or logged after buying (the expense form opens prefilled). Nothing is saved automatically, and chat never auto-logs a message that asks for something ("suggest…", "what can I buy…", "budget is…"); the capture parser refuses those too. The rule-based fallback suggests from a small catalogue of typical Philippine prices. When Claude refuses, the fallback answer shows why (no API credits, invalid key, busy) so it can be fixed.
 
+**Companion:** Faldo acts like a friend who keeps an eye on your money.
+
+- **Actions, confirmed:** `propose_action` prepares a goal, a monthly budget, logged income or an expense, a planned purchase, a paid bill, a memory or a challenge as a card; only the user's tap calls the app's own endpoint (the card allows a fixed list of paths). Setting one budget keeps the others.
+- **Memory:** lasting facts shared in chat (a birthday, allowance, family, plans) are offered as "Remember this?" and saved to Faldo's memory; saved notes are in every answer's context. They are never evidence for the numeric guardrail, so a note can't slip in a fake figure.
+- **Recall:** after an answer is saved, the conversation gets a two or three sentence summary (Claude's fast model, or a plain extract in the fallback); the last five summaries go into later chats.
+- **Check-ins:** `services/companion.py` ranks what's worth bringing up: money short, bills due or overdue (combined), budgets over or running low, payday, goals behind or reached, last week's spending, challenge progress, birthdays from memory, and Philippine moments (13th month, Christmas, Undas, back to school, Valentine's, Mother's and Father's Day, the new year). They open an empty chat as Faldo's messages, become personal chat starters, and feed the answer context.
+- **Phone check-ins:** web push with a service worker (`public/sw.js`, no caching). The signing key is generated once and kept in `app_keys`. A daily cron (`/api/v1/internal/checkins/run`, 09:00 Manila) sends each subscribed user's most useful new check-in, at most one a day; gone subscriptions are removed. On iPhone it works in the app added to the Home Screen.
+- **Challenges:** daily ipon, 52-week ipon, no-spend and spending cap, tracked from real records (ipon challenges save into their own goal). On the Streaks page and in chat (`get_challenges`, or started with `propose_action`).
+- **Photos:** the chat takes a photo (downsized to about 1600px JPEG in the browser), which Claude reads; "can I afford this?" goes through `calculate_affordability` with the price it reads. The fallback says it can't see photos.
+- **Web search:** Claude's own web search tool (up to three searches an answer, located in the Philippines). Quoted text from cited pages counts as evidence, and the pages show as links under the answer.
+
 ## Environment variables
 
 ### API (`apps/api`)
@@ -161,7 +172,8 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 | `OPENAI_API_KEY` | — | recommended | server-side only; the assistant when there is no Anthropic key, and search embeddings |
 | `OPENAI_CHAT_MODEL` / `OPENAI_FAST_MODEL` / `OPENAI_VISION_MODEL` / `OPENAI_EMBEDDING_MODEL` | `gpt-5-mini` / `gpt-5-nano` / `gpt-5-mini` / `text-embedding-3-small` | same | |
 | `JOB_MODE` | `worker` | `inline` | inline processes queued jobs right after each write |
-| `CRON_SECRET` | — | recommended | protects the daily job sweep |
+| `CRON_SECRET` | — | recommended | protects the daily cron runs (job sweep and phone check-ins); without it they don't run |
+| `AI_WEB_SEARCH` | `true` | `true` | lets Claude search the web for current prices, rates and news (Anthropic bills each search); if web search isn't enabled for the Anthropic organization, Faldo continues without it |
 | `STORAGE_BACKEND` | `local` | `database` | receipt images |
 | `RATE_LIMIT_BACKEND` | `memory` | `database` | |
 | `RESEND_API_KEY` / `EMAIL_FROM` | — | for password reset emails | without a key, reset links are only logged in development |
@@ -229,7 +241,7 @@ Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the
 ## Quality checks
 
 ```bash
-make test        # 154 backend tests
+make test        # 168 backend tests
 make lint        # ruff + eslint
 make typecheck   # mypy + tsc
 make build       # Next.js production build

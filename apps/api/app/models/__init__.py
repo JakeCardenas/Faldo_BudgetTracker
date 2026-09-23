@@ -1,4 +1,15 @@
-from app.models.ai import AIConversation, AIInsight, AIMessage, Job, MemoryDocument, RateLimitHit, Receipt, StoredFile
+from app.models.ai import (
+    AIConversation,
+    AIInsight,
+    AIMessage,
+    AppKey,
+    Job,
+    MemoryDocument,
+    PushSubscription,
+    RateLimitHit,
+    Receipt,
+    StoredFile,
+)
 from app.models.base import Base
 from app.models.identity import AuthToken, Session, User, UserSettings
 from app.models.ledger import (
@@ -14,6 +25,7 @@ from app.models.ledger import (
 from app.models.planning import (
     Budget,
     BudgetCategory,
+    Challenge,
     Debt,
     DebtPayment,
     FinancialNote,
@@ -32,10 +44,12 @@ __all__ = [
     "AIInsight",
     "AIMessage",
     "Account",
+    "AppKey",
     "Base",
     "Budget",
     "BudgetCategory",
     "Category",
+    "Challenge",
     "Debt",
     "DebtPayment",
     "FinancialNote",
@@ -46,6 +60,7 @@ __all__ = [
     "Merchant",
     "MoneyPlan",
     "PlannedPurchase",
+    "PushSubscription",
     "Receipt",
     "RecurringPayment",
     "SavingsGoal",

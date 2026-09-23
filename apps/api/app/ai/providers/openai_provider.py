@@ -60,7 +60,12 @@ class OpenAIProvider:
     def _input(self, transcript: list[TranscriptItem]) -> list[Any]:
         items: list[Any] = []
         for entry in transcript:
-            if entry.kind == "user":
+            if entry.kind == "user" and entry.images:
+                items.append({"role": "user", "content": [
+                    *({"type": "input_image", "image_url": f"data:{i['media_type']};base64,{i['data']}", "detail": "high"}
+                      for i in entry.images),
+                    {"type": "input_text", "text": entry.text or ""}]})
+            elif entry.kind == "user":
                 items.append({"role": "user", "content": entry.text or ""})
             elif entry.kind == "assistant":
                 items.append({"role": "assistant", "content": entry.text or ""})

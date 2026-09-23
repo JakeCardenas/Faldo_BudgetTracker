@@ -519,6 +519,23 @@ export interface Receipt {
 
 export type Block =
   | {
+      type: "action"
+      id: string
+      action: string
+      title: string
+      lines: { label: string; value?: string; amount_minor?: number }[]
+      request: { method: "POST" | "PUT" | "PATCH"; path: string; body: Record<string, unknown> }
+      confirm: string
+      done: string
+      href: string
+      mood: string
+    }
+  | {
+      type: "challenges"
+      title: string
+      items: { id: string; title: string; kind: string; pct: number; state: string; on_track: boolean; summary: string; next_step?: string | null; days_left: number }[]
+    }
+  | {
       type: "ideas"
       title: string
       budget_minor: number | null
@@ -691,4 +708,30 @@ export interface MoneyPlan {
     needs_minor: number; needs_spent_minor: number; needs_left_minor: number
   } | null
   categories: { id: string; name: string; is_essential: boolean; icon: string | null; color: string | null }[]
+}
+
+
+export interface ChallengeProgress {
+  id: string
+  kind: "ipon_daily" | "ipon_52" | "no_spend" | "spend_cap"
+  title: string
+  status: "active" | "ended"
+  state: "active" | "completed" | "missed"
+  start_on: string
+  end_on: string
+  days_total: number
+  days_elapsed: number
+  days_left: number
+  pct: number
+  on_track: boolean
+  summary: string
+  next_step?: string | null
+  goal_id: string | null
+  category_id: string | null
+  saved_minor?: number
+  target_minor?: number
+  this_week_minor?: number
+  spent_minor?: number
+  cap_minor?: number
+  clean_days?: number
 }

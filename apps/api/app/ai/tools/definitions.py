@@ -22,9 +22,9 @@ from app.engine.periods import (
     resolve_period,
 )
 from app.engine.scenarios import Adjustment
-from app.models import Category, Transaction, TransactionItem
-from app.models.enums import CategoryKind, TransactionType
-from app.services import analytics, budgets, debts, forecast, goals, health, insights, money_plan, recurring
+from app.models import Account, Category, RecurringPayment, Transaction, TransactionItem
+from app.models.enums import CategoryKind, RecurringKind, TransactionType
+from app.services import analytics, budgets, challenges, debts, forecast, goals, health, insights, money_plan, recurring
 from app.services import check as check_service
 from app.services import planned as planned_service
 from app.services.accounts import account_balances
@@ -545,6 +545,213 @@ async def suggest_ideas(ctx: ToolContext, args: SuggestArgs) -> ToolOutput:
     return ToolOutput(result, [block])
 
 
+ActionKind = Literal["create_goal", "set_budget", "log_transaction", "add_planned_purchase", "mark_bill_paid", "remember",
+                     "start_challenge"]
+ChallengeKind = Literal["ipon_daily", "ipon_52", "no_spend", "spend_cap"]
+
+
+class ActionArgs(BaseModel):
+    action: ActionKind = Field(..., description="What to do once the user confirms")
+    name: str | None = Field(None, description="Goal, planned purchase or bill name; the merchant or note for a transaction; "
+                             "an optional challenge title")
+    amount: float | None = Field(None, description="Major units: a goal's target, a budget limit, a transaction amount, a "
+                                 "purchase price, or a challenge amount (the daily amount, the 52-week base amount or the cap)")
+    category: str | None = Field(None, description="Category name, for a budget, transaction, purchase or challenge")
+    date: str | None = Field(None, description="YYYY-MM-DD: a goal's target date, when a transaction happened, or when to buy")
+    transaction_type: Literal["expense", "income"] | None = Field(None, description="For log_transaction")
+    account: str | None = Field(None, description="Account name for log_transaction; the default account when left out")
+    monthly_amount: float | None = Field(None, description="For create_goal: how much to save each month")
+    fact: str | None = Field(None, description="For remember: one short sentence in the user's words")
+    challenge: ChallengeKind | None = Field(None, description="For start_challenge: ipon_daily (same amount daily), ipon_52 "
+                                            "(the 52-week challenge), no_spend (no spending in a category or on non-essentials) "
+                                            "or spend_cap (keep a category under a cap)")
+    days: int | None = Field(None, description="For start_challenge: how many days (not for ipon_52)")
+
+
+async def _match_category(ctx: ToolContext, name: str | None, *, top_level: bool = False,
+                         kind: CategoryKind = CategoryKind.expense) -> Category | None:
+    if not name:
+        return None
+    stmt = select(Category).where(Category.user_id == ctx.user_id, Category.kind == kind)
+    if top_level:
+        stmt = stmt.where(Category.parent_id.is_(None))
+    rows = list((await ctx.db.execute(stmt)).scalars())
+    wanted = name.lower().strip()
+    return next((c for c in rows if c.name.lower() == wanted), None) or next(
+        (c for c in rows if wanted in c.name.lower() or c.name.lower() in wanted), None)
+
+
+async def _find_account(ctx: ToolContext, name: str | None) -> Account | None:
+    rows = list((await ctx.db.execute(select(Account).where(Account.user_id == ctx.user_id, Account.archived_at.is_(None))
+                                      .order_by(Account.created_at))).scalars())
+    if name:
+        wanted = name.lower().strip()
+        found = next((a for a in rows if a.name.lower() == wanted), None) or next(
+            (a for a in rows if wanted in a.name.lower() or a.name.lower() in wanted), None)
+        if found:
+            return found
+    return next((a for a in rows if a.id == ctx.settings.default_account_id), None) or (rows[0] if rows else None)
+
+
+def _when(text: str | None, today: date) -> date | None:
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text[:10])
+    except ValueError:
+        return None
+
+
+@tool("propose_action", "Offer to do something for the user in Faldo: create a savings goal, set a monthly budget for a "
+      "category, log an expense or income, add a planned purchase, mark a bill paid, remember a fact about them, or start "
+      "a money challenge. It shows a card with exactly what will happen and a Confirm button; nothing changes until the "
+      "user taps it. Use it when they ask you to do something, or when it's the obvious next step (\"make it a goal?\"). "
+      "Use remember when they share a lasting personal fact (a birthday, allowance, family obligation, plan or preference).",
+      ActionArgs, "Preparing that for you")
+async def propose_action(ctx: ToolContext, args: ActionArgs) -> ToolOutput:
+    money = lambda value: to_minor(value, ctx.currency)  # noqa: E731
+    lines: list[dict[str, Any]] = []
+    body: dict[str, Any]
+    kind = args.action
+
+    if kind == "create_goal":
+        if not args.name or not args.amount:
+            return ToolOutput({"error": "Ask what the goal is for and how much it needs."})
+        target = _when(args.date, ctx.today)
+        body = {"name": args.name.strip()[:80], "target_minor": money(args.amount),
+                "target_date": target.isoformat() if target and target > ctx.today else None,
+                "monthly_contribution_minor": money(args.monthly_amount) if args.monthly_amount else None}
+        lines = [{"label": "Goal", "value": body["name"]}, {"label": "Target", "amount_minor": body["target_minor"]}]
+        if body["target_date"]:
+            lines.append({"label": "By", "value": f"{target:%B %Y}"})
+        if body["monthly_contribution_minor"]:
+            lines.append({"label": "Save each month", "amount_minor": body["monthly_contribution_minor"]})
+        card = ("New savings goal", "POST", "/goals", "Create goal", "Goal created", "/goals", "goal")
+    elif kind == "set_budget":
+        category = await _match_category(ctx, args.category, top_level=True)
+        if category is None or not args.amount:
+            return ToolOutput({"error": "Ask which main spending category and how much per month."})
+        month = ctx.today.replace(day=1)
+        current = await budgets.budget_status(ctx.db, ctx.user_id, ctx.today, ctx.today)
+        kept = [{"category_id": str(line.category_id), "limit_minor": line.limit_minor} for line in current.lines
+                if line.category_id != category.id]
+        before = next((line.limit_minor for line in current.lines if line.category_id == category.id), None)
+        body = {"month": f"{month:%Y-%m}", "total_limit_minor": current.total_limit_minor,
+                "lines": [*kept, {"category_id": str(category.id), "limit_minor": money(args.amount)}]}
+        lines = [{"label": "Category", "value": category.name}, {"label": f"{month:%B} budget", "amount_minor": money(args.amount)}]
+        if before is not None:
+            lines.append({"label": "Was", "amount_minor": before})
+        card = ("Set a budget", "PUT", "/budgets", "Set budget", "Budget set", "/budgets", "chart")
+    elif kind == "log_transaction":
+        if not args.amount:
+            return ToolOutput({"error": "Ask how much it was."})
+        income = args.transaction_type == "income"
+        account = await _find_account(ctx, args.account)
+        if account is None:
+            return ToolOutput({"error": "They have no account yet; suggest adding one in Wallet first."})
+        category = await _match_category(ctx, args.category, kind=CategoryKind.income if income else CategoryKind.expense)
+        when = _when(args.date, ctx.today) or ctx.today
+        if when > ctx.today:
+            when = ctx.today
+        body = {"type": "income" if income else "expense", "amount_minor": money(args.amount), "occurred_on": when.isoformat(),
+                "account_id": str(account.id), "category_id": str(category.id) if category else None,
+                "merchant": (args.name or "").strip()[:80] or None}
+        lines = [{"label": "Income" if income else "Expense", "amount_minor": body["amount_minor"]},
+                 {"label": "To" if income else "From", "value": account.name}]
+        if category:
+            lines.append({"label": "Category", "value": category.name})
+        if body["merchant"]:
+            lines.append({"label": "For", "value": body["merchant"]})
+        lines.append({"label": "Date", "value": "Today" if when == ctx.today else f"{when:%b %-d}"})
+        card = ("Log income" if income else "Log an expense", "POST", "/transactions", "Log it", "Logged", "/transactions", "receipt")
+    elif kind == "add_planned_purchase":
+        if not args.name or not args.amount:
+            return ToolOutput({"error": "Ask what they want to buy and roughly how much it costs."})
+        category = await _match_category(ctx, args.category)
+        target = _when(args.date, ctx.today)
+        body = {"name": args.name.strip()[:80], "amount_minor": money(args.amount),
+                "category_id": str(category.id) if category else None,
+                "target_date": target.isoformat() if target and target >= ctx.today else None}
+        lines = [{"label": "Item", "value": body["name"]}, {"label": "Price", "amount_minor": body["amount_minor"]}]
+        if body["target_date"]:
+            lines.append({"label": "When", "value": f"{target:%B %Y}"})
+        card = ("Add to planned purchases", "POST", "/planned-purchases", "Add it", "Added", "/plan/purchases", "shopping")
+    elif kind == "mark_bill_paid":
+        wanted = (args.name or "").lower().strip()
+        bills = [r for r in (await ctx.db.execute(select(RecurringPayment).where(
+            RecurringPayment.user_id == ctx.user_id, RecurringPayment.is_active.is_(True),
+            RecurringPayment.kind != RecurringKind.income))).scalars()]
+        bill = next((b for b in bills if wanted and (b.name.lower() == wanted or wanted in b.name.lower()
+                                                     or b.name.lower() in wanted)), None)
+        if bill is None:
+            names = ", ".join(b.name for b in bills[:8]) or "none"
+            return ToolOutput({"error": f"Ask which bill. Their bills: {names}."})
+        body = {}
+        lines = [{"label": "Bill", "value": bill.name}, {"label": "Amount", "amount_minor": bill.amount_minor},
+                 {"label": "Was due", "value": f"{bill.next_due_on:%b %-d}"}]
+        card = ("Mark a bill paid", "POST", f"/recurring/{bill.id}/pay", "Mark paid", "Marked paid", "/bills", "receipt")
+    elif kind == "remember":
+        fact = (args.fact or "").strip()
+        if not fact:
+            return ToolOutput({"error": "Say what to remember in one short sentence."})
+        body = {"content": fact[:1000]}
+        lines = [{"label": "Remember", "value": fact[:200]}]
+        card = ("Remember this?", "POST", "/notes", "Remember", "Faldo will remember that", "/settings/memory", "love")
+    else:
+        which = args.challenge
+        if which is None:
+            return ToolOutput({"error": "Ask which challenge: daily ipon, 52-week ipon, no-spend or a spending cap."})
+        category = await _match_category(ctx, args.category)
+        if which in {"ipon_daily", "ipon_52", "spend_cap"} and not args.amount:
+            return ToolOutput({"error": "Ask for the amount: the daily amount, the 52-week base amount or the cap."})
+        if which == "spend_cap" and category is None:
+            return ToolOutput({"error": "Ask which spending category to cap."})
+        days = 364 if which == "ipon_52" else max(3, min(args.days or (7 if which == "no_spend" else 30), 366))
+        body = {"kind": which, "title": (args.name or "").strip()[:80] or None,
+                "amount_minor": money(args.amount) if args.amount else None,
+                "category_id": str(category.id) if category else None, "days": days}
+        label = challenges.KIND_TITLES[which]
+        lines = [{"label": "Challenge", "value": body["title"] or label}, {"label": "Length", "value": f"{days} days"}]
+        if which == "ipon_daily" and body["amount_minor"]:
+            lines += [{"label": "Save each day", "amount_minor": body["amount_minor"]},
+                      {"label": "You'll have", "amount_minor": body["amount_minor"] * days}]
+        elif which == "ipon_52" and body["amount_minor"]:
+            lines += [{"label": "Week 1", "amount_minor": body["amount_minor"]},
+                      {"label": "Week 52", "amount_minor": body["amount_minor"] * 52},
+                      {"label": "You'll have", "amount_minor": body["amount_minor"] * challenges.WEEKS_52_TOTAL}]
+        elif which == "spend_cap" and body["amount_minor"]:
+            lines.append({"label": f"Cap on {category.name if category else 'spending'}", "amount_minor": body["amount_minor"]})
+        elif which == "no_spend":
+            lines.append({"label": "No spending on", "value": category.name if category else "anything non-essential"})
+        card = ("Start a challenge", "POST", "/challenges", "Start", "Challenge started", "/streaks", "motivated")
+
+    title, method, path, confirm, done, href, mood = card
+    block = {"type": "action", "id": uuid.uuid4().hex, "action": kind, "title": title, "lines": lines,
+             "request": {"method": method, "path": path, "body": body}, "confirm": confirm, "done": done, "href": href,
+             "mood": mood}
+    readable = [{**line, "amount": _fmt(ctx, line["amount_minor"])} if "amount_minor" in line else line for line in lines]
+    return ToolOutput({"proposed": kind, "details": readable,
+                       "note": "Shown as a card with a Confirm button; nothing has changed yet. Tell them to tap "
+                               f"{confirm} if it looks right."}, [block])
+
+
+class ChallengesArgs(BaseModel):
+    pass
+
+
+@tool("get_challenges", "The user's money challenges (daily or 52-week ipon, no-spend, spending cap) with progress worked "
+      "out from their records: saved or spent so far, days left, whether they're on track, and today's next step.",
+      ChallengesArgs, "Checking your challenges")
+async def get_challenges(ctx: ToolContext, args: ChallengesArgs) -> ToolOutput:
+    items = await challenges.list_challenges(ctx.db, ctx.user_id, ctx.today, ctx.currency)
+    if not items:
+        return ToolOutput({"challenges": [], "note": "No challenges yet. Offer one with propose_action start_challenge."})
+    block = {"type": "challenges", "title": "Your challenges", "items": [
+        {"id": c["id"], "title": c["title"], "kind": c["kind"], "pct": c["pct"], "state": c["state"], "on_track": c["on_track"],
+         "summary": c["summary"], "next_step": c.get("next_step"), "days_left": c["days_left"]} for c in items]}
+    return ToolOutput({"challenges": items}, [block])
+
+
 class UpcomingArgs(BaseModel):
     days: int = Field(30, ge=1, le=90)
 
@@ -644,7 +851,7 @@ async def calculate_affordability(ctx: ToolContext, args: AffordArgs) -> ToolOut
     amount = to_minor(args.amount, ctx.currency)
     on = date.fromisoformat(args.date) if args.date else ctx.today + timedelta(days=1)
     on = max(on, ctx.today + timedelta(days=1))
-    category = await _find_category(ctx, args.category) if args.category else None
+    category = await _match_category(ctx, args.category) if args.category else None
     check = await check_service.check_purchase(ctx.db, ctx.user_id, ctx.settings, ctx.today, amount,
                                                category.id if category else None, args.description)
     budget = check["budget_impact"]

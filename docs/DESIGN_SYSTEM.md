@@ -89,6 +89,8 @@ Only in the chat, Faldo's face on each reply is the mascot, not the app icon; ev
 
 Only the newest reply keeps moving; older ones rest. The empty chat shows `wave`. Reduce motion stops all of it.
 
+An empty chat opens with Faldo's check-ins (up to two, each with his pose and a "Talk about it" button), then "For you" starters from the user's own situation and "Log it" examples. Cards in chat follow one pattern: a title row, labelled rows, and pill buttons at the bottom. Confirm cards (`action`) show exactly what will change, with the primary button and "Not now"; nothing changes until the tap. Ideas cards offer "Plan it" and "Log it". Web sources are small globe chips under the answer. Photos show above the message they were sent with.
+
 Rewards: the backend's outfit ids unlock poses (`OUTFIT_INFO` in `lib/catalog.ts`) and its background ids unlock green environment themes (`BACKGROUND_INFO`). The chosen pose and theme appear in the Home hero.
 
 ## Green environment

@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import {
-  ArrowUp, BookText, Check, ChevronDown, ChevronLeft, CircleAlert, History, Loader2, Mic, MicOff, PenSquare, ShieldCheck, Square, Trash2, Wrench,
+  ArrowUp, BookText, Check, ChevronDown, ChevronLeft, CircleAlert, Globe, History, ImagePlus, Loader2, Mic, MicOff, PenSquare, ShieldCheck, Square,
+  Trash2, Wrench, X,
 } from "lucide-react"
 import { toast } from "sonner"
-import { Faldo, FaldoAvatar } from "@/components/brand/faldo"
+import { FALDO_MOODS, Faldo, FaldoAvatar, type FaldoMood } from "@/components/brand/faldo"
 import { BlockView } from "@/components/assistant/blocks"
 import { LoggedCard, ReviewCard, draftToInput, looksLikeLogging } from "@/components/assistant/logged-card"
 import { useAppActions } from "@/components/layout/app-context"
@@ -17,18 +18,32 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { api, streamPost } from "@/lib/api"
 import { formatDate, timeAgo } from "@/lib/format"
 import { replyMood, toolNames } from "@/lib/mood"
-import { invalidateFinancialData, useMe } from "@/lib/queries"
+import { readPhoto, type Photo } from "@/lib/photo"
+import { maskAmounts } from "@/lib/privacy"
+import { invalidateFinancialData, useCompanion, useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Block, CaptureDraft, CaptureResult, ChatMessage, Source, ToolCallRecord, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 interface Step { id: string; tool: string; label: string; state: "running" | "done" | "error" }
-interface LiveMessage extends ChatMessage { steps?: Step[]; streaming?: boolean; error?: string; logged?: Transaction[]; drafts?: CaptureDraft[]; fallbackHint?: string }
+interface LiveMessage extends ChatMessage { steps?: Step[]; streaming?: boolean; error?: string; logged?: Transaction[]; drafts?: CaptureDraft[]; fallbackHint?: string; photo?: string }
 
-const SUGGESTIONS = [
-  { group: "Log it", items: ["Spent 250 on lunch", "Grab 180 and coffee 140 from GCash", "Salary 30k"] },
-  { group: "Understand", items: ["Where did my money go this month?", "Have I been spending more than last month?", "What subscriptions do I have?"] },
-  { group: "Decide", items: ["Can I afford a ₱3,000 purchase?", "When can I afford my MacBook?", "What should I reduce this month?"] },
+const PHOTO_MARK = "\n[Photo attached]"
+
+function hostname(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return url
+  }
+}
+
+const LOG_EXAMPLES = ["Spent 250 on lunch", "Grab 180 and coffee 140 from GCash", "Salary 30k"]
+const FALLBACK_STARTERS = [
+  { prompt: "Where did my money go this month?", label: "Where did my money go?", mood: "chart" },
+  { prompt: "How much can I safely spend this week?", label: "What's safe to spend?", mood: "wallet" },
+  { prompt: "Suggest gift ideas for someone special, budget ₱2,000.", label: "Gift ideas", mood: "love" },
+  { prompt: "Start a savings challenge with me.", label: "Start a challenge", mood: "motivated" },
 ]
 
 const TOOL_NAMES: Record<string, string> = {
@@ -91,6 +106,18 @@ function Details({ message, onOpenTransaction }: { message: LiveMessage; onOpenT
               <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 {sources.map((s) => {
                   const txnId = s.type === "transaction" ? s.id : s.type === "transaction_item" ? (s as Source & { transaction_id?: string }).transaction_id : undefined
+                  if (s.type === "web") return (
+                    <li key={s.ref}>
+                      <a href={s.id} target="_blank" rel="noopener noreferrer"
+                        className="flex w-full items-start gap-2 rounded-md border bg-card p-2 text-left text-xs transition-colors hover:bg-accent/60">
+                        <Globe className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{s.label}</span>
+                          <span className="block truncate text-muted-foreground">{hostname(s.id)}</span>
+                        </span>
+                      </a>
+                    </li>
+                  )
                   return (
                     <li key={s.ref}>
                       <button type="button" disabled={!txnId} onClick={() => txnId && onOpenTransaction(txnId)}
@@ -158,6 +185,16 @@ function AssistantMessage({ message, latest, onFollowUp, onOpenTransaction, onDr
         {message.content && (
           <div>
             <RichText text={message.content} sources={message.sources ?? []} onOpenTransaction={onOpenTransaction} />
+          </div>
+        )}
+        {!message.streaming && (message.sources ?? []).some((src) => src.type === "web") && (
+          <div className="flex flex-wrap gap-1.5">
+            {message.sources.filter((src) => src.type === "web").slice(0, 3).map((src) => (
+              <a key={src.ref} href={src.id} target="_blank" rel="noopener noreferrer"
+                className="pressable inline-flex max-w-full items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground">
+                <Globe className="size-3 shrink-0" /> <span className="truncate">{hostname(src.id)}</span>
+              </a>
+            ))}
           </div>
         )}
         {message.blocks?.length > 0 && (
@@ -250,6 +287,9 @@ function AssistantView() {
   const [messages, setMessages] = useState<LiveMessage[]>([])
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [input, setInput] = useState("")
+  const [photo, setPhoto] = useState<Photo | null>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
+  const { data: companion } = useCompanion()
   const [busy, setBusy] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [devProvider, setDevProvider] = useState<boolean | null>(null)
@@ -297,13 +337,14 @@ function AssistantView() {
     }
   }, [qc])
 
-  const ask = useCallback(async (question: string) => {
-    const text = question.trim()
+  const ask = useCallback(async (question: string, attached: Photo | null = null) => {
+    const text = question.trim() || (attached ? "What can you tell me about this?" : "")
     if (!text || busy) return
     play("send")
     setInput("")
+    setPhoto(null)
     setBusy(true)
-    if (await tryLog(text)) {
+    if (!attached && await tryLog(text)) {
       setBusy(false)
       textareaRef.current?.focus()
       return
@@ -312,14 +353,15 @@ function AssistantView() {
     const assistantId = `live-${Date.now()}`
     setMessages((prev) => [
       ...prev,
-      { id: `u-${Date.now()}`, role: "user", content: text, blocks: [], sources: [], follow_ups: [], tool_calls: [], provider: null, validation: null, created_at: now },
+      { id: `u-${Date.now()}`, role: "user", content: text, photo: attached?.preview, blocks: [], sources: [], follow_ups: [], tool_calls: [], provider: null, validation: null, created_at: now },
       { id: assistantId, role: "assistant", content: "", blocks: [], sources: [], follow_ups: [], tool_calls: [], provider: null, validation: null, created_at: now, steps: [], streaming: true },
     ])
     const patch = (fn: (m: LiveMessage) => LiveMessage) => setMessages((prev) => prev.map((m) => (m.id === assistantId ? fn(m) : m)))
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      await streamPost("/assistant/messages", { message: text, conversation_id: conversationId }, ({ event, data }) => {
+      const image = attached ? { media_type: attached.media_type, data: attached.data } : undefined
+      await streamPost("/assistant/messages", { message: text, conversation_id: conversationId, image }, ({ event, data }) => {
         if (event === "conversation") { setConversationId(String(data.id)); setDevProvider(Boolean(data.is_development_provider)) }
         if (event === "status") {
           const step = data as unknown as Step
@@ -409,24 +451,62 @@ function AssistantView() {
                   <h2 className="mt-4 text-xl font-semibold tracking-[-0.02em]">Hi {me?.display_name?.split(" ")[0] ?? "there"}, how can I help?</h2>
                   <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">Ask about your balances, spending or goals. You can also log money the way you&apos;d text it, like &ldquo;Spent 250 on food&rdquo;.</p>
                 </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  {SUGGESTIONS.map((group) => (
-                    <div key={group.group} className="space-y-2">
-                      <p className="px-1 text-[0.8125rem] font-medium text-muted-foreground">{group.group}</p>
-                      {group.items.map((q) => (
-                        <button key={q} type="button" onClick={() => ask(q)} className="pressable block w-full rounded-lg border bg-card px-3.5 py-2.5 text-left text-sm hover:bg-accent/60">
-                          {q}
+                {/* Faldo speaks first: what's worth knowing right now, from your own money and the calendar. */}
+                {companion?.checkins.length ? (
+                  <section aria-label="Faldo's check-in" className="space-y-2.5">
+                    {companion.checkins.slice(0, 2).map((c) => (
+                      <div key={c.key} className="flex gap-3">
+                        <FaldoAvatar mood={(c.mood in FALDO_MOODS ? c.mood : "happy") as FaldoMood} animated className="size-10" />
+                        <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border bg-card px-4 py-3">
+                          <p className="text-[0.9375rem] font-semibold tracking-[-0.01em]">{maskAmounts(c.title)}</p>
+                          <p className="mt-0.5 text-[0.875rem] leading-snug text-muted-foreground">{maskAmounts(c.body)}</p>
+                          <button type="button" onClick={() => ask(c.prompt)}
+                            className="pressable mt-2.5 inline-flex h-8 items-center rounded-full bg-primary px-3.5 text-[0.8125rem] font-medium text-primary-foreground hover:bg-primary/90">
+                            Talk about it
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <Link href="/settings/appearance" className="ml-13 inline-block text-[0.8125rem] font-medium text-primary hover:opacity-80">
+                      Get check-ins on your phone
+                    </Link>
+                  </section>
+                ) : null}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr]">
+                  <div className="space-y-2">
+                    <p className="px-1 text-[0.8125rem] font-medium text-muted-foreground">For you</p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {(companion?.starters ?? FALLBACK_STARTERS).map((st) => (
+                        <button key={st.prompt} type="button" onClick={() => ask(st.prompt)}
+                          className="pressable flex w-full items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 text-left text-sm hover:bg-accent/60">
+                          <FaldoAvatar mood={(st.mood in FALDO_MOODS ? st.mood : "happy") as FaldoMood} className="size-7" />
+                          <span className="min-w-0 flex-1 leading-snug">{maskAmounts(st.label)}</span>
                         </button>
                       ))}
                     </div>
-                  ))}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="px-1 text-[0.8125rem] font-medium text-muted-foreground">Log it</p>
+                    {LOG_EXAMPLES.map((q) => (
+                      <button key={q} type="button" onClick={() => ask(q)} className="pressable block w-full rounded-lg border bg-card px-3.5 py-2.5 text-left text-sm hover:bg-accent/60">
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <p className="flex items-start justify-center gap-1.5 text-center text-xs text-muted-foreground"><BookText className="mt-px size-3.5 shrink-0" /> Faldo is not a licensed financial advisor. For investments, loans or insurance, talk to a professional.</p>
               </div>
             ) : (
               messages.map((m) => m.role === "user" ? (
-                <div key={m.id} className="flex justify-end pl-10">
-                  <p className="rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground">{m.content}</p>
+                <div key={m.id} className="flex flex-col items-end gap-1.5 pl-10">
+                  {m.photo && (
+                    // eslint-disable-next-line @next/next/no-img-element -- the photo the user just sent
+                    <img src={m.photo} alt="Photo you sent" className="max-h-56 w-auto max-w-[70%] rounded-2xl rounded-br-md border object-cover" />
+                  )}
+                  <p className="rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground">
+                    {m.content.endsWith(PHOTO_MARK) ? m.content.slice(0, -PHOTO_MARK.length) : m.content}
+                    {!m.photo && m.content.endsWith(PHOTO_MARK) && <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><ImagePlus className="size-3" /> With a photo</span>}
+                  </p>
                 </div>
               ) : (
                 <AssistantMessage key={m.id} message={m} latest={m.id === latestReplyId} onFollowUp={ask} onOpenTransaction={openTransaction}
@@ -438,20 +518,46 @@ function AssistantView() {
         </div>
 
         <div className="px-3 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-5">
-          <form onSubmit={(e) => { e.preventDefault(); ask(input) }} className="mx-auto max-w-3xl rounded-xl border bg-card p-2 shadow-(--shadow-float) transition-[border-color] focus-within:border-input">
+          <form onSubmit={(e) => { e.preventDefault(); ask(input, photo) }} className="mx-auto max-w-3xl rounded-xl border bg-card p-2 shadow-(--shadow-float) transition-[border-color] focus-within:border-input">
             <label htmlFor="assistant-input" className="sr-only">Ask Faldo or log a transaction</label>
+            {photo && (
+              <div className="relative m-1.5 inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element -- a local preview of the photo being sent */}
+                <img src={photo.preview} alt="Photo to send" className="h-20 w-auto rounded-lg border object-cover" />
+                <button type="button" onClick={() => setPhoto(null)} aria-label="Remove photo"
+                  className="pressable absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-foreground text-background shadow">
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
+            <input ref={photoInput} type="file" accept="image/*" className="hidden" aria-hidden tabIndex={-1}
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ""
+                if (!file) return
+                try {
+                  setPhoto(await readPhoto(file))
+                  textareaRef.current?.focus()
+                } catch (error) {
+                  toast.error((error as Error).message || "Couldn't read that photo.")
+                }
+              }} />
             <textarea
               id="assistant-input"
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input) } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(input, photo) } }}
               rows={1}
               maxLength={1000}
-              placeholder="Ask a question or type an expense"
+              placeholder={photo ? "Ask about this photo, like “kaya ko ba 'to?”" : "Ask a question or type an expense"}
               className="max-h-40 min-h-11 w-full resize-none bg-transparent px-2.5 py-2 text-base outline-none field-sizing-content placeholder:text-muted-foreground/80 sm:text-[0.9375rem]"
             />
             <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => photoInput.current?.click()} aria-label="Add a photo"
+                className="pressable mr-auto flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
+                <ImagePlus className="size-4.5" />
+              </button>
               {dictation.supported && (
                 <button type="button" onClick={dictation.toggle} aria-label={dictation.listening ? "Stop dictation" : "Dictate"} aria-pressed={dictation.listening}
                   className={cn("pressable flex size-9 items-center justify-center rounded-lg", dictation.listening ? "animate-pulse bg-expense-soft text-expense" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
@@ -461,7 +567,7 @@ function AssistantView() {
               {busy ? (
                 <Button type="button" size="icon" variant="secondary" onClick={() => abortRef.current?.abort()} aria-label="Stop"><Square className="size-3.5" /></Button>
               ) : (
-                <Button type="submit" size="icon" disabled={!input.trim()} aria-label="Send"><ArrowUp /></Button>
+                <Button type="submit" size="icon" disabled={!input.trim() && !photo} aria-label="Send"><ArrowUp /></Button>
               )}
             </div>
           </form>

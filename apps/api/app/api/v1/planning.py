@@ -9,6 +9,7 @@ from app.schemas.ledger import TransactionOut
 from app.schemas.planning import (
     BudgetOut,
     BudgetUpsert,
+    ChallengeIn,
     ContributionIn,
     DebtIn,
     DebtOut,
@@ -27,7 +28,7 @@ from app.schemas.planning import (
     RecurringOut,
     RecurringUpdate,
 )
-from app.services import budgets, debts, goals, money_plan, planned, recurring
+from app.services import budgets, challenges, debts, goals, money_plan, planned, recurring
 from app.services.transactions import to_out as txn_out
 
 router = APIRouter()
@@ -211,4 +212,21 @@ async def preview_money_plan(data: MoneyPlanIn, ctx: CtxDep) -> dict[str, Any]:
 @router.delete("/money-plan", status_code=204, tags=["money plan"])
 async def delete_money_plan(ctx: CtxDep) -> Response:
     await money_plan.delete_money_plan(ctx.db, ctx.user_id)
+    return Response(status_code=204)
+
+
+@router.get("/challenges", tags=["challenges"])
+async def list_challenges(ctx: CtxDep) -> list[dict[str, Any]]:
+    return await challenges.list_challenges(ctx.db, ctx.user_id, ctx.today, ctx.settings.currency)
+
+
+@router.post("/challenges", status_code=201, tags=["challenges"])
+async def start_challenge(data: ChallengeIn, ctx: CtxDep) -> dict[str, Any]:
+    challenge = await challenges.create_challenge(ctx.db, ctx.user_id, ctx.settings, ctx.today, data)
+    return await challenges.progress(ctx.db, ctx.user_id, challenge, ctx.today, ctx.settings.currency)
+
+
+@router.post("/challenges/{challenge_id}/end", status_code=204, tags=["challenges"])
+async def end_challenge(challenge_id: uuid.UUID, ctx: CtxDep) -> Response:
+    await challenges.end_challenge(ctx.db, ctx.user_id, challenge_id)
     return Response(status_code=204)

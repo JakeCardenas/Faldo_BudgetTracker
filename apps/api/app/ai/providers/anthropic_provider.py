@@ -59,6 +59,9 @@ def _hint(status: int, body: bytes) -> str:
 
 
 NETWORK_HINT = "Faldo couldn't reach Claude. Try again shortly."
+# Claude searches the web itself for current prices, rates and news (billed per search by Anthropic).
+WEB_SEARCH = {"type": "web_search_20250305", "name": "web_search", "max_uses": 3,
+              "user_location": {"type": "approximate", "country": "PH", "timezone": "Asia/Manila"}}
 
 
 def _tools(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -82,7 +85,10 @@ def _messages(transcript: list[TranscriptItem]) -> list[dict[str, Any]]:
             messages.append({"role": role, "content": content})
 
     for entry in transcript:
-        if entry.kind == "user" and entry.text:
+        if entry.kind == "user" and entry.images:
+            add("user", [*({"type": "image", "source": {"type": "base64", "media_type": i["media_type"], "data": i["data"]}}
+                           for i in entry.images), {"type": "text", "text": entry.text or "What can you tell me about this?"}])
+        elif entry.kind == "user" and entry.text:
             add("user", [{"type": "text", "text": entry.text}])
         elif entry.kind == "assistant" and entry.text:
             add("assistant", [{"type": "text", "text": entry.text}])
@@ -107,6 +113,7 @@ class AnthropicProvider:
         self.vision_model = settings.anthropic_vision_model
         self._client: httpx.AsyncClient | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self.web_search = settings.ai_web_search
 
     def _http(self) -> httpx.AsyncClient:
         # One pooled client per event loop, so connections stay warm between turns.
@@ -135,19 +142,29 @@ class AnthropicProvider:
     async def stream_turn(
         self, *, system: str, transcript: list[TranscriptItem], tools: list[dict[str, Any]]
     ) -> AsyncIterator[TextDelta | ModelTurn]:
+        search = self.web_search
         body = {
             "model": self.chat_model,
             "max_tokens": 2048,
             "system": [{"type": "text", "text": system, "cache_control": CACHE}],
             "messages": _messages(transcript),
-            "tools": _tools(tools),
+            "tools": [*_tools(tools), *([WEB_SEARCH] if search else [])],
             "stream": True,
         }
         blocks: list[dict[str, Any]] = []
+        citations: list[dict[str, Any]] = []
+        stop_reason: str | None = None
         try:
             async with self._http().stream("POST", API_URL, headers=self._headers, json=body) as response:
                 if response.status_code >= 400:
                     refusal = await response.aread()
+                    if search and response.status_code == 400 and b"web_search" in refusal:
+                        # Web search isn't turned on for this Anthropic organization: answer without it from now on.
+                        logger.warning("Anthropic web search unavailable, continuing without it: %s", _reason(400, refusal))
+                        self.web_search = False
+                        async for item in self.stream_turn(system=system, transcript=transcript, tools=tools):
+                            yield item
+                        return
                     logger.warning("Anthropic assistant call refused: %s", _reason(response.status_code, refusal))
                     raise ProviderUnavailable(UNAVAILABLE, _hint(response.status_code, refusal))
                 async for line in response.aiter_lines():
@@ -157,7 +174,7 @@ class AnthropicProvider:
                     kind = event.get("type")
                     if kind == "content_block_start":
                         block = dict(event["content_block"])
-                        if block.get("type") == "tool_use":
+                        if block.get("type") in {"tool_use", "server_tool_use"}:
                             block["partial_json"] = ""
                         blocks.append(block)
                     elif kind == "content_block_delta":
@@ -168,6 +185,13 @@ class AnthropicProvider:
                             yield TextDelta(delta["text"])
                         elif delta.get("type") == "input_json_delta":
                             block["partial_json"] += delta.get("partial_json", "")
+                        elif delta.get("type") == "citations_delta":
+                            citation = delta.get("citation", {})
+                            block.setdefault("citations", []).append(citation)
+                            citations.append({"url": citation.get("url"), "title": citation.get("title"),
+                                              "cited_text": citation.get("cited_text", "")})
+                    elif kind == "message_delta":
+                        stop_reason = event.get("delta", {}).get("stop_reason") or stop_reason
                     elif kind == "error":
                         error = event.get("error", {})
                         logger.warning("Anthropic stream error: %s: %s", error.get("type"), str(error.get("message", ""))[:200])
@@ -180,17 +204,22 @@ class AnthropicProvider:
         raw: list[dict[str, Any]] = []
         text: list[str] = []
         for block in blocks:
-            if block.get("type") == "tool_use":
+            if block.get("type") in {"tool_use", "server_tool_use"}:
                 try:
                     args = json.loads(block.get("partial_json") or "{}")
                 except json.JSONDecodeError:
                     args = {}
-                calls.append(ToolCall(id=block["id"], name=block["name"], arguments=args))
-                raw.append({"type": "tool_use", "id": block["id"], "name": block["name"], "input": args})
+                raw.append({"type": block["type"], "id": block["id"], "name": block["name"], "input": args})
+                if block["type"] == "tool_use":
+                    calls.append(ToolCall(id=block["id"], name=block["name"], arguments=args))
+            elif block.get("type") == "web_search_tool_result":
+                raw.append({k: v for k, v in block.items() if k in {"type", "tool_use_id", "content"}})
             elif block.get("type") == "text" and block.get("text"):
                 text.append(block["text"])
-                raw.append({"type": "text", "text": block["text"]})
-        yield ModelTurn(text="".join(text) if not calls else None, tool_calls=calls, raw=raw)
+                raw.append({"type": "text", "text": block["text"], **({"citations": block["citations"]} if block.get("citations") else {})})
+        paused = stop_reason == "pause_turn" and not calls
+        yield ModelTurn(text="".join(text) if not calls and not paused else None, tool_calls=calls, raw=raw, paused=paused,
+                        citations=citations)
 
     async def assistant_turn(self, *, system: str, transcript: list[TranscriptItem], tools: list[dict[str, Any]]) -> ModelTurn:
         final: ModelTurn | None = None
@@ -246,6 +275,15 @@ class AnthropicProvider:
             return await self._structured(self.vision_model, RECEIPT_INSTRUCTIONS, content, "record_receipt", RECEIPT_SCHEMA)
         except ProviderUnavailable as exc:
             raise ProviderUnavailable("Receipt reading failed. Try again or enter the details manually.") from exc
+
+    async def summarize_conversation(self, prompt: str) -> str | None:
+        try:
+            data = await self._create({"model": self.fast_model, "max_tokens": 250,
+                                       "messages": [{"role": "user", "content": prompt}]})
+        except ProviderUnavailable:
+            return None
+        text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text").strip()
+        return text or None
 
     async def write_summary(self, kind: str, facts: dict[str, Any], draft: str) -> str | None:
         length = "One or two sentences, under 45 words." if kind == "pulse" else "Three to four sentences."

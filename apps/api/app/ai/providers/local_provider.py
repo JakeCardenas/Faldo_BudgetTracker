@@ -144,6 +144,34 @@ def _ideas(question: str) -> dict[str, Any]:
     return {"topic": topic, "budget": budget, "ideas": ideas}
 
 
+REMEMBER_RE = re.compile(r"^(?:please\s+)?(?:remember|tandaan(?: mo)?)(?:\s+(?:that|na))?[:,]?\s+(.+)$", re.IGNORECASE)
+CHALLENGE_RE = re.compile(r"\bchallenge\b|\bipon challenge\b|\bno[- ]spend\b", re.IGNORECASE)
+GOAL_ACTION_RE = re.compile(r"\b(?:make|create|set up|start|gawa(?:n|in)?)\b.*\bgoal\b|\bmake it a goal\b", re.IGNORECASE)
+BUDGET_ACTION_RE = re.compile(r"\bset\b.*\bbudget\b.*?\b(?:for|sa|ng)\s+([a-z &]+?)\s+(?:to|at|of|na|sa)\b", re.IGNORECASE)
+
+
+def _challenge(question: str) -> dict[str, Any]:
+    q = question.lower()
+    days = re.search(r"(\d{1,3})\s*(?:days?|araw)", q)
+    amount = _amount(re.sub(r"\b52[- ]?weeks?\b|\b\d{1,3}\s*(?:days?|araw)\b", " ", question, flags=re.IGNORECASE))
+    on = re.search(r"\b(?:on|sa|for)\s+([a-z][a-z &]{2,30}?)(?=\s+(?:for|in|this|sa)\b|[,.!?]|$)", question, re.IGNORECASE)
+    category = on.group(1).strip() if on else _topic(question)
+    if re.search(r"\b52\b", q):
+        return {"action": "start_challenge", "challenge": "ipon_52", "amount": amount or 20}
+    if re.search(r"no[- ]spend", q):
+        return {"action": "start_challenge", "challenge": "no_spend", "days": int(days.group(1)) if days else 7, "category": category}
+    if re.search(r"\b(cap|limit|hanggang)\b", q) and amount:
+        return {"action": "start_challenge", "challenge": "spend_cap", "amount": amount, "days": int(days.group(1)) if days else 30,
+                "category": category}
+    return {"action": "start_challenge", "challenge": "ipon_daily", "amount": amount or 50, "days": int(days.group(1)) if days else 30}
+
+
+def _action_args(**given: Any) -> dict[str, Any]:
+    base = {"action": None, "name": None, "amount": None, "category": None, "date": None, "transaction_type": None,
+            "account": None, "monthly_amount": None, "fact": None, "challenge": None, "days": None}
+    return {**base, **given}
+
+
 def _when(text: str, today: date) -> tuple[str | None, int | None, str]:
     """A target month from the text (as YYYY-MM-01) or a number of months, and the text without it."""
     match = IN_MONTHS_RE.search(text)
@@ -226,17 +254,37 @@ def _topic(text: str) -> str | None:
     return None if not topic or topic.lower() in STOP_TOPICS or len(topic) > 40 else topic
 
 
-def _call(name: str, **arguments: Any) -> ToolCall:
-    return ToolCall(id=f"local_{name}", name=name, arguments=arguments)
+def _call(tool: str, /, **arguments: Any) -> ToolCall:
+    return ToolCall(id=f"local_{tool}", name=tool, arguments=arguments)
 
 
 def plan(question: str, today: date | None = None) -> tuple[str, list[ToolCall]]:
     q = question.lower()
     period = _period(q)
     topic = _topic(question)
+    remembered = REMEMBER_RE.match(question.strip())
+    if remembered:
+        return "action", [_call("propose_action", **_action_args(action="remember", fact=remembered.group(1).strip()))]
+    if CHALLENGE_RE.search(question):
+        if re.search(r"\b(how|progress|status|kamusta|kumusta|my challenges?)\b", q) and not re.search(r"\b(start|new|another|suggest)\b", q):
+            return "challenges", [_call("get_challenges")]
+        return "action", [_call("propose_action", **_action_args(**_challenge(question)))]
+    budget = BUDGET_ACTION_RE.search(question)
+    if budget and _amount(question):
+        return "action", [_call("propose_action", **_action_args(action="set_budget", category=budget.group(1).strip(),
+                                                                 amount=_amount(question)))]
     if IDEAS_RE.search(question):
         return "ideas", [_call("suggest_ideas", **_ideas(question))]
     purchase = _purchase(question, today or date.today())
+    if GOAL_ACTION_RE.search(question):
+        target, _, rest = _when(question, today or date.today())
+        named = re.search(r"(?:\bgoal\s*[:\-–]|\b(?:for|para sa))\s*(?:my |the |a |an )?(.+?)(?=\s+(?:worth|of|for|by|in|sa|na)\b|"
+                          r"[,.!?]|\s+(?:₱|php)|\s+\d+(?:\.\d+)?\s*k\b|\s+\d{1,3}(?:,\d{3})+|\s+\d{4,}|$)", rest, re.IGNORECASE)
+        item = (purchase or {}).get("item") or (named.group(1).strip() if named else None)
+        amount = (purchase or {}).get("price") or _amount(re.sub(r"\b20\d\d\b", " ", rest))
+        if item and amount:
+            return "action", [_call("propose_action", **_action_args(
+                action="create_goal", name=item, amount=amount, date=(purchase or {}).get("target_date") or target))]
     if purchase and (purchase["price"] or purchase["target_date"] or purchase["months_from_now"]):
         return "future_purchase", [_call("plan_future_purchase", **purchase)]
     amount = _amount(question)
@@ -566,6 +614,26 @@ def compose_goal(question: str, r: dict[str, dict[str, Any]]) -> str:
     return " ".join(parts) + " Projections are estimates."
 
 
+def compose_action(question: str, r: dict[str, dict[str, Any]]) -> str:
+    a = r["propose_action"]
+    if "error" in a:
+        return a["error"].replace("Ask ", "Tell me ", 1) if a["error"].startswith("Ask ") else a["error"]
+    lead = {"remember": "Got it. Want me to remember this?", "start_challenge": "Let's do it. Here's your challenge.",
+            "create_goal": "Here's the goal, ready to go.", "set_budget": "Here's the new budget."}.get(a["proposed"], "Here's what I'll do.")
+    return f"{lead} Tap the button on the card if it looks right; nothing changes until you do."
+
+
+def compose_challenges(question: str, r: dict[str, dict[str, Any]]) -> str:
+    items = r["get_challenges"].get("challenges", [])
+    if not items:
+        return "You don't have a challenge yet. Want to start one? A daily ipon or a no-spend week is a good first try."
+    parts = []
+    for c in items[:3]:
+        state = {"completed": "Done!", "missed": "This one slipped.", "active": "On track." if c["on_track"] else "A bit behind."}[c["state"]]
+        parts.append(f"{c['title']}: {c['summary']}. {state}" + (f" Next: {c['next_step']}." if c.get("next_step") else ""))
+    return " ".join(parts)
+
+
 def compose_ideas(question: str, r: dict[str, dict[str, Any]]) -> str:
     s = r["suggest_ideas"]
     if not s.get("ideas"):
@@ -801,6 +869,8 @@ COMPOSERS = {
     "goal": compose_goal,
     "future_purchase": compose_future_purchase,
     "ideas": compose_ideas,
+    "action": compose_action,
+    "challenges": compose_challenges,
     "running_out": compose_running_out,
     "recurring": compose_recurring,
     "upcoming": compose_upcoming,
