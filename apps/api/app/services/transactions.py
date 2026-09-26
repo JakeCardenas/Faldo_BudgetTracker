@@ -234,11 +234,19 @@ def _check_date(occurred_on: date) -> None:
         raise AppError("A transaction can't be dated in the future. Plan it as a bill or planned purchase instead.")
 
 
-async def _validate_refs(db: AsyncSession, user_id: uuid.UUID, data: TransactionIn) -> tuple[Account, Category | None, Category | None]:
+async def _validate_refs(
+    db: AsyncSession, user_id: uuid.UUID, data: TransactionIn, current_account_ids: frozenset[uuid.UUID] = frozenset(),
+) -> tuple[Account, Category | None, Category | None]:
     _check_date(data.occurred_on)
     account = await get_owned(db, Account, data.account_id, user_id, "Account")
+    if account.archived_at is not None and account.id not in current_account_ids:
+        raise AppError("That account is archived. Restore it to record money in it.")
     if data.to_account_id:
-        await get_owned(db, Account, data.to_account_id, user_id, "Destination account")
+        to_account = await get_owned(db, Account, data.to_account_id, user_id, "Destination account")
+        if to_account.archived_at is not None and to_account.id not in current_account_ids:
+            raise AppError("The destination account is archived. Restore it to record money in it.")
+        if to_account.currency != account.currency:
+            raise AppError("Both accounts in a transfer must use the same currency.")
     if data.recurring_payment_id:
         await get_owned(db, RecurringPayment, data.recurring_payment_id, user_id, "Recurring payment")
     category, sub = await resolve_category_pair(db, user_id, data.category_id, data.subcategory_id)
@@ -284,7 +292,9 @@ async def update_transaction(
     txn = await get_transaction(db, user_id, transaction_id)
     _ensure_not_money_owed(txn)
     previous_date = txn.occurred_on
-    account, category, sub = await _validate_refs(db, user_id, data)
+    # Editing history on an account archived since is fine; moving money onto an archived account isn't.
+    current = frozenset(a for a in (txn.account_id, txn.to_account_id) if a is not None)
+    account, category, sub = await _validate_refs(db, user_id, data, current)
     merchant = await get_or_create_merchant(
         db, user_id, data.merchant, category.id if category and data.type == TransactionType.expense else None
     )

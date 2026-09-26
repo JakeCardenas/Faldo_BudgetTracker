@@ -225,7 +225,7 @@ export default function OnboardingPage() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5"><Label htmlFor="ob-acc">Account name</Label><Input id="ob-acc" value={accountName} onChange={(e) => setAccountName(e.target.value)} disabled={!!accountId} /></div>
-                <div className="space-y-1.5"><Label htmlFor="ob-bal">{ACCOUNT_PRESETS[accountPreset].type === "credit_card" ? "Amount owed" : "Current balance"}</Label><AmountInput id="ob-bal" value={accountBalance} onValueChange={setAccountBalance} placeholder="0" disabled={!!accountId} /></div>
+                <div className="space-y-1.5"><Label htmlFor="ob-bal">{ACCOUNT_PRESETS[accountPreset].type === "credit_card" ? "Amount owed" : "Current balance"}</Label><AmountInput currency={currency} id="ob-bal" value={accountBalance} onValueChange={setAccountBalance} placeholder="0" disabled={!!accountId} /></div>
               </div>
             </div>
           )}
@@ -248,7 +248,7 @@ export default function OnboardingPage() {
               </div>
               {INCOME_TYPES[incomeType].scheduled ? (
                 <>
-                  <div className="space-y-1.5"><Label htmlFor="ob-income">How much each time?</Label><AmountInput id="ob-income" size="lg" value={income} onValueChange={setIncome} placeholder="0" /></div>
+                  <div className="space-y-1.5"><Label htmlFor="ob-income">How much each time?</Label><AmountInput currency={currency} id="ob-income" size="lg" value={income} onValueChange={setIncome} placeholder="0" /></div>
                   <div className="space-y-2"><Label>How often?</Label>
                     <div className="flex flex-wrap gap-2">
                       {(["weekly", "biweekly", "semi_monthly", "monthly"] as Frequency[]).map((f) => (
@@ -276,7 +276,7 @@ export default function OnboardingPage() {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5 sm:col-span-3"><Label htmlFor="ob-goal">Goal name</Label><Input id="ob-goal" value={goalName} onChange={(e) => setGoalName(e.target.value)} maxLength={80} /></div>
-                <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ob-target">Target amount</Label><AmountInput id="ob-target" value={goalTarget} onValueChange={setGoalTarget} placeholder="0" /></div>
+                <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="ob-target">Target amount</Label><AmountInput currency={currency} id="ob-target" value={goalTarget} onValueChange={setGoalTarget} placeholder="0" /></div>
                 <div className="space-y-1.5"><Label htmlFor="ob-date">Target date</Label><Input id="ob-date" type="date" min={todayISO()} value={goalDate} onChange={(e) => setGoalDate(e.target.value)} /></div>
               </div>
             </div>
@@ -289,7 +289,7 @@ export default function OnboardingPage() {
                 {BUDGET_PRESETS.map((name) => (
                   <div key={name} className="flex items-center gap-3 rounded-2xl bg-card px-4 py-2 shadow-[inset_0_0_0_1px_var(--border)]">
                     <span className="flex-1 text-sm font-medium">{name}</span>
-                    <AmountInput aria-label={`${name} monthly limit`} value={budgets[name] ?? ""} onValueChange={(v) => setBudgets({ ...budgets, [name]: v })} placeholder="No limit" className="w-36" />
+                    <AmountInput currency={currency} aria-label={`${name} monthly limit`} value={budgets[name] ?? ""} onValueChange={(v) => setBudgets({ ...budgets, [name]: v })} placeholder="No limit" className="w-36" />
                   </div>
                 ))}
               </div>
