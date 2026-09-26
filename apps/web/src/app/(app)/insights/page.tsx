@@ -10,7 +10,7 @@ import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader } from "@/components/layout/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
-import { useMaskedAmounts } from "@/lib/privacy"
+import { maskAmounts, useMaskedAmounts } from "@/lib/privacy"
 import { useInsights, usePulse } from "@/lib/queries"
 import type { Insight } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -52,7 +52,7 @@ export default function InsightsPage() {
       {pulse && (
         <div className="card-surface p-5">
           <p className="text-[0.8125rem] font-medium text-muted-foreground">Financial pulse</p>
-          <p className="mt-2 text-[0.9375rem] leading-relaxed">{pulse.text}</p>
+          <p className="mt-2 text-[0.9375rem] leading-relaxed">{maskAmounts(pulse.text)}</p>
         </div>
       )}
       {isLoading ? <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div> : !insights?.length ? (
