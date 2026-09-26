@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { formatMoney, formatPct, minorToInput, monthKey, toMinor } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useBudget, useCategories } from "@/lib/queries"
 import type { Budget } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -76,6 +77,7 @@ function EditBudgetDialog({ budget, open, onOpenChange }: { budget: Budget; open
 }
 
 export default function BudgetsPage() {
+  useMaskedAmounts()
   const qc = useQueryClient()
   const [month, setMonth] = useState(monthKey())
   const [editing, setEditing] = useState(false)

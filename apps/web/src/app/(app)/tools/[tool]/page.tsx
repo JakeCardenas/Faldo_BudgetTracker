@@ -9,6 +9,7 @@ import { LoanCalculator } from "@/components/tools/loan"
 import { QuickNotes } from "@/components/tools/notes"
 import { SplitBill } from "@/components/tools/split"
 import { TaxCalculator } from "@/components/tools/tax"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { TOOLS } from "@/lib/tools-catalog"
 
 const VIEWS: Record<string, React.ComponentType> = {
@@ -17,6 +18,7 @@ const VIEWS: Record<string, React.ComponentType> = {
 }
 
 export default function ToolPage({ params }: { params: Promise<{ tool: string }> }) {
+  useMaskedAmounts()
   const { tool } = use(params)
   if (tool === "budget-planner" || tool === "money-plan") redirect("/plan/money")
   const meta = TOOLS.find((t) => t.slug === tool)

@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { FREQUENCY_LABELS, formatMoney, minorToInput, toMinor, todayISO } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useCategories, useRecurring } from "@/lib/queries"
 import type { Frequency, Recurring, RecurringKind } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -148,6 +149,7 @@ function PayDialog({ item, onOpenChange }: { item: Recurring; onOpenChange: (ope
 }
 
 export default function BillsPage() {
+  useMaskedAmounts()
   const qc = useQueryClient()
   const { data: items, isLoading } = useRecurring()
   const [dialog, setDialog] = useState<{ mode: "new" | "edit" | "pay"; item?: Recurring } | null>(null)

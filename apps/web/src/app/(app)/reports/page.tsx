@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import { formatMoney, monthKey } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useReport } from "@/lib/queries"
 import type { Health, MonthlyReport } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -176,6 +177,7 @@ function HealthDetails({ health }: { health: Health }) {
 
 /** Past money, explained. Each block answers one question; nothing is here just because finance apps have charts. */
 export default function ReportsPage() {
+  useMaskedAmounts()
   const [month, setMonth] = useState(monthKey())
   const { data: report, isLoading } = useReport(month)
   const summary = useQuery({ queryKey: ["report", "summary", month], queryFn: () => api.get<{ text: string; generated_by: string }>("/reports/summary", { month }) })

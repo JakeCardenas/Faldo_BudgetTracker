@@ -26,3 +26,17 @@ export class Spring {
 }
 
 export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
+
+/**
+ * Points a spring at `target`. With reduced motion it lands there at once; otherwise it is left to move there.
+ * Returns whether it still needs frames to get there.
+ */
+export function aim(spring: Spring, target: number, config: SpringConfig, still: boolean) {
+  if (still) {
+    spring.snap(target)
+    return false
+  }
+  spring.config = config
+  spring.target = target
+  return true
+}

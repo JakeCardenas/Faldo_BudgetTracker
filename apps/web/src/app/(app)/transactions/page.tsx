@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import { setChromeAway, useChromeAway } from "@/lib/chrome"
 import { formatDate } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useAccounts, useCategories } from "@/lib/queries"
 import { listView } from "@/lib/query-view"
 import type { Receipt, TransactionList } from "@/lib/types"
@@ -227,5 +228,6 @@ function HistoryView() {
 }
 
 export default function TransactionsPage() {
+  useMaskedAmounts()
   return <Suspense><HistoryView /></Suspense>
 }

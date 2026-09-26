@@ -6,12 +6,14 @@ import { Panda } from "@/components/brand/panda"
 import { ProgressBar } from "@/components/finance/progress-bar"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { LESSONS } from "@/lib/lessons"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useMe } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 
 const LEVELS = ["Foundations", "Growing", "Advanced"] as const
 
 export default function LearnPage() {
+  useMaskedAmounts()
   const { data: me } = useMe()
   const done = new Set(me?.settings.completed_lessons ?? [])
   const completed = LESSONS.filter((l) => done.has(l.slug)).length

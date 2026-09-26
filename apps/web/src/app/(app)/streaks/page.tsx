@@ -8,11 +8,13 @@ import { ChallengesSection } from "@/components/challenges/challenges-section"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OUTFIT_INFO, poseFor } from "@/lib/catalog"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useEngagement, useMe, useUpdateSettings } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 export default function StreaksPage() {
+  useMaskedAmounts()
   const { data: me } = useMe()
   const { data, isLoading } = useEngagement()
   const update = useUpdateSettings()

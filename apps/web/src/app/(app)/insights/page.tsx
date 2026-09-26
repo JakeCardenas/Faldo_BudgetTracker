@@ -10,6 +10,7 @@ import { HeaderButton } from "@/components/ios/nav-header"
 import { PageHeader } from "@/components/layout/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useInsights, usePulse } from "@/lib/queries"
 import type { Insight } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -25,6 +26,7 @@ const QUESTIONS: Record<string, (i: Insight) => string> = {
 }
 
 export default function InsightsPage() {
+  useMaskedAmounts()
   const qc = useQueryClient()
   const { data: insights, isLoading, isFetching, refetch } = useInsights()
   const { data: pulse } = usePulse()

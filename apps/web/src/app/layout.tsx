@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google"
 import { Splash } from "@/components/brand/splash"
+import { MOTION_SCRIPT } from "@/lib/motion-pref"
 import { Providers } from "./providers"
 import "./globals.css"
 
@@ -42,8 +43,6 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 }
 
-/** "Reduce motion" from Settings, applied before first paint (see lib/motion). */
-const MOTION = `try{if(localStorage.getItem("faldo:motion")==="reduced")document.documentElement.dataset.motion="reduced"}catch(e){}`
 
 const IOS_EDGE = `if(/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))document.documentElement.classList.add("ios")`
 
@@ -55,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: SPLASH_GATE }} />
         {/* iPhone and iPad blur the top ~40pt under the status bar (iOS 26 scroll edge effect); mark them before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: IOS_EDGE }} />
-        <script dangerouslySetInnerHTML={{ __html: MOTION }} />
+        <script dangerouslySetInnerHTML={{ __html: MOTION_SCRIPT }} />
       </head>
       <body className="min-h-dvh">
         <Splash />

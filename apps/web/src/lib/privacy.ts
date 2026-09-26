@@ -49,3 +49,11 @@ export function useAmountsHidden() {
 export function maskAmounts(text: string) {
   return hidden ? text.replace(/[−-]?₱\s?[\d,]+(?:\.\d+)?[KkMm]?/g, "₱••••") : text
 }
+
+/**
+ * Re-renders the calling page when "Hide amounts" changes. formatMoney reads the flag directly, so every page
+ * calls this to update its amounts in place, keeping its filters, tabs and scroll instead of remounting.
+ */
+export function useMaskedAmounts() {
+  useAmountsHidden()
+}

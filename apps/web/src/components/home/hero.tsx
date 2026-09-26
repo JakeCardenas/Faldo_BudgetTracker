@@ -53,7 +53,7 @@ function FaldoBubble({ data, className }: { data: Dashboard; className?: string 
         <div className="relative">
           {note.title && <p className="mt-0.5 text-[0.875rem] leading-snug font-semibold">{maskAmounts(note.title)}</p>}
           <p className={cn("mt-0.5 text-[0.8125rem] leading-snug", note.title ? "text-muted-foreground" : "line-clamp-5 text-foreground/80")}>{maskAmounts(note.title ? note.body : firstSentences(note.body))}</p>
-          <Link href={note.href} className="mt-1.5 inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
+          <Link href={note.href} className="hit mt-1.5 inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
             {note.cta} <ArrowRight className="size-3.5" />
           </Link>
         </div>

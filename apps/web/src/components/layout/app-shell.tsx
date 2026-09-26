@@ -47,7 +47,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { data: me, isLoading } = useMe()
-  const hideAmounts = useAmountsHidden()
+  // Re-renders the shell's own sheets and dialogs when "Hide amounts" changes; pages subscribe themselves.
+  useAmountsHidden()
   const bubble = useBubbleShown()
   const { setTheme } = useSmoothTheme()
   const [addOpen, setAddOpen] = useState(false)
@@ -117,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {/* The app paints its own canvas, so the body's colour only shows under the status bar and in overscroll. */}
           <div className="flex min-h-dvh flex-col bg-background">
             {!fullBleed && <TopNav />}
-            <PageMain key={`${pathname}:${hideAmounts ? "hidden" : "shown"}`} pathname={pathname} className={fullBleed
+            <PageMain key={pathname} pathname={pathname} className={fullBleed
               ? "w-full flex-1"
               // With the Faldo bubble docked above the tab bar, the page scrolls far enough for its last row to clear it.
               : cn("mx-auto w-full max-w-[1240px] flex-1 px-5 sm:px-6 lg:px-8 lg:pb-20", isNarrow(pathname) && "lg:max-w-[52rem]",

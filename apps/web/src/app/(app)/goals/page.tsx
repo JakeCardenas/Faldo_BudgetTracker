@@ -23,6 +23,7 @@ import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, minorToInput, toMinor, todayISO } from "@/lib/format"
 import { GOAL_ICONS, GoalIcon, goalIconId } from "@/lib/goal-icons"
 import { goalStatusLine } from "@/lib/goals"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useGoals } from "@/lib/queries"
 import { useUrlIntent } from "@/lib/use-url-intent"
 import type { Goal } from "@/lib/types"
@@ -212,6 +213,7 @@ function GoalCard({ goal, onEdit, onContribute }: { goal: Goal; onEdit: () => vo
 }
 
 export default function GoalsPage() {
+  useMaskedAmounts()
   const { data: goals, isLoading } = useGoals()
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Goal | null>(null)

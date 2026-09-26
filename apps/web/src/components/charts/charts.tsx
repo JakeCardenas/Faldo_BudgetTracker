@@ -167,12 +167,13 @@ export function SpendingDonut({ rows, total, label = "Spent" }: { rows: Category
 }
 
 export function IncomeExpenseBars({ data, height = 240 }: { data: { label: string; income_minor: number; expense_minor: number; partial?: boolean; is_partial?: boolean }[]; height?: number }) {
+  const hidden = useAmountsHidden()
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} barGap={4} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tick={AXIS} />
-        <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={56} />
+        <YAxis key={String(hidden)} tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={56} />
         <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload, label }) => payload?.length ? (
           <TooltipCard title={`${label}${payload[0].payload.partial || payload[0].payload.is_partial ? " (so far)" : ""}`} rows={[
             { label: "Money in", value: formatMoney(payload[0].payload.income_minor), color: "var(--chart-1)" },
@@ -188,12 +189,13 @@ export function IncomeExpenseBars({ data, height = 240 }: { data: { label: strin
 }
 
 export function DailyBars({ data, height = 180 }: { data: { date: string; amount_minor: number }[]; height?: number }) {
+  const hidden = useAmountsHidden()
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 0, left: -8, bottom: 0 }}>
         <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.7} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tick={AXIS} tickFormatter={(d) => format(parseISO(d), "d")} interval="preserveStartEnd" minTickGap={12} />
-        <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={52} />
+        <YAxis key={String(hidden)} tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={52} />
         <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload }) => payload?.length ? (
           <TooltipCard title={format(parseISO(payload[0].payload.date), "EEE, MMM d")} rows={[{ label: "Spent", value: formatMoney(payload[0].payload.amount_minor) }]} />
         ) : null} />
@@ -230,6 +232,8 @@ export function ForecastChart({ series, actual = EMPTY_ACTUAL, baseline, bufferM
 }) {
   const data = useMemo(() => mergeForecast(series, actual, baseline), [series, actual, baseline])
   const gradientId = `band-${useId().replace(/:/g, "")}`
+  // Keying the axis by "Hide amounts" redraws its labels when it changes; the same formatter alone wouldn't.
+  const hidden = useAmountsHidden()
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data} margin={{ top: 10, right: 6, left: -6, bottom: 0 }}>
@@ -241,7 +245,7 @@ export function ForecastChart({ series, actual = EMPTY_ACTUAL, baseline, bufferM
         </defs>
         <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.7} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tick={AXIS} tickFormatter={(d) => format(parseISO(d), "MMM d")} minTickGap={28} />
-        <YAxis tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={58} />
+        <YAxis key={String(hidden)} tickLine={false} axisLine={false} tick={AXIS} tickFormatter={compact} width={58} />
         {bufferMinor ? <ReferenceLine y={bufferMinor} stroke="var(--warning)" strokeDasharray="4 4" strokeOpacity={0.6} /> : null}
         <ReferenceLine y={0} stroke="var(--border)" />
         <Tooltip content={({ payload, label }) => payload?.length ? (

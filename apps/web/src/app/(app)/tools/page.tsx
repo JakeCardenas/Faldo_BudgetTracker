@@ -2,9 +2,11 @@
 
 import { ListGroup, ListRow } from "@/components/ios/list"
 import { LargeTitle } from "@/components/ios/nav-header"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { TOOLS } from "@/lib/tools-catalog"
 
 export default function ToolsPage() {
+  useMaskedAmounts()
   return (
     <div className="space-y-4">
       <LargeTitle title="Tools" subtitle="Calculators and helpers for everyday money" back={{ href: "/you", label: "Profile" }} />
