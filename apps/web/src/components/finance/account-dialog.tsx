@@ -15,7 +15,7 @@ import { api, ApiError } from "@/lib/api"
 import { ACCOUNT_PALETTE } from "@/lib/account-templates"
 import { minorToInput, toMinor } from "@/lib/format"
 import { providersFor, type Provider } from "@/lib/providers"
-import { invalidateFinancialData } from "@/lib/queries"
+import { invalidateFinancialData, useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Account, AccountType } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -61,6 +61,9 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
   const type: AccountType = account?.type ?? meta.type
   const providerKind: AccountType = choice === "debit" ? "bank" : meta.type
   const allProviders = useMemo(() => providersFor(providerKind), [providerKind])
+  // An existing account keeps its own currency; a new one is in the user's.
+  const userCurrency = useMe().data?.settings.currency
+  const currency = account?.currency ?? userCurrency ?? "PHP"
   const providers = allProviders.filter((p) => !query.trim() || p.name.toLowerCase().includes(query.trim().toLowerCase()))
   const hasCardNumber = type === "credit_card" || type === "bank" || type === "savings"
   const cardLast4 = hasCardNumber && last4.length === 4 ? last4 : null
@@ -69,7 +72,7 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
 
   const preview: Account = {
     id: account?.id ?? "preview", name: name || meta.label, type, custom_type: customType || null, institution: institution || null,
-    currency: account?.currency ?? "PHP", opening_balance_minor: 0,
+    currency, opening_balance_minor: 0,
     balance_minor: account ? account.balance_minor : type === "credit_card" ? -openingMinor : openingMinor,
     is_spendable: spendableValue, credit_limit_minor: type === "credit_card" ? toMinor(limit) : null,
     card_last4: cardLast4, color, archived: false, sort_order: 0, transaction_count: 0, last_activity_on: null, updated_at: "",
@@ -220,12 +223,12 @@ export function AccountDialog({ open, onOpenChange, account }: { open: boolean; 
           <div className={cn("grid gap-3", type === "credit_card" ? "grid-cols-2" : "grid-cols-1")}>
             <div className="space-y-1.5">
               <Label htmlFor="acc-open">{type === "credit_card" ? "Amount owed now" : editing ? "Starting balance" : "Balance now"}</Label>
-              <AmountInput id="acc-open" value={opening} onValueChange={setOpening} placeholder="0" />
+              <AmountInput currency={currency} id="acc-open" value={opening} onValueChange={setOpening} placeholder="0" />
             </div>
             {type === "credit_card" && (
               <div className="space-y-1.5">
                 <Label htmlFor="acc-limit">Credit limit</Label>
-                <AmountInput id="acc-limit" value={limit} onValueChange={setLimit} placeholder="Optional" />
+                <AmountInput currency={currency} id="acc-limit" value={limit} onValueChange={setLimit} placeholder="Optional" />
               </div>
             )}
           </div>

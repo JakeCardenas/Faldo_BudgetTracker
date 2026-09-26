@@ -79,6 +79,8 @@ export function TransactionForm({ initial, saved, onSubmit, submitLabel = "Save 
   const topCategories = useMemo(() => categories.filter((c) => c.kind === kind && !c.parent_id), [categories, kind])
   const subcategories = useMemo(() => categories.filter((c) => c.parent_id === categoryId), [categories, categoryId])
   const activeAccounts = accounts.filter((a) => !a.archived)
+  // Amounts are entered in the chosen account's currency; until one is chosen, the user's.
+  const currency = accounts.find((a) => a.id === accountId)?.currency
 
   const itemTotal = items.reduce((sum, i) => sum + (toMinor(i.amount) ?? 0), 0)
   const amountMinor = toMinor(amount)
@@ -118,7 +120,7 @@ export function TransactionForm({ initial, saved, onSubmit, submitLabel = "Save 
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Amount" htmlFor="tx-amount" highlight={!!highlights.amount_minor} hint={highlights.amount_minor}>
-          <AmountInput id="tx-amount" value={amount} onValueChange={setAmount} placeholder="0.00" autoFocus={!initial?.amount_minor} />
+          <AmountInput id="tx-amount" currency={currency} value={amount} onValueChange={setAmount} placeholder="0.00" autoFocus={!initial?.amount_minor} />
         </Field>
         <Field label="Date" htmlFor="tx-date" highlight={!!highlights.occurred_on} hint={highlights.occurred_on}>
           <Input id="tx-date" type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} />
@@ -191,7 +193,7 @@ export function TransactionForm({ initial, saved, onSubmit, submitLabel = "Save 
                 <div key={index} className="flex gap-2">
                   <Input aria-label={`Item ${index + 1} name`} value={item.name} placeholder="Item name" className="bg-card"
                     onChange={(e) => setItems(items.map((it, i) => (i === index ? { ...it, name: e.target.value } : it)))} />
-                  <AmountInput aria-label={`Item ${index + 1} amount`} value={item.amount} className="w-32 shrink-0" placeholder="0"
+                  <AmountInput aria-label={`Item ${index + 1} amount`} currency={currency} value={item.amount} className="w-32 shrink-0" placeholder="0"
                     onValueChange={(v) => setItems(items.map((it, i) => (i === index ? { ...it, amount: v } : it)))} />
                   <Button type="button" variant="ghost" size="icon" aria-label="Remove item" onClick={() => setItems(items.filter((_, i) => i !== index))}>
                     <Trash2 />

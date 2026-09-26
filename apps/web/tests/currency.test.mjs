@@ -23,3 +23,8 @@ test("an unknown currency falls back to its code", () => {
   assert.equal(currencySymbol("CAD"), "CAD ")
   assert.equal(formatCurrency(1_000, "CAD"), "CAD 10")
 })
+
+test("an amount field with no account or user currency yet falls back to pesos", () => {
+  assert.equal(currencySymbol(undefined), "₱")
+  assert.equal(currencySymbol("USD"), "$")
+})
