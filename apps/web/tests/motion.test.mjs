@@ -1,35 +1,34 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { MOTION_SCRIPT, REDUCE_QUERY, resolveMotionReduced } from "../src/lib/motion-pref.ts"
+import { MOTION_SCRIPT, resolveMotionReduced } from "../src/lib/motion-pref.ts"
 import { Spring, aim } from "../src/lib/spring.ts"
 
 /** Runs the pre-paint script against a fake page and returns what it set. */
 function runScript({ stored = null, deviceReduced = false, storageThrows = false } = {}) {
   const documentElement = { dataset: {} }
   const localStorage = { getItem: () => { if (storageThrows) throw new Error("blocked"); return stored } }
-  const matchMedia = (query) => ({ matches: query === REDUCE_QUERY && deviceReduced })
+  const matchMedia = () => ({ matches: deviceReduced })
   new Function("localStorage", "matchMedia", "document", MOTION_SCRIPT)(localStorage, matchMedia, { documentElement })
   return documentElement.dataset.motion === "reduced"
 }
 
-test("with no choice made, Faldo follows the device's Reduce Motion", () => {
-  assert.equal(resolveMotionReduced(null, true), true)
-  assert.equal(resolveMotionReduced(null, false), false)
-  assert.equal(runScript({ deviceReduced: true }), true)
+test("Faldo animates by default, even when the device asks for reduced motion", () => {
+  assert.equal(resolveMotionReduced(null), false)
+  assert.equal(runScript({ deviceReduced: true }), false)
   assert.equal(runScript({ deviceReduced: false }), false)
 })
 
-test("Faldo's own setting overrides the device either way", () => {
-  assert.equal(resolveMotionReduced("reduced", false), true)
-  assert.equal(resolveMotionReduced("full", true), false)
-  assert.equal(runScript({ stored: "reduced", deviceReduced: false }), true)
+test("Faldo's own Reduce motion setting stills it, and turning it off brings motion back", () => {
+  assert.equal(resolveMotionReduced("reduced"), true)
+  assert.equal(resolveMotionReduced("full"), false)
+  assert.equal(runScript({ stored: "reduced" }), true)
   assert.equal(runScript({ stored: "full", deviceReduced: true }), false)
 })
 
 test("the pre-paint script matches the rule for every case, and survives blocked storage", () => {
   for (const stored of [null, "reduced", "full"]) {
     for (const deviceReduced of [false, true]) {
-      assert.equal(runScript({ stored, deviceReduced }), resolveMotionReduced(stored, deviceReduced), `${stored}/${deviceReduced}`)
+      assert.equal(runScript({ stored, deviceReduced }), resolveMotionReduced(stored), `${stored}/${deviceReduced}`)
     }
   }
   assert.doesNotThrow(() => runScript({ storageThrows: true }))

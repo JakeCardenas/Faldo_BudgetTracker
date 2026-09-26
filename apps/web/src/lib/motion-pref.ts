@@ -1,12 +1,12 @@
 export const MOTION_KEY = "faldo:motion"
-export const REDUCE_QUERY = "(prefers-reduced-motion: reduce)"
 
-/** Faldo's own "Reduce motion" choice wins; until one is made, the device's Reduce Motion decides. */
-export function resolveMotionReduced(stored: string | null, deviceReduced: boolean) {
-  if (stored === "reduced") return true
-  if (stored === "full") return false
-  return deviceReduced
+/**
+ * Faldo animates fully by default, whatever the device's own Reduce Motion says (the owner's choice).
+ * Only "Reduce motion" in Settings > Appearance stills it.
+ */
+export function resolveMotionReduced(stored: string | null) {
+  return stored === "reduced"
 }
 
 /** The same rule, run in <head> before the first paint (see app/layout). */
-export const MOTION_SCRIPT = `try{var s=localStorage.getItem("${MOTION_KEY}");if(s==="reduced"||(s!=="full"&&matchMedia("${REDUCE_QUERY}").matches))document.documentElement.dataset.motion="reduced"}catch(e){}`
+export const MOTION_SCRIPT = `try{if(localStorage.getItem("${MOTION_KEY}")==="reduced")document.documentElement.dataset.motion="reduced"}catch(e){}`

@@ -983,8 +983,8 @@ html:not([data-splash="skip"]) .boot-quiet {
 }
 
 /*
-  Reduced motion (lib/motion): everything goes still. On by default when the device asks for reduced
-  motion; "Reduce motion" in Settings > Appearance overrides the device either way.
+  "Reduce motion" in Settings > Appearance (lib/motion): everything goes still. Faldo animates fully
+  otherwise, whatever the device's own Reduce Motion setting says, by the owner's choice.
 */
 html[data-motion="reduced"] {
   scroll-behavior: auto;
