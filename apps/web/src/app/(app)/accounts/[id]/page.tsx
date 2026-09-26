@@ -18,12 +18,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import { formatDate } from "@/lib/format"
 import { PALETTE } from "@/lib/palette"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 import { invalidateFinancialData, useAccounts } from "@/lib/queries"
 import type { TransactionList } from "@/lib/types"
 
 export default function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  useMaskedAmounts()
   const { id } = use(params)
   const qc = useQueryClient()
   const { openTransaction, openAddTransaction } = useAppActions()

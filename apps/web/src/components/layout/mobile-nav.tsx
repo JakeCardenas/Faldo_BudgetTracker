@@ -7,8 +7,9 @@ import { Plus } from "lucide-react"
 import { useAppActions } from "@/components/layout/app-context"
 import { TAB_ITEMS, activeTabIndex, type TabItem } from "@/components/layout/nav"
 import { setChromeAway, useChromeAway } from "@/lib/chrome"
+import { motionReduced } from "@/lib/motion"
 import { play } from "@/lib/sound"
-import { Spring, clamp, type SpringConfig } from "@/lib/spring"
+import { Spring, aim, clamp, type SpringConfig } from "@/lib/spring"
 import { cn } from "@/lib/utils"
 
 export function initialsOf(name?: string | null) {
@@ -83,7 +84,7 @@ function IconRow({ filled }: { filled?: boolean }) {
  * scroll back up and the bar rises under the +, which fades back into it. The page header steps aside
  * and back with it (see lib/chrome). That transition is CSS (.nav-away in globals.css), so the system
  * runs it off the main thread; the lens moves on springs, frame by frame, writing styles directly so it
- * stays smooth while the next page renders.
+ * stays smooth while the next page renders. With reduced motion the lens goes straight to its place.
  */
 export function MobileNav() {
   const pathname = usePathname()
@@ -145,6 +146,17 @@ export function MobileNav() {
     frame.current = requestAnimationFrame(tick)
   }, [paint])
 
+  /** Moves the lens on a spring, or, with reduced motion, straight to where it is going. */
+  const moveTo = useCallback((target: number, config: SpringConfig) => {
+    if (aim(x.current, target, config, motionReduced())) {
+      run()
+      return
+    }
+    cancelAnimationFrame(frame.current)
+    frame.current = 0
+    paint()
+  }, [paint, run])
+
   /** Show or hide the lens (and the filled icons with it), fading. */
   const light = useCallback((on: boolean) => {
     lit.current = on
@@ -161,10 +173,8 @@ export function MobileNav() {
       light(true)
       return
     }
-    x.current.config = GLIDE
-    x.current.target = target
-    run()
-  }, [light, run])
+    moveTo(target, GLIDE)
+  }, [light, moveTo])
 
   // Measure the bar, lay out the lens and icons before the first paint, and again whenever it resizes.
   useLayoutEffect(() => {
@@ -261,10 +271,8 @@ export function MobileNav() {
         x.current.snap(lensAt(e.clientX))
         light(true)
       }
-      x.current.config = FOLLOW
     }
-    x.current.target = lensAt(e.clientX)
-    run()
+    moveTo(lensAt(e.clientX), FOLLOW)
   }
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
     if (!press.current) return

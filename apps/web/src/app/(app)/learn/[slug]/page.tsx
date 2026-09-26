@@ -8,11 +8,13 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { LargeTitle } from "@/components/ios/nav-header"
 import { LESSONS, lessonBySlug } from "@/lib/lessons"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useMe, useUpdateSettings } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
 
 export default function LessonPage({ params }: { params: Promise<{ slug: string }> }) {
+  useMaskedAmounts()
   const { slug } = use(params)
   const lesson = lessonBySlug(slug)
   const { data: me } = useMe()

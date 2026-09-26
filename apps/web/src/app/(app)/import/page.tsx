@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { formatDate } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useCategories } from "@/lib/queries"
 import type { Category } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -329,6 +330,7 @@ function ImportFlow() {
 }
 
 export default function ImportPage() {
+  useMaskedAmounts()
   return (
     <div className="space-y-5">
       <LargeTitle title="Import statement" subtitle="Bring in transactions from a bank or e-wallet CSV" back={{ href: "/accounts", label: "Wallet" }} />

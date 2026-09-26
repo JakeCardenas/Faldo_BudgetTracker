@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, minorToInput, toMinor } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useMoneyPlan } from "@/lib/queries"
 import type { MoneyPlan, MoneyPlanBucket } from "@/lib/types"
 import { BUCKET_COLORS } from "@/lib/money-plan"
@@ -309,6 +310,7 @@ function NeedsOrWants({ plan }: { plan: MoneyPlan }) {
 }
 
 export default function MoneyPlanPage() {
+  useMaskedAmounts()
   const { data: plan, isLoading, error } = useMoneyPlan()
   return (
     <div className="space-y-5">

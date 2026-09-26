@@ -3,9 +3,11 @@
 import { LargeTitle } from "@/components/ios/nav-header"
 import { ListGroup, ListRow } from "@/components/ios/list"
 import { SETTINGS_SECTIONS } from "@/components/settings/sections"
+import { useMaskedAmounts } from "@/lib/privacy"
 
 /** Settings, Threads-style: a short list, each row opening its own screen. */
 export default function SettingsPage() {
+  useMaskedAmounts()
   return (
     <div className="space-y-4">
       <LargeTitle title="Settings" back={{ href: "/you", label: "Profile" }} />

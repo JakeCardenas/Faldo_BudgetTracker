@@ -14,6 +14,7 @@ import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { greeting } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useDashboard, useMe } from "@/lib/queries"
 
 function HomeSkeleton() {
@@ -64,6 +65,7 @@ function Welcome() {
  * and out, payments due, accounts and recent activity.
  */
 export default function HomePage() {
+  useMaskedAmounts()
   const { data, isLoading, error, refetch } = useDashboard("this_month")
 
   if (error) {

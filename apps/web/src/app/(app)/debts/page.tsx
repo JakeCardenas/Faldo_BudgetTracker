@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
 import { PALETTE } from "@/lib/palette"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useCategories, useDebts } from "@/lib/queries"
 import { useUrlIntent } from "@/lib/use-url-intent"
 import type { Debt } from "@/lib/types"
@@ -146,6 +147,7 @@ function PaymentDialog({ debt, onOpenChange }: { debt: Debt; onOpenChange: (open
 }
 
 export default function DebtsPage() {
+  useMaskedAmounts()
   const qc = useQueryClient()
   const { data: debts, isLoading } = useDebts()
   const [creating, setCreating] = useState(false)

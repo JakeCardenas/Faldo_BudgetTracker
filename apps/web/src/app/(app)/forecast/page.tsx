@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useCategories, useForecast } from "@/lib/queries"
 import type { ScenarioResult } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -210,6 +211,7 @@ function Timeline({ data }: { data: NonNullable<ReturnType<typeof useForecast>["
 
 /** Future money as an estimate: where the spendable balance is heading, and what moves it. */
 export default function ForecastPage() {
+  useMaskedAmounts()
   const [horizon, setHorizon] = useState("end_of_month")
   const { data, isLoading } = useForecast(horizon)
   const belowBuffer = data ? data.lowest_point.p50_minor < data.buffer_minor : false

@@ -58,7 +58,7 @@ export function SafeToSpendCard({ sts, className }: { sts: SafeToSpend; classNam
           <div className="flex items-center justify-between gap-2">
             <h2 id="sts-title" className="text-[0.9375rem] font-medium text-muted-foreground">Safe to spend</h2>
             <button type="button" onClick={() => setWhy(true)}
-              className="-mr-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.8125rem] font-medium text-primary hover:bg-accent">
+              className="hit -mr-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.8125rem] font-medium text-primary hover:bg-accent">
               <Calculator className="size-3.5" /> Why?
             </button>
           </div>

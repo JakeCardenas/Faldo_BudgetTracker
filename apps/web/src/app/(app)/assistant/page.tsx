@@ -19,8 +19,8 @@ import { api, streamPost } from "@/lib/api"
 import { formatDate, timeAgo } from "@/lib/format"
 import { replyMood, toolNames } from "@/lib/mood"
 import { readPhoto, type Photo } from "@/lib/photo"
+import { maskAmounts, useMaskedAmounts } from "@/lib/privacy"
 import { usePushEnabled } from "@/lib/push"
-import { maskAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useCompanion, useMe } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Block, CaptureDraft, CaptureResult, ChatMessage, Source, ToolCallRecord, Transaction } from "@/lib/types"
@@ -590,5 +590,6 @@ function AssistantView() {
 }
 
 export default function AssistantPage() {
+  useMaskedAmounts()
   return <Suspense><AssistantView /></Suspense>
 }

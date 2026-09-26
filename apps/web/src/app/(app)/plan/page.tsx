@@ -13,6 +13,7 @@ import { Section } from "@/components/ios/panel"
 import { Button } from "@/components/ui/button"
 import { ApiError } from "@/lib/api"
 import { formatMoney, monthKey, relativeDays, toMinor } from "@/lib/format"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useBudget, useDebts, useForecast, useGoals, useMoneyPlan, usePlanned, useUpcoming } from "@/lib/queries"
 
 /** The decision tool: type a price, see Safe to Spend now and after. */
@@ -117,6 +118,7 @@ const PLAN_ITEMS = [
 
 /** Money ahead: every planning tool in a plain list, with the purchase check beside them. */
 export default function PlanPage() {
+  useMaskedAmounts()
   const router = useRouter()
   const status = usePlanStatus()
   return (

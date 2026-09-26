@@ -23,7 +23,7 @@ import { ACCOUNT_GROUPS } from "@/lib/account-templates"
 import { api } from "@/lib/api"
 import { poseFor } from "@/lib/catalog"
 import { formatMoney } from "@/lib/format"
-import { maskAmounts } from "@/lib/privacy"
+import { maskAmounts, useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights, useMe } from "@/lib/queries"
 import type { Account, AccountType } from "@/lib/types"
 import { play } from "@/lib/sound"
@@ -80,7 +80,7 @@ function InsightCard() {
     <section aria-label="Insight" className="card-surface flex min-w-0 flex-col p-3.5">
       <div className="flex items-center justify-between gap-2">
         <span className="label-caps text-primary">Insight</span>
-        <Link href="/insights" className="inline-flex items-center text-[0.6875rem] font-semibold text-muted-foreground hover:text-foreground">All <ChevronRight className="size-3" /></Link>
+        <Link href="/insights" className="hit inline-flex items-center text-[0.6875rem] font-semibold text-muted-foreground hover:text-foreground">All <ChevronRight className="size-3" /></Link>
       </div>
       {isLoading ? (
         <div className="mt-2 space-y-1.5"><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-2/3" /></div>
@@ -134,6 +134,7 @@ function DailyBalance({ view }: { view: View }) {
 }
 
 export default function AccountsPage() {
+  useMaskedAmounts()
   const router = useRouter()
   const qc = useQueryClient()
   const { data: me } = useMe()

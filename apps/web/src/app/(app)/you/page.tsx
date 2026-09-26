@@ -5,6 +5,7 @@ import { LargeTitle } from "@/components/ios/nav-header"
 import { ListGroup, ListRow } from "@/components/ios/list"
 import { Avatar, useLogout } from "@/components/layout/user-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useMaskedAmounts } from "@/lib/privacy"
 import { useMe } from "@/lib/queries"
 
 /**
@@ -20,6 +21,7 @@ const MENU = [
 ]
 
 export default function YouPage() {
+  useMaskedAmounts()
   const { data: me, isLoading } = useMe()
   const logout = useLogout()
 
