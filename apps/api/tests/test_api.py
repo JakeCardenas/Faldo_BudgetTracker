@@ -39,6 +39,20 @@ async def test_auth_flow(anon, app):
     assert (await anon.post("/api/v1/auth/login", json={"email": email, "password": "long-enough-password"})).status_code == 200
 
 
+async def test_register_with_a_taken_email_does_the_same_work(anon, monkeypatch):
+    from app.api.v1 import auth
+
+    email = f"taken-{uuid.uuid4().hex[:8]}@example.com"
+    body = {"email": email, "password": "long-enough-password", "display_name": "Jake"}
+    assert (await anon.post("/api/v1/auth/register", json=body)).status_code == 201
+    anon.cookies.clear()
+    hashed = []
+    monkeypatch.setattr(auth, "hash_password", lambda password: hashed.append(password) or "x")
+    r = await anon.post("/api/v1/auth/register", json=body)
+    assert r.status_code == 409
+    assert hashed == ["long-enough-password"]  # hashed like a new signup, so the reply isn't faster
+
+
 async def test_csrf_header_required(client):
     r = await client.post("/api/v1/accounts", json={"name": "X", "type": "cash"}, headers={"x-faldo-client": "other"})
     assert r.status_code == 403
