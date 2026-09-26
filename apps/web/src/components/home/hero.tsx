@@ -108,7 +108,7 @@ export function HomeBand({ data }: { data: Dashboard }) {
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-10">
         <div className="pt-5 lg:pt-0 lg:pb-9">
-          <p className="text-[0.6875rem] font-semibold tracking-[0.08em] text-white/90 uppercase">{formatDate(new Date().toISOString(), "EEEE, MMMM d")}</p>
+          <p className="text-[0.8125rem] font-semibold tracking-[-0.005em] text-white/85">{formatDate(new Date().toISOString(), "EEEE, MMMM d")}</p>
           <h1 className="mt-1 truncate text-[1.625rem] leading-tight font-normal tracking-[-0.03em] lg:text-[2.125rem]">
             {greeting()}{name ? <>, <span className="font-extrabold">{name}</span>!</> : ""}
           </h1>
@@ -158,7 +158,7 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
         </div>
         <p className="text-xs text-muted-foreground">{accounts} {accounts === 1 ? "account" : "accounts"}</p>
       </div>
-      <AnimatedMoney minor={shown} className={cn("mt-2 block leading-none font-extrabold tracking-[-0.045em] lg:text-[2.75rem]", balanceSize(formatMoney(shown)))} />
+      <AnimatedMoney minor={shown} className={cn("mt-2 block leading-none font-extrabold tracking-[-0.025em] lg:text-[2.75rem]", balanceSize(formatMoney(shown)))} />
       <p className="mt-2 flex min-h-6 flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.8125rem] text-muted-foreground">
         {hover ? (
           <span className="font-semibold text-foreground">{format(parseISO(hover.date), "EEEE, MMM d")}</span>

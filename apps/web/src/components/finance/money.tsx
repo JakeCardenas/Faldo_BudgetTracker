@@ -52,7 +52,7 @@ export function AnimatedMoney({ minor, currency = "PHP", className, symbolClassN
   const symbol = currencySymbol(currency)
   const [sign, rest] = text.startsWith("−") ? ["−", text.slice(1)] : ["", text]
   return (
-    <span className={cn("tabular whitespace-nowrap", className)} aria-label={amountsHidden() ? "Amount hidden" : formatMoney(minor, currency)}>
+    <span className={cn("tabular font-money whitespace-nowrap", className)} aria-label={amountsHidden() ? "Amount hidden" : formatMoney(minor, currency)}>
       {sign}
       <span className={cn("mr-[0.06em] align-[0.36em] text-[0.58em] font-medium text-muted-foreground", symbolClassName)}>{symbol}</span>
       {rest.slice(symbol.length)}

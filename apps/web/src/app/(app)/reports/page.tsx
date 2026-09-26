@@ -222,7 +222,7 @@ export default function ReportsPage() {
                 <IncomeExpenseBars data={report.history} height={220} />
                 <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-1" /> Money in</span>
-                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-ink" /> Money out</span>
+                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-chart-out" /> Money out</span>
                 </div>
               </div>
             </Section>
