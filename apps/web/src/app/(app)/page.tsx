@@ -9,7 +9,7 @@ import { AccountDialog } from "@/components/finance/account-dialog"
 import { BalanceCard, HomeBand } from "@/components/home/hero"
 import { SafeToSpendCard } from "@/components/home/safe-to-spend"
 import { AccountsRail, PaymentsDue, RecentActivity } from "@/components/home/sections"
-import { MoneyInOut, QuickActions, SpendingRing } from "@/components/home/widgets"
+import { MoneyInOut, QuickActions, SpendingCard } from "@/components/home/widgets"
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -29,7 +29,7 @@ function HomeSkeleton() {
       <div className="mt-5 space-y-5 lg:mt-8">
         <Skeleton className="h-80 rounded-[1.5rem]" />
         <div className="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-8">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="mx-auto size-14 rounded-full" />)}</div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><Skeleton className="h-36 rounded-2xl" /><Skeleton className="h-32 rounded-2xl" /></div>
+        <Skeleton className="h-96 rounded-[1.5rem] sm:h-72" />
       </div>
     </div>
   )
@@ -86,18 +86,16 @@ export default function HomePage() {
         <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
           <BalanceCard data={data} className="order-1 lg:order-none" />
           <QuickActions className="order-2 lg:order-none" />
-          <div className="order-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:order-none">
-            <SpendingRing data={data} />
-            <MoneyInOut />
-          </div>
-          <div className="order-6 lg:order-none"><AccountsRail data={data} /></div>
+          <SpendingCard data={data} className="order-4 lg:order-none" />
+          <div className="order-7 lg:order-none"><AccountsRail data={data} /></div>
         </div>
-        {/* On desktop the right column carries what needs doing (Safe to Spend, then what's due) above the latest
-            activity, so the two columns balance. Phones keep one column in the order above. */}
+        {/* On desktop the right column carries what needs doing (Safe to Spend, money in and out, then what's due)
+            above the latest activity, so the two columns balance. Phones keep one column in the order above. */}
         <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
           <SafeToSpendCard sts={data.safe_to_spend} className="order-3 lg:order-none" />
-          <div className="order-5 lg:order-none"><PaymentsDue data={data} /></div>
-          <div className="order-7 lg:order-none"><RecentActivity data={data} /></div>
+          <MoneyInOut className="order-5 lg:order-none" />
+          <div className="order-6 lg:order-none"><PaymentsDue data={data} /></div>
+          <div className="order-8 lg:order-none"><RecentActivity data={data} /></div>
         </div>
       </div>
     </div>

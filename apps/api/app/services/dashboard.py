@@ -9,7 +9,7 @@ from app.engine.periods import previous_comparable, resolve_period
 from app.models.identity import UserSettings
 from app.services.accounts import account_balances
 from app.services.accounts import to_out as account_out
-from app.services.analytics import category_meta, category_rows, spending_by_category, totals_by_type
+from app.services.analytics import category_meta, category_rows, daily_totals, spending_by_category, totals_by_type
 from app.services.budgets import budget_status
 from app.services.debts import list_debts
 from app.services.forecast import safe_to_spend
@@ -73,6 +73,8 @@ async def dashboard(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings
     upcoming_items = await upcoming(db, user_id, today, today + timedelta(days=21))
     sts = await safe_to_spend(db, user_id, settings, today)
     owed = await list_debts(db, user_id, today)
+    week_start = today - timedelta(days=6)
+    week = await daily_totals(db, user_id, week_start, today)
 
     return {
         "period": period.as_dict(),
@@ -90,6 +92,11 @@ async def dashboard(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings
             "transaction_count": totals["count"],
         },
         "spending_by_category": category_rows(by_cat, meta),
+        # Spending per day for the seven days ending today, whatever the range, for Home's spending card.
+        "last_7_days": [
+            {"date": (week_start + timedelta(days=i)).isoformat(), "amount_minor": week.get(week_start + timedelta(days=i), 0)}
+            for i in range(7)
+        ],
         "budget": budget.model_dump(mode="json"),
         "recent_transactions": [t.model_dump(mode="json") for t in recent.items],
         "goals": [g.model_dump(mode="json", exclude={"contributions"}) for g in goals[:4]],

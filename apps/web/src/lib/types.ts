@@ -350,6 +350,8 @@ export interface Dashboard {
     transaction_count: number
   }
   spending_by_category: CategoryRow[]
+  /** Spending per day for the seven days ending today, oldest first. Missing from an API older than the web app. */
+  last_7_days?: { date: string; amount_minor: number }[]
   budget: Budget
   recent_transactions: Transaction[]
   goals: Goal[]

@@ -49,17 +49,19 @@ function niceTicks(min: number, max: number) {
 const PLOT = { top: 10, right: 4, left: 2, bottom: 4, axis: 46 }
 
 /**
- * Answers one question: how has my balance moved? One line over a quiet dashed grid, a compact scale on
- * the right, the first, middle and last dates below and a dot for today. `tone="light"` draws it in
- * white for the green Home environment. Drag across it (finger or
- * mouse) or use the arrow keys to read any day; `onHover` reports that point so a headline can show it.
+ * Answers one question: how has my balance moved? One line over a quiet grid, a compact scale on the
+ * right, the first, middle and last dates below and a dot for today. `startLine` adds a dashed line at
+ * where the range began, so up or down reads at a glance. `tone="light"` draws it in white for the green
+ * Home environment. Drag across it (finger or mouse) or use the arrow keys to read any day; `onHover`
+ * reports that point so a headline can show it.
  */
-export function BalanceLine({ data, height = 168, tone = "default", onHover }: {
+export function BalanceLine({ data, height = 168, tone = "default", startLine = false, onHover }: {
   data: BalancePointValue[]
   /** Pixels, or "100%" to fill the parent. */
   height?: number | "100%"
   /** "light" draws it in white for the green Home environment. */
   tone?: "default" | "light"
+  startLine?: boolean
   onHover?: (point: BalancePointValue | null) => void
 }) {
   const gradientId = `line-${useId().replace(/:/g, "")}`
@@ -107,11 +109,12 @@ export function BalanceLine({ data, height = 168, tone = "default", onHover }: {
         <AreaChart data={data} margin={{ top: PLOT.top, right: PLOT.right, left: PLOT.left, bottom: PLOT.bottom }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={stroke} stopOpacity={light ? 0.26 : 0.18} />
+              <stop offset="0%" stopColor={stroke} stopOpacity={light ? 0.26 : 0.22} />
               <stop offset="100%" stopColor={stroke} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke={light ? "#ffffff" : "var(--foreground)"} strokeOpacity={light ? 0.16 : 0.09} strokeDasharray="2 5" />
+          <CartesianGrid vertical={false} stroke={light ? "#ffffff" : "var(--foreground)"} strokeOpacity={light ? 0.16 : 0.07} />
+          {startLine && <ReferenceLine y={data[0].value} stroke="var(--muted-foreground)" strokeOpacity={0.55} strokeDasharray="3 4" />}
           <YAxis orientation="right" hide={hidden} width={axis} domain={[ticks[0], ticks[ticks.length - 1]]} ticks={ticks} interval={0}
             axisLine={false} tickLine={false} tickMargin={6} tick={{ fontSize: 10.5, fill: ink }} tickFormatter={compact} />
           <XAxis dataKey="date" ticks={dates} interval={0} axisLine={false} tickLine={false} height={20} tickMargin={4}
@@ -122,7 +125,7 @@ export function BalanceLine({ data, height = 168, tone = "default", onHover }: {
               </text>
             )} />
           {point && <ReferenceLine x={point.date} stroke={light ? "#ffffff" : "var(--foreground)"} strokeOpacity={light ? 0.5 : 0.22} strokeDasharray="3 3" />}
-          <Area type="monotone" dataKey="value" stroke={stroke} strokeWidth={2.25} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
+          <Area type="monotone" dataKey="value" stroke={stroke} strokeWidth={2} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
             activeDot={false}
             dot={(props: { cx?: number; cy?: number; index?: number }) => {
               if (props.cx === undefined || props.cy === undefined) return <g key={`d-${props.index}`} />
@@ -201,7 +204,7 @@ export function DailyBars({ data, height = 180 }: { data: { date: string; amount
         ) : null} />
         {/* Each day on a quiet track; the latest day is the bright one. */}
         <Bar dataKey="amount_minor" radius={[4, 4, 1, 1]} maxBarSize={14} background={{ fill: "var(--chart-track)", radius: 4 }}>
-          {data.map((d, i) => <Cell key={d.date} fill={i === data.length - 1 ? "var(--chart-1)" : "var(--chart-2)"} />)}
+          {data.map((d, i) => <Cell key={d.date} fill={i === data.length - 1 ? "var(--primary)" : "var(--chart-2)"} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
