@@ -1,6 +1,8 @@
 "use client"
 
 import { forwardRef, useImperativeHandle, useRef } from "react"
+import { currencySymbol } from "@/lib/currency"
+import { useMe } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 
 /** "20000.5" shown as "20,000.5": thousands grouped, up to two decimals kept as typed. */
@@ -11,15 +13,19 @@ function grouped(raw: string) {
 }
 
 /**
- * A peso amount field. It shows the number grouped as you type ("20,000") and keeps the caret beside the digit you
- * just typed, but hands the form the plain number ("20000"), so `toMinor` and every caller read it the same way.
+ * An amount field in the user's currency, or `currency` when given. It shows the number grouped as you type ("20,000")
+ * and keeps the caret beside the digit you just typed, but hands the form the plain number ("20000"), so `toMinor` and
+ * every caller read it the same way.
  */
 export const AmountInput = forwardRef<HTMLInputElement, Omit<React.ComponentProps<"input">, "onChange" | "value" | "size"> & {
   value: string
   onValueChange: (value: string) => void
   size?: "default" | "lg"
-}>(function AmountInput({ value, onValueChange, className, size = "default", ...props }, ref) {
+  currency?: string
+}>(function AmountInput({ value, onValueChange, className, size = "default", currency, ...props }, ref) {
   const input = useRef<HTMLInputElement>(null)
+  const { data: me } = useMe()
+  const symbol = currencySymbol(currency ?? me?.settings.currency)
   useImperativeHandle(ref, () => input.current as HTMLInputElement)
 
   return (
@@ -29,7 +35,7 @@ export const AmountInput = forwardRef<HTMLInputElement, Omit<React.ComponentProp
       size === "lg" ? "h-14 px-4" : "h-11 px-3",
       className,
     )}>
-      <span className={cn("mr-1.5 text-muted-foreground", size === "lg" && "text-xl")}>₱</span>
+      <span className={cn("mr-1.5 text-muted-foreground", size === "lg" && "text-xl")}>{symbol.trim()}</span>
       <input
         ref={input}
         inputMode="decimal"

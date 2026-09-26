@@ -25,12 +25,12 @@ START_TYPE = {DebtDirection.owed_to_me: TransactionType.debt_out, DebtDirection.
 PAYMENT_TYPE = {DebtDirection.owed_to_me: TransactionType.debt_in, DebtDirection.i_owe: TransactionType.debt_out}
 
 
-async def _load(db: AsyncSession, user_id: uuid.UUID, debt_id: uuid.UUID) -> Debt:
-    debt = (
-        await db.execute(
-            select(Debt).where(Debt.id == debt_id, Debt.user_id == user_id).options(selectinload(Debt.payments))
-        )
-    ).scalar_one_or_none()
+async def _load(db: AsyncSession, user_id: uuid.UUID, debt_id: uuid.UUID, for_update: bool = False) -> Debt:
+    stmt = select(Debt).where(Debt.id == debt_id, Debt.user_id == user_id).options(selectinload(Debt.payments))
+    if for_update:
+        # Lock the debt row first so its payments are read after any concurrent payment has committed.
+        stmt = stmt.with_for_update(of=Debt).execution_options(populate_existing=True)
+    debt = (await db.execute(stmt)).scalar_one_or_none()
     if debt is None:
         raise NotFound("Record not found.")
     return debt
@@ -186,7 +186,7 @@ async def delete_debt(db: AsyncSession, user_id: uuid.UUID, debt_id: uuid.UUID) 
 
 
 async def add_payment(db: AsyncSession, user_id: uuid.UUID, debt_id: uuid.UUID, data: DebtPaymentIn, today: date) -> DebtOut:
-    debt = await _load(db, user_id, debt_id)
+    debt = await _load(db, user_id, debt_id, for_update=True)
     if debt.status != DebtStatus.open:
         raise AppError("This record is already closed.")
     outstanding = debt.amount_minor - sum(p.amount_minor for p in debt.payments)

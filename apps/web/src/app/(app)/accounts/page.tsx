@@ -98,6 +98,7 @@ function InsightCard() {
 /** The last seven days of the chosen balance as bars, today in full colour. */
 function DailyBalance({ view }: { view: View }) {
   const { data: history, isLoading } = useBalanceHistory(7)
+  const currency = useMe().data?.settings.currency
   const points = (history ?? []).slice(-7).map((p) => ({ date: p.date, value: p[HISTORY_KEY[view]] }))
   const values = points.map((p) => p.value)
   const min = Math.min(...values)
@@ -107,7 +108,7 @@ function DailyBalance({ view }: { view: View }) {
       <span className="label-caps">Daily balance</span>
       {points.length >= 2 && (
         <p className={cn("tabular mt-1 text-[0.8125rem] font-semibold", values[values.length - 1] - values[0] < 0 ? "text-foreground" : "text-income")}>
-          {formatMoney(values[values.length - 1] - values[0], "PHP", { signed: true })} <span className="font-normal text-muted-foreground">over 7 days</span>
+          {formatMoney(values[values.length - 1] - values[0], currency, { signed: true })} <span className="font-normal text-muted-foreground">over 7 days</span>
         </p>
       )}
       {isLoading ? <Skeleton className="mt-3 h-20" /> : points.length < 2 ? (
@@ -118,7 +119,7 @@ function DailyBalance({ view }: { view: View }) {
             const last = i === points.length - 1
             const height = max === min ? 60 : 28 + ((p.value - min) / (max - min)) * 72
             return (
-              <li key={p.date} className="flex flex-1 flex-col items-center gap-1.5" title={`${format(parseISO(p.date), "EEE, MMM d")}: ${formatMoney(p.value)}`}>
+              <li key={p.date} className="flex flex-1 flex-col items-center gap-1.5" title={`${format(parseISO(p.date), "EEE, MMM d")}: ${formatMoney(p.value, currency)}`}>
                 <span className="flex h-16 w-full items-end justify-center">
                   <span className={cn("w-2 rounded-full", last ? "bg-primary" : "bg-primary/25")} style={{ height: `${height}%` }} />
                 </span>

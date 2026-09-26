@@ -22,6 +22,7 @@ import { api } from "@/lib/api"
 import { setChromeAway, useChromeAway } from "@/lib/chrome"
 import { formatDate } from "@/lib/format"
 import { useAccounts, useCategories } from "@/lib/queries"
+import { listView } from "@/lib/query-view"
 import type { Receipt, TransactionList } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -83,6 +84,7 @@ function HistoryView() {
   })
 
   const items = list.data?.pages.flatMap((p) => p.items) ?? []
+  const view = listView({ isLoading: list.isLoading, isError: list.isError, hasData: !!list.data, count: items.length })
   const summary = list.data?.pages[0]
   const activeFilters = [accountId, categoryId, tag].filter((v) => v !== ALL).length + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
   const clear = () => { setAccountId(ALL); setCategoryId(ALL); setTag(ALL); setDateFrom(""); setDateTo("") }
@@ -154,9 +156,16 @@ function HistoryView() {
         </div>
       )}
 
-      {list.isLoading ? (
+      {view === "loading" ? (
         <div className="ios-group divide-y divide-border/60">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="flex items-center gap-3 px-4 py-3"><Skeleton className="size-10 rounded-full" /><div className="flex-1 space-y-1.5"><Skeleton className="h-3.5 w-2/5" /><Skeleton className="h-3 w-1/4" /></div><Skeleton className="h-3.5 w-16" /></div>)}</div>
-      ) : items.length === 0 ? (
+      ) : view === "error" ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">
+          <span className="flex-1">Couldn&apos;t load your transactions. {list.error?.message}</span>
+          <Button size="sm" variant="outline" onClick={() => list.refetch()} disabled={list.isFetching}>
+            {list.isFetching && <Loader2 className="animate-spin" />} Try again
+          </Button>
+        </div>
+      ) : view === "empty" ? (
         <div className="card-surface">
           {search || activeFilters || kind !== ALL ? (
             <EmptyState icon={Search} title="No matching transactions" description="Try a different search or clear your filters."

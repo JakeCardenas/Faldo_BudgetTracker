@@ -18,6 +18,7 @@ import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
 import { PALETTE } from "@/lib/palette"
 import { invalidateFinancialData, useDeleteTransaction, useSaveTransaction } from "@/lib/queries"
+import { detailView } from "@/lib/query-view"
 import type { Debt, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -93,11 +94,12 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [splitting, setSplitting] = useState(false)
-  const { data: t, isLoading } = useQuery({
+  const { data: t, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["transactions", "detail", id],
     queryFn: () => api.get<Transaction>(`/transactions/${id}`),
     enabled: !!id,
   })
+  const view = detailView({ isError, hasData: !!t })
   const save = useSaveTransaction()
   const remove = useDeleteTransaction()
   const close = () => { setEditing(false); setSplitting(false); onOpenChange(false) }
@@ -107,7 +109,14 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
   return (
     <>
       <IosSheet open={!!id} onOpenChange={(open) => { if (!open) close() }} title={editing ? "Edit transaction" : "Transaction"} size="sm">
-        {isLoading || !t ? (
+        {view === "error" ? (
+          <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">
+            <span className="flex-1">Couldn&apos;t load this transaction. {error?.message}</span>
+            <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching && <Loader2 className="animate-spin" />} Try again
+            </Button>
+          </div>
+        ) : !t ? (
           <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-40 w-full" /></div>
         ) : editing ? (
           <TransactionForm saved

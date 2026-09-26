@@ -84,6 +84,8 @@ def to_out(b: AccountBalance) -> AccountOut:
 
 
 async def create_account(db: AsyncSession, user_id: uuid.UUID, currency: str, data: AccountIn) -> Account:
+    if data.currency and data.currency != currency:
+        raise AppError(f"Accounts use your currency, {currency}. Faldo doesn't mix currencies yet.")
     exists = await db.scalar(select(Account.id).where(Account.user_id == user_id, Account.name == data.name))
     if exists:
         raise Conflict("You already have an account with that name.")
@@ -93,7 +95,7 @@ async def create_account(db: AsyncSession, user_id: uuid.UUID, currency: str, da
         type=data.type,
         custom_type=data.custom_type if data.type == AccountType.custom else None,
         institution=data.institution,
-        currency=data.currency or currency,
+        currency=currency,
         opening_balance_minor=data.opening_balance_minor,
         is_spendable=data.is_spendable if data.is_spendable is not None else SPENDABLE_DEFAULTS[data.type],
         credit_limit_minor=data.credit_limit_minor,
@@ -147,12 +149,28 @@ async def reorder_accounts(db: AsyncSession, user_id: uuid.UUID, ids: list[uuid.
 async def balance_history(db: AsyncSession, user_id: uuid.UUID, today: date, days: int) -> list[dict]:
     step = max(1, days // 30)
     offsets = sorted({*range(days, -1, -step), 0}, reverse=True)
+    start = today - timedelta(days=offsets[0])
+    balances = {b.account.id: b.balance_minor for b in await account_balances(db, user_id, as_of=start, include_archived=False)}
+    rows = (
+        await db.execute(
+            select(Account.id, Transaction.occurred_on, func.sum(_signed_amount(Account.id)))
+            .join(Transaction, or_(Transaction.account_id == Account.id, Transaction.to_account_id == Account.id))
+            .where(Account.user_id == user_id, Account.archived_at.is_(None),
+                   Transaction.occurred_on > start, Transaction.occurred_on <= today)
+            .group_by(Account.id, Transaction.occurred_on)
+            .order_by(Transaction.occurred_on)
+        )
+    ).all()
     points = []
+    applied = 0
     for offset in offsets:
         day = today - timedelta(days=offset)
-        balances = await account_balances(db, user_id, as_of=day, include_archived=False)
-        assets = sum(b.balance_minor for b in balances if b.balance_minor > 0)
-        liabilities = sum(-b.balance_minor for b in balances if b.balance_minor < 0)
+        while applied < len(rows) and rows[applied][1] <= day:
+            account_id, _, delta = rows[applied]
+            balances[account_id] += int(delta)
+            applied += 1
+        assets = sum(v for v in balances.values() if v > 0)
+        liabilities = sum(-v for v in balances.values() if v < 0)
         points.append({"date": day.isoformat(), "assets_minor": assets, "liabilities_minor": liabilities,
                        "net_minor": assets - liabilities})
     return points

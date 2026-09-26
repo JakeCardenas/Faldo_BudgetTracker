@@ -83,7 +83,8 @@ async def scheduled_events(
         by_account = {aid: int(total) for aid, total in linked_rows}
         for g in goals:
             if g.linked_account_id:
-                contributed[g.id] = contributed.get(g.id, 0) + by_account.get(g.linked_account_id, 0)
+                # A linked goal's contribution records mirror its transfers, so only the transfers count.
+                contributed[g.id] = by_account.get(g.linked_account_id, 0)
     planned_savings = 0
     top_pace = None
     for goal in goals:

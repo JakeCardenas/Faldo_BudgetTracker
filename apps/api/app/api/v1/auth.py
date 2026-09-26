@@ -72,9 +72,11 @@ def _me(user: User, user_settings: UserSettings) -> MeOut:
 @router.post("/auth/register", response_model=MeOut, status_code=201)
 async def register(data: RegisterIn, request: Request, response: Response, db: AnonDbDep) -> MeOut:
     await limiter.hit(f"register:{_client_ip(request)}", 10, 3600)
+    # Hash first so a taken email takes as long to answer as a new one.
+    password_hash = hash_password(data.password)
     if await db.scalar(select(User.id).where(User.email == data.email)):
         raise Conflict("An account with this email already exists.")
-    user = User(email=data.email, password_hash=hash_password(data.password), display_name=data.display_name)
+    user = User(email=data.email, password_hash=password_hash, display_name=data.display_name)
     db.add(user)
     await db.flush()
     await set_user_scope(db, user.id)

@@ -9,7 +9,7 @@ from app.core.errors import AppError
 from app.engine.planning import advance_due_date, monthly_equivalent, occurrences_between
 from app.jobs.queue import enqueue_index, enqueue_unindex
 from app.models import Account, Category, Merchant, RecurringPayment
-from app.models.enums import Frequency, RecurringKind, TransactionSource, TransactionType
+from app.models.enums import CategoryKind, Frequency, RecurringKind, TransactionSource, TransactionType
 from app.schemas.ledger import TransactionIn
 from app.schemas.planning import MarkPaidIn, RecurringIn, RecurringOut, RecurringUpdate
 from app.services.common import apply_updates, get_owned
@@ -52,12 +52,19 @@ def _check_due(next_due_on: date) -> None:
         raise AppError("That due date is more than five years away. Check the year.")
 
 
+async def _check_category(db: AsyncSession, user_id: uuid.UUID, category_id: uuid.UUID, kind: RecurringKind) -> None:
+    category = await get_owned(db, Category, category_id, user_id, "Category")
+    expected = CategoryKind.income if kind == RecurringKind.income else CategoryKind.expense
+    if category.kind != expected:
+        raise AppError(f"Choose an {expected.value} category for this.")
+
+
 async def create_recurring(db: AsyncSession, user_id: uuid.UUID, currency: str, data: RecurringIn) -> RecurringPayment:
     _check_due(data.next_due_on)
     if data.account_id:
         await get_owned(db, Account, data.account_id, user_id, "Account")
     if data.category_id:
-        await get_owned(db, Category, data.category_id, user_id, "Category")
+        await _check_category(db, user_id, data.category_id, data.kind)
     merchant = await get_or_create_merchant(db, user_id, data.merchant)
     item = RecurringPayment(
         user_id=user_id, name=data.name, kind=data.kind, amount_minor=data.amount_minor, currency=currency,
@@ -79,8 +86,10 @@ async def update_recurring(db: AsyncSession, user_id: uuid.UUID, rid: uuid.UUID,
         _check_due(updates["next_due_on"])
     if updates.get("account_id"):
         await get_owned(db, Account, updates["account_id"], user_id, "Account")
-    if updates.get("category_id"):
-        await get_owned(db, Category, updates["category_id"], user_id, "Category")
+    kind = updates.get("kind") or item.kind
+    category_id = updates.get("category_id", item.category_id)
+    if category_id and ("category_id" in updates or "kind" in updates):
+        await _check_category(db, user_id, category_id, kind)
     apply_updates(item, updates)
     if "next_due_on" in updates or "frequency" in updates:
         item.anchor_day = _anchor(item.frequency.value, item.next_due_on)
@@ -105,6 +114,12 @@ async def mark_paid(db: AsyncSession, user_id: uuid.UUID, rid: uuid.UUID, data: 
         merchant = await db.get(Merchant, item.merchant_id)
         merchant_name = merchant.name if merchant else None
     is_income = item.kind == RecurringKind.income
+    category_id = item.category_id
+    if category_id:
+        # Older items may carry a category of the other kind; record the payment uncategorized rather than refuse it.
+        category = await db.get(Category, category_id)
+        if category is None or category.kind != (CategoryKind.income if is_income else CategoryKind.expense):
+            category_id = None
     txn = await create_transaction(
         db, user_id,
         TransactionIn(
@@ -113,7 +128,7 @@ async def mark_paid(db: AsyncSession, user_id: uuid.UUID, rid: uuid.UUID, data: 
             occurred_on=data.paid_on or today,
             account_id=account_id,
             merchant=merchant_name or item.name,
-            category_id=item.category_id,
+            category_id=category_id,
             recurring_payment_id=item.id,
             notes=None,
         ),
