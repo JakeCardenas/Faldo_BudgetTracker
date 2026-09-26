@@ -225,6 +225,19 @@ async def test_dashboard_today_and_this_week_ranges(client):
     assert week["period"]["name"] == "this_week" and week["overview"]["expense_minor"] == 12_000
 
 
+async def test_dashboard_last_7_days_spending(client):
+    gcash = await _account(client)
+    for days_ago, amount, kind in ((0, 12_000, "expense"), (6, 30_000, "expense"), (7, 99_000, "expense"), (2, 500_000, "income")):
+        r = await client.post("/api/v1/transactions", json={
+            "type": kind, "amount_minor": amount, "occurred_on": (TODAY - timedelta(days=days_ago)).isoformat(), "account_id": gcash["id"]})
+        assert r.status_code == 201, r.text
+    for range_name in ("this_month", "today"):
+        days = (await client.get("/api/v1/dashboard", params={"range": range_name})).json()["last_7_days"]
+        assert [d["date"] for d in days] == [(TODAY - timedelta(days=6 - i)).isoformat() for i in range(7)]
+        assert days[0]["amount_minor"] == 30_000 and days[-1]["amount_minor"] == 12_000
+        assert sum(d["amount_minor"] for d in days) == 42_000
+
+
 async def test_card_last4_is_optional_and_only_four_digits(client):
     card = await _account(client, "BPI Visa", "credit_card", 0, credit_limit_minor=5_000_000, card_last4="4821")
     assert card["card_last4"] == "4821"

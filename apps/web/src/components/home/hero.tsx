@@ -25,8 +25,8 @@ import { cn } from "@/lib/utils"
 const RANGES = [
   { label: "1W", days: 7, phrase: "past week" },
   { label: "1M", days: 30, phrase: "past month" },
-  { label: "3M", days: 90, phrase: "3 months" },
-  { label: "6M", days: 180, phrase: "6 months" },
+  { label: "3M", days: 90, phrase: "past 3 months" },
+  { label: "6M", days: 180, phrase: "past 6 months" },
   { label: "1Y", days: 365, phrase: "past year" },
 ] as const
 
@@ -133,9 +133,22 @@ function balanceSize(text: string) {
   return "text-[1.875rem]"
 }
 
+/** The change from the start of the range, as a pill that says up or down in words and colour. */
+function ChangePill({ change, pct }: { change: number; pct: number | null }) {
+  const up = change > 0
+  return (
+    <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-semibold", up ? "bg-income-soft text-income" : "bg-danger-soft text-expense")}>
+      {up ? <ArrowUpRight className="size-3.5" aria-hidden /> : <ArrowDownRight className="size-3.5" aria-hidden />}
+      <span className="sr-only">{up ? "Up" : "Down"} </span>
+      <span className="tabular">{formatMoney(Math.abs(change))}{pct !== null && Number.isFinite(pct) && ` (${Math.abs(pct).toFixed(1)}%)`}</span>
+    </span>
+  )
+}
+
 /**
- * What you have and how it has moved: the total balance with its real balance history. Drag across the
- * line to read any day; the amount above follows your finger.
+ * What you have and how it has moved: the total balance, the change over the chosen range, the balance
+ * history with a dashed line where the range began, and the range picker. Drag across the line to read
+ * any day; the amount and the change above follow your finger.
  */
 export function BalanceCard({ data, className }: { data: Dashboard; className?: string }) {
   const [range, setRange] = useState<(typeof RANGES)[number]>(RANGES[1])
@@ -145,7 +158,7 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
   const current = data.overview.total_balance_minor
   const shown = hover?.value ?? current
   const first = series[0]?.value
-  const change = first !== undefined ? current - first : null
+  const change = first !== undefined ? shown - first : null
   const pct = first ? ((change ?? 0) / Math.abs(first)) * 100 : null
   const accounts = data.accounts.filter((a) => !a.archived).length
 
@@ -159,34 +172,30 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
         <p className="text-xs text-muted-foreground">{accounts} {accounts === 1 ? "account" : "accounts"}</p>
       </div>
       <AnimatedMoney minor={shown} className={cn("mt-2 block leading-none font-extrabold tracking-[-0.025em] lg:text-[2.75rem]", balanceSize(formatMoney(shown)))} />
-      <p className="mt-2 flex min-h-6 flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.8125rem] text-muted-foreground">
-        {hover ? (
-          <span className="font-semibold text-foreground">{format(parseISO(hover.date), "EEEE, MMM d")}</span>
-        ) : change !== null && change !== 0 ? (
+      <p className="mt-2.5 flex min-h-6 flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.8125rem] text-muted-foreground" aria-live="polite">
+        {hover && <span className="font-semibold text-foreground">{format(parseISO(hover.date), "EEE, MMM d")}</span>}
+        {change !== null && change !== 0 ? (
           <>
-            <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-semibold",
-              change > 0 ? "bg-income-soft text-income" : "bg-danger-soft text-expense")}>
-              {change > 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
-              {formatMoney(Math.abs(change))}{pct !== null && Number.isFinite(pct) && ` (${Math.abs(pct).toFixed(1)}%)`}
-            </span>
-            <span>{range.phrase}</span>
+            <ChangePill change={change} pct={pct} />
+            <span>{hover ? `since ${format(parseISO(series[0].date), "MMM d")}` : `over the ${range.phrase}`}</span>
           </>
-        ) : <>No change over the {range.phrase}</>}
+        ) : !hover && <>No change over the {range.phrase}</>}
       </p>
 
-      <div className="mt-4 h-36 lg:h-48">
+      <div className="mt-4 h-40 lg:h-48">
         {isLoading ? <Skeleton className="h-full rounded-xl" /> : series.length > 1 ? (
-          <BalanceLine data={series} onHover={setHover} height="100%" />
+          <BalanceLine data={series} onHover={setHover} height="100%" startLine />
         ) : (
           <p className="flex h-full items-center justify-center rounded-xl border border-dashed px-6 text-center text-sm text-muted-foreground">Your balance line appears after a few days of activity.</p>
         )}
       </div>
-      <div className="mx-auto mt-3 flex w-full justify-between gap-1 sm:max-w-sm" role="radiogroup" aria-label="Chart range">
+      <div className="mx-auto mt-4 flex w-full rounded-full bg-muted p-1 sm:max-w-sm" role="radiogroup" aria-label="Chart range">
         {RANGES.map((r) => (
           <button key={r.label} type="button" role="radio" aria-checked={r.label === range.label}
             onClick={() => { play("select"); setRange(r); setHover(null) }}
-            className={cn("pressable hit h-9 flex-1 rounded-full text-[0.8125rem] font-semibold transition-colors duration-200",
-              r.label === range.label ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
+            className={cn("pressable hit h-8 flex-1 rounded-full text-[0.8125rem] font-semibold transition-[background-color,color,box-shadow] duration-200",
+              r.label === range.label ? "bg-card text-foreground shadow-[0_1px_3px_rgb(16_36_24/0.1),0_0_0_0.5px_rgb(16_36_24/0.05)] dark:bg-accent dark:shadow-none"
+                : "text-muted-foreground hover:text-foreground")}>
             {r.label}
           </button>
         ))}
