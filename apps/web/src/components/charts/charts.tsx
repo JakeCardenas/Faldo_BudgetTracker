@@ -150,7 +150,7 @@ export function SpendingDonut({ rows, total, label = "Spent" }: { rows: Category
     <div className="relative mx-auto aspect-square w-full max-w-[13rem]">
       <ResponsiveContainer>
         <PieChart>
-          <Pie data={data} dataKey="amount_minor" nameKey="label" innerRadius="70%" outerRadius="100%" paddingAngle={1.5} stroke="none" isAnimationActive animationDuration={700}>
+          <Pie data={data} dataKey="amount_minor" nameKey="label" innerRadius="72%" outerRadius="100%" paddingAngle={2.5} cornerRadius={6} stroke="none" isAnimationActive animationDuration={700}>
             {data.map((row) => <Cell key={row.label} fill={row.color} />)}
           </Pie>
           <Tooltip content={({ payload }) => payload?.[0] ? (
@@ -177,12 +177,12 @@ export function IncomeExpenseBars({ data, height = 240 }: { data: { label: strin
         <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload, label }) => payload?.length ? (
           <TooltipCard title={`${label}${payload[0].payload.partial || payload[0].payload.is_partial ? " (so far)" : ""}`} rows={[
             { label: "Money in", value: formatMoney(payload[0].payload.income_minor), color: "var(--chart-1)" },
-            { label: "Money out", value: formatMoney(payload[0].payload.expense_minor), color: "var(--chart-ink)" },
+            { label: "Money out", value: formatMoney(payload[0].payload.expense_minor), color: "var(--chart-out)" },
             { label: "Net", value: formatMoney(payload[0].payload.income_minor - payload[0].payload.expense_minor, "PHP", { signed: true }) },
           ]} />
         ) : null} />
         <Bar dataKey="income_minor" fill="var(--chart-1)" radius={[6, 6, 2, 2]} maxBarSize={18} />
-        <Bar dataKey="expense_minor" fill="var(--chart-ink)" radius={[6, 6, 2, 2]} maxBarSize={18} />
+        <Bar dataKey="expense_minor" fill="var(--chart-out)" radius={[6, 6, 2, 2]} maxBarSize={18} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -199,7 +199,10 @@ export function DailyBars({ data, height = 180 }: { data: { date: string; amount
         <Tooltip cursor={{ fill: "var(--muted)", radius: 6 }} content={({ payload }) => payload?.length ? (
           <TooltipCard title={format(parseISO(payload[0].payload.date), "EEE, MMM d")} rows={[{ label: "Spent", value: formatMoney(payload[0].payload.amount_minor) }]} />
         ) : null} />
-        <Bar dataKey="amount_minor" fill="var(--chart-2)" radius={[4, 4, 1, 1]} maxBarSize={14} />
+        {/* Each day on a quiet track; the latest day is the bright one. */}
+        <Bar dataKey="amount_minor" radius={[4, 4, 1, 1]} maxBarSize={14} background={{ fill: "var(--chart-track)", radius: 4 }}>
+          {data.map((d, i) => <Cell key={d.date} fill={i === data.length - 1 ? "var(--chart-1)" : "var(--chart-2)"} />)}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   )

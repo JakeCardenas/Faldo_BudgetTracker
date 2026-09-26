@@ -62,7 +62,7 @@ export function SafeToSpendCard({ sts, className }: { sts: SafeToSpend; classNam
               <Calculator className="size-3.5" /> Why?
             </button>
           </div>
-          <AnimatedMoney minor={sts.amount_minor} className={cn("mt-0.5 block text-[2rem] leading-tight font-semibold tracking-[-0.035em]", short && "text-expense")} />
+          <AnimatedMoney minor={sts.amount_minor} className={cn("mt-0.5 block text-[2rem] leading-tight font-extrabold tracking-[-0.02em]", short && "text-expense")} />
           <p className={cn("mt-1 text-sm leading-snug", tight ? "text-warning" : "text-muted-foreground")}>
             {short ? statusSentence(sts) : <>After upcoming bills and planned savings. {statusSentence(sts)}</>}
           </p>

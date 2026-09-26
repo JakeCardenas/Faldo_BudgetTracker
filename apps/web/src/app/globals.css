@@ -11,6 +11,8 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-heading: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-brand: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  /* Headline amounts: the rounded brand face, heavy, with tabular figures. */
+  --font-money: var(--font-jakarta), var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -25,6 +27,8 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
   --color-chart-ink: var(--chart-ink);
+  --color-chart-out: var(--chart-out);
+  --color-chart-track: var(--chart-track);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -77,7 +81,8 @@
   Radius: buttons and chips are full pills; inputs 12px (lg); inner tiles 17px (xl); surfaces 22px (2xl); hero cards and sheets 26px (3xl).
   Surfaces: the page is the canvas. White surfaces group lists; colour is reserved for Safe to Spend and account cards.
   Glass: only floating controls (tab bar, desktop nav, compact headers). Never on financial information.
-  Type: Geist throughout. Money uses tabular figures. Sentence case, no uppercase labels.
+  Type: Geist for text; headline amounts in the rounded brand face (Plus Jakarta Sans, extra bold). Money uses tabular figures.
+  Sentence case, no uppercase labels. Dark mode: charcoal green-black cards on a near-black canvas, darker insets, hairline rims.
 */
 
 :root {
@@ -88,46 +93,49 @@
   */
   --ios-edge: 0px;
   --top-inset: calc(env(safe-area-inset-top) + var(--ios-edge));
-  --background: #f4f7f4;
-  --surface: #fafcfa;
-  --foreground: #101411;
+  --background: #eef2ee;
+  --surface: #f5f8f5;
+  --foreground: #131916;
   --card: #ffffff;
-  --card-foreground: #101411;
+  --card-foreground: #131916;
   --popover: #ffffff;
-  --popover-foreground: #101411;
-  --primary: #2c7549;
+  --popover-foreground: #131916;
+  --primary: #2d7849;
   --primary-foreground: #ffffff;
-  --secondary: #e6f1e8;
+  --secondary: #e3efe6;
   --secondary-foreground: #1d5634;
-  --muted: #ecefea;
-  --muted-foreground: #646c66;
-  --accent: #eef0ec;
-  --accent-foreground: #101411;
+  --muted: #edf1ee;
+  --muted-foreground: #5a6560;
+  --accent: #e8ede9;
+  --accent-foreground: #131916;
   --mint: #e1efe4;
   --mint-foreground: #1d5634;
   --emerald: #23804c;
   --leaf: #8fd3a0;
   --hero: #2a6e46;
   --hero-deep: #143a25;
-  --expense: #c43d36;
-  --expense-soft: #fbeceb;
+  --expense: #c2363d;
+  --expense-soft: #fbeaeb;
   --income: #1f7a47;
-  --income-soft: #e3f1e7;
+  --income-soft: #e2f0e6;
   --warning: #955700;
   --warning-soft: #fbf0df;
-  --destructive: #c43d36;
-  --danger-soft: #fbeceb;
-  --border: #e3e6e1;
-  --input: #d9ddd7;
+  --destructive: #c2363d;
+  --danger-soft: #fbeaeb;
+  --border: #dfe5e0;
+  --input: #d5dcd7;
   --ring: #3c8d5c;
-  --chart-1: #2c7549;
-  --chart-2: #7fbf8f;
-  --chart-3: #c3dfc9;
+  --chart-1: #2f7d4c;
+  --chart-2: #86bf94;
+  --chart-3: #c9e0cf;
   --chart-4: #e3b63e;
   --chart-5: #3380be;
   /* Panda ink: money out and other neutral series beside Faldo's green. */
-  --chart-ink: #2f3532;
-  --radius: 0.75rem;
+  --chart-ink: #39413d;
+  /* Money out beside money in, and the quiet track behind bars and rings. */
+  --chart-out: #cf4047;
+  --chart-track: #e7ece8;
+  --radius: 0.875rem;
   --sidebar: #f3f4f1;
   --sidebar-foreground: #101411;
   --sidebar-primary: #2c7549;
@@ -136,7 +144,7 @@
   --sidebar-accent-foreground: #101411;
   --sidebar-border: #e3e6e1;
   --sidebar-ring: #3c8d5c;
-  --elevation-card: 0 1px 2px rgb(16 36 24 / 0.04), 0 8px 24px -14px rgb(16 36 24 / 0.12);
+  --elevation-card: 0 1px 2px rgb(19 40 28 / 0.04), 0 10px 26px -16px rgb(19 40 28 / 0.16);
   --elevation-float: 0 22px 48px -18px rgb(16 36 24 / 0.3), 0 4px 14px -6px rgb(16 36 24 / 0.1);
   --surface-ring: 0 0 #0000;
   --glass-bg: rgb(255 255 255 / 0.52);
@@ -164,55 +172,58 @@ html.ios {
 }
 
 .dark {
-  --background: #0b0d0c;
-  --surface: #101311;
-  --foreground: #eceeec;
-  --card: #151917;
-  --card-foreground: #eceeec;
-  --popover: #1a1e1b;
-  --popover-foreground: #eceeec;
-  --primary: #7ccb93;
+  --background: #0e1311;
+  --surface: #131a17;
+  --foreground: #f1f3f1;
+  --card: #1f2724;
+  --card-foreground: #f1f3f1;
+  --popover: #252e2a;
+  --popover-foreground: #f1f3f1;
+  --primary: #72c088;
   --primary-foreground: #06150c;
-  --secondary: #1a2c20;
-  --secondary-foreground: #b6e0c0;
-  --muted: #1e2320;
-  --muted-foreground: #9aa39c;
-  --accent: #212622;
-  --accent-foreground: #eceeec;
-  --mint: #1c3224;
-  --mint-foreground: #b6e0c0;
-  --emerald: #74c48b;
+  --secondary: #1d3225;
+  --secondary-foreground: #b9e2c4;
+  --muted: #17201c;
+  --muted-foreground: #a3ada8;
+  --accent: #28312d;
+  --accent-foreground: #f1f3f1;
+  --mint: #1d3225;
+  --mint-foreground: #b9e2c4;
+  --emerald: #72c088;
   --leaf: #5fa874;
   --hero: #1f5838;
   --hero-deep: #0c2517;
-  --expense: #ff8a80;
-  --expense-soft: #33201e;
-  --income: #74c48b;
-  --income-soft: #172a1d;
+  --expense: #f0676d;
+  --expense-soft: #35201f;
+  --income: #72c088;
+  --income-soft: #18291e;
   --warning: #e9ae5b;
   --warning-soft: #322617;
-  --destructive: #ff7a70;
-  --danger-soft: #33201e;
-  --border: #242926;
-  --input: #2e3430;
-  --ring: #7ccb93;
-  --chart-1: #7ccb93;
-  --chart-2: #4f9565;
-  --chart-3: #2e4c37;
+  --destructive: #f0676d;
+  --danger-soft: #35201f;
+  --border: #2c3531;
+  --input: #36403b;
+  --ring: #72c088;
+  --chart-1: #5ea871;
+  --chart-2: #58775f;
+  --chart-3: #2a3a31;
   --chart-4: #e7c15a;
   --chart-5: #5b9bd0;
-  --chart-ink: #cfd5d0;
-  --sidebar: #0b0d0c;
+  --chart-ink: #c9d0cb;
+  /* Money out beside money in, and the quiet track behind bars and rings. */
+  --chart-out: #cf3d46;
+  --chart-track: #28302c;
+  --sidebar: #0e1311;
   --sidebar-foreground: #eceeec;
-  --sidebar-primary: #7ccb93;
+  --sidebar-primary: #72c088;
   --sidebar-primary-foreground: #06150c;
-  --sidebar-accent: #1b1f1c;
+  --sidebar-accent: #1f2724;
   --sidebar-accent-foreground: #eceeec;
-  --sidebar-border: #202522;
-  --sidebar-ring: #7ccb93;
-  --elevation-card: 0 0 #0000;
+  --sidebar-border: #2c3531;
+  --sidebar-ring: #72c088;
+  --elevation-card: inset 0 1px 0 rgb(255 255 255 / 0.035);
   --elevation-float: 0 22px 48px -14px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05);
-  --surface-ring: inset 0 0 0 1px rgb(255 255 255 / 0.055);
+  --surface-ring: inset 0 0 0 1px rgb(255 255 255 / 0.06);
   --glass-bg: rgb(32 37 34 / 0.55);
   --glass-border: rgb(255 255 255 / 0.13);
   --glass-edge: rgb(0 0 0 / 0.45);
@@ -468,8 +479,9 @@ html.ios {
   }
   /* Type scale. Weight carries the hierarchy: titles and money are bold, supporting text stays regular. */
   /* Small all-caps labels that name a figure (NET WORTH, BALANCE, DUE). */
+  /* A card's quiet title ("Total balance"): sentence case, semibold, muted. */
   .label-caps {
-    @apply text-[0.6875rem] leading-4 font-semibold tracking-[0.08em] text-muted-foreground uppercase;
+    @apply text-[0.8125rem] leading-5 font-semibold tracking-[-0.005em] text-muted-foreground;
   }
   .eyebrow {
     @apply text-[0.75rem] font-semibold tracking-[0.005em] text-muted-foreground;
@@ -481,11 +493,11 @@ html.ios {
     @apply text-[1rem] leading-6 font-bold tracking-[-0.015em];
   }
   .display-number {
-    @apply text-[1.75rem] leading-none font-bold tracking-[-0.04em];
+    @apply font-money text-[1.75rem] leading-none font-extrabold tracking-[-0.02em];
     font-variant-numeric: tabular-nums;
   }
   .display-xl {
-    @apply text-[2rem] leading-none font-bold tracking-[-0.042em];
+    @apply font-money text-[2rem] leading-none font-extrabold tracking-[-0.022em];
     font-variant-numeric: tabular-nums;
   }
   .text-balance-safe {

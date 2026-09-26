@@ -24,7 +24,7 @@ export function TopNav() {
         <Link href="/" aria-label="Faldo home" className="justify-self-start rounded-full"><Logo /></Link>
 
         <nav aria-label="Main" className="relative grid grid-cols-4 rounded-full bg-muted p-1">
-          <span aria-hidden className={cn("absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/4)] rounded-full bg-card shadow-[0_1px_3px_rgb(16_36_24/0.1),0_0_0_0.5px_rgb(16_36_24/0.05)] transition-[transform,opacity] duration-[440ms] ease-(--ease-spring) dark:bg-[#2b302c]",
+          <span aria-hidden className={cn("absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/4)] rounded-full bg-card shadow-[0_1px_3px_rgb(16_36_24/0.1),0_0_0_0.5px_rgb(16_36_24/0.05)] transition-[transform,opacity] duration-[440ms] ease-(--ease-spring) dark:bg-accent",
             index < 0 && "opacity-0")}
             style={{ transform: `translateX(${Math.max(index, 0) * 100}%)` }} />
           {TAB_ITEMS.map((item, i) => (

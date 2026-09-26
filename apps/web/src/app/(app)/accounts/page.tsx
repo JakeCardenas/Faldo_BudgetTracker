@@ -66,7 +66,7 @@ function NetWorthCard({ view, headline }: { view: View; headline: { label: strin
         )}
         <HideAmountsButton className="-my-1 ml-auto size-7" />
       </div>
-      <AnimatedMoney minor={headline.value} className="mt-1 block truncate text-[1.75rem] leading-tight font-extrabold tracking-[-0.04em]" />
+      <AnimatedMoney minor={headline.value} className="mt-1 block truncate text-[1.75rem] leading-tight font-extrabold tracking-[-0.02em]" />
       <p className="truncate text-xs text-muted-foreground">{headline.caption}</p>
     </div>
   )
@@ -302,9 +302,9 @@ export default function AccountsPage() {
               <p className="truncate text-[0.8125rem] text-muted-foreground">{shown.length} {shown.length === 1 ? "account" : "accounts"}, tap one for its history</p>
               <div className="flex shrink-0 rounded-full bg-muted p-1" role="radiogroup" aria-label="Layout">
                 <button type="button" role="radio" aria-label="Card view" aria-checked={layout === "grid"} onClick={() => changeLayout("grid")}
-                  className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "grid" && "bg-card text-primary shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-[#2b302c]")}><LayoutGrid className="size-3.5" /></button>
+                  className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "grid" && "bg-card text-primary shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-accent")}><LayoutGrid className="size-3.5" /></button>
                 <button type="button" role="radio" aria-label="List view" aria-checked={layout === "list"} onClick={() => changeLayout("list")}
-                  className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "list" && "bg-card text-primary shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-[#2b302c]")}><List className="size-3.5" /></button>
+                  className={cn("flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors", layout === "list" && "bg-card text-primary shadow-[0_1px_3px_rgb(16_36_24/0.1)] dark:bg-accent")}><List className="size-3.5" /></button>
               </div>
             </div>
           </div>

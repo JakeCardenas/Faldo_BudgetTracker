@@ -21,7 +21,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
               // Tighter on the smallest phones (320pt), so four options still fit the width.
               size === "sm" ? "h-7 px-1.5 text-[0.8125rem] min-[375px]:px-3" : "h-8 px-2.5 text-sm min-[375px]:px-4",
               active
-                ? cn("bg-card shadow-[0_1px_3px_rgb(16_36_24/0.1),0_0_0_0.5px_rgb(16_36_24/0.05)] dark:bg-[#2b302c] dark:shadow-none",
+                ? cn("bg-card shadow-[0_1px_3px_rgb(16_36_24/0.1),0_0_0_0.5px_rgb(16_36_24/0.05)] dark:bg-accent dark:shadow-none",
                   option.tone === "expense" ? "text-expense" : option.tone === "income" ? "text-income" : "text-foreground")
                 : "text-muted-foreground hover:text-foreground")}>
             {option.label}
