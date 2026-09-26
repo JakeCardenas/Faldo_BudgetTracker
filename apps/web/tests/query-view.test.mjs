@@ -21,3 +21,17 @@ test("a failed transaction detail request shows an error, not an endless skeleto
   assert.equal(detailView({ isError: false, hasData: false }), "loading")
   assert.equal(detailView({ isError: false, hasData: true }), "ready")
 })
+
+test("retrying a failed load shows loading, then the transactions once it succeeds", () => {
+  const steps = [
+    { isLoading: false, isError: true, hasData: false, count: 0 },
+    { isLoading: false, isError: true, hasData: false, count: 0 },
+    { isLoading: false, isError: false, hasData: true, count: 5 },
+  ]
+  assert.deepEqual(steps.map(listView), ["error", "error", "items"])
+  assert.deepEqual([
+    { isError: true, hasData: false },
+    { isError: false, hasData: false },
+    { isError: false, hasData: true },
+  ].map(detailView), ["error", "loading", "ready"])
+})

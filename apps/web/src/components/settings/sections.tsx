@@ -10,6 +10,7 @@ import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
 import { ListGroup, ListRow } from "@/components/ios/list"
 import { Segmented } from "@/components/ios/segmented"
+import { BackupRestore } from "@/components/settings/backup-restore"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -367,8 +368,9 @@ function YourData() {
   return (
     <>
       <ListGroup>
-        <ListRow icon={Download} title="Download your data" href="/api/v1/me/export" external />
+        <ListRow icon={Download} title="Download your data" detail="A readable copy, not for restoring" href="/api/v1/me/export" external />
       </ListGroup>
+      <BackupRestore />
       <ListGroup divider className="mt-3">
         <ListRow title="Delete account" onClick={() => setConfirm(true)} destructive />
       </ListGroup>

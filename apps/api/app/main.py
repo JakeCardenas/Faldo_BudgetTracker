@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import RequestResponseEndpoint
 
-from app.api.v1 import auth, engagement, intelligence, internal, ledger, planning
+from app.api.v1 import auth, backup, engagement, intelligence, internal, ledger, planning
 from app.core.config import get_settings
 from app.core.db import dispose_engine
 from app.core.errors import install_error_handlers
@@ -64,7 +64,7 @@ def create_app() -> FastAPI:
             response.headers["Cache-Control"] = "no-store"
         return response
 
-    for module in (auth, ledger, planning, intelligence, engagement, internal):
+    for module in (auth, backup, ledger, planning, intelligence, engagement, internal):
         app.include_router(module.router, prefix="/api/v1")
 
     @app.get("/api/health", include_in_schema=False)
