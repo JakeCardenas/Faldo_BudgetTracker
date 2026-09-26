@@ -1,6 +1,7 @@
 "use client"
 
 import { AlertTriangle, CheckCircle2, Info, OctagonAlert, X } from "lucide-react"
+import { maskAmounts } from "@/lib/privacy"
 import type { Insight, Severity } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -28,8 +29,8 @@ export function InsightCard({ insight, onDismiss, compact, action }: { insight: 
         <Icon className="size-[1.05rem]" strokeWidth={2} />
       </span>
       <div className="min-w-0 flex-1 space-y-0.5 pr-7">
-        <p className="text-[0.9375rem] font-semibold leading-snug tracking-[-0.01em]">{insight.title}</p>
-        <p className={cn("text-sm leading-relaxed text-muted-foreground", compact && "line-clamp-2")}>{insight.body}</p>
+        <p className="text-[0.9375rem] font-semibold leading-snug tracking-[-0.01em]">{maskAmounts(insight.title)}</p>
+        <p className={cn("text-sm leading-relaxed text-muted-foreground", compact && "line-clamp-2")}>{maskAmounts(insight.body)}</p>
         {!compact && (
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1.5">
             <p className="text-xs text-muted-foreground">{style.label}, based on your data</p>

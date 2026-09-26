@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/lib/api"
 import { formatMoney, monthKey } from "@/lib/format"
-import { useMaskedAmounts } from "@/lib/privacy"
+import { maskAmounts, useMaskedAmounts } from "@/lib/privacy"
 import { useReport } from "@/lib/queries"
 import type { Health, MonthlyReport } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -165,7 +165,7 @@ function HealthDetails({ health }: { health: Health }) {
               <span className="font-medium">{c.label}</span>
               <span className="tabular">{c.score !== null ? c.score : <span className="text-xs text-muted-foreground">Not counted</span>}</span>
             </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{c.explanation}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{maskAmounts(c.explanation)}</p>
             <p className="mt-0.5 text-[0.6875rem] text-muted-foreground/80">Weight {Math.round((c.effective_weight ?? c.weight) * 100)}%. {c.measure}{c.value !== null && ` = ${c.value}`}</p>
           </li>
         ))}
@@ -214,7 +214,7 @@ export default function ReportsPage() {
                 )}
                 <span className="tabular">{formatMoney(s.income_minor)}</span> came in.
               </p>
-              {summary.data ? <p className="mt-4 max-w-[62ch] text-[0.9375rem] leading-relaxed text-foreground/85">{summary.data.text}</p> : <div className="mt-4 space-y-2"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-3/4" /></div>}
+              {summary.data ? <p className="mt-4 max-w-[62ch] text-[0.9375rem] leading-relaxed text-foreground/85">{maskAmounts(summary.data.text)}</p> : <div className="mt-4 space-y-2"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-3/4" /></div>}
             </section>
             <WhereItWent report={report} />
             <Section title="Money in and out" description="Last 12 months">
