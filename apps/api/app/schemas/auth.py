@@ -20,6 +20,8 @@ class RegisterIn(ApiModel):
 class LoginIn(ApiModel):
     email: EmailStr
     password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
+    # Unticked "Remember me": the cookie ends with the browser, and the server forgets the session after a short idle time.
+    remember: bool = True
 
 
 class SettingsOut(OutModel):

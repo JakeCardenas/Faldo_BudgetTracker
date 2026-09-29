@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_sessionmaker, set_user_scope
 from app.core.errors import Unauthorized
-from app.core.security import hash_token
+from app.core.security import hash_token, session_window
 from app.engine.periods import today_in
 from app.models import Session, User, UserSettings
 
@@ -72,7 +72,7 @@ async def get_ctx(request: Request) -> AsyncIterator[Ctx]:
             await session.execute(
                 update(Session)
                 .where(Session.token_hash == token_hash)
-                .values(last_seen_at=now, expires_at=now + timedelta(days=settings.session_ttl_days))
+                .values(last_seen_at=now, expires_at=now + session_window(sess.remember))
             )
         user_id = user.id
         yield Ctx(db=session, user=user, settings=user_settings, session_token_hash=token_hash)

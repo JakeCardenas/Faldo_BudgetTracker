@@ -14,7 +14,7 @@ from app.core.config import get_settings
 from app.core.db import set_user_scope
 from app.core.errors import AppError, Conflict, Unauthorized
 from app.core.rate_limit import limiter
-from app.core.security import hash_password, hash_token, new_session_token, verify_password
+from app.core.security import hash_password, hash_token, new_session_token, session_window, verify_password
 from app.models import (
     Account,
     AuthToken,
@@ -55,15 +55,16 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-async def _start_session(db: Any, response: Response, request: Request, user: User) -> None:
+async def _start_session(db: Any, response: Response, request: Request, user: User, *, remember: bool = True) -> None:
     settings = get_settings()
     token = new_session_token()
-    db.add(Session(token_hash=hash_token(token), user_id=user.id,
-                   expires_at=datetime.now(UTC) + timedelta(days=settings.session_ttl_days),
+    db.add(Session(token_hash=hash_token(token), user_id=user.id, remember=remember,
+                   expires_at=datetime.now(UTC) + session_window(remember),
                    user_agent=(request.headers.get("user-agent") or "")[:255]))
+    # Not remembered: no max-age, so the browser drops the cookie when it closes.
     response.set_cookie(
-        settings.session_cookie_name, token, max_age=settings.session_ttl_days * 86400, httponly=True,
-        secure=settings.cookie_secure, samesite="lax", path="/",
+        settings.session_cookie_name, token, max_age=settings.session_ttl_days * 86400 if remember else None,
+        httponly=True, secure=settings.cookie_secure, samesite="lax", path="/",
     )
 
 
@@ -104,7 +105,7 @@ async def login(data: LoginIn, request: Request, response: Response, db: AnonDbD
     user_settings = await db.get(UserSettings, user.id)
     if user_settings is None:
         raise Unauthorized("Account is not fully set up.")
-    await _start_session(db, response, request, user)
+    await _start_session(db, response, request, user, remember=data.remember)
     return _me(user, user_settings)
 
 

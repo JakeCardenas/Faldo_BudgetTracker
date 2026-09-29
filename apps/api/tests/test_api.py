@@ -39,6 +39,39 @@ async def test_auth_flow(anon, app):
     assert (await anon.post("/api/v1/auth/login", json={"email": email, "password": "long-enough-password"})).status_code == 200
 
 
+async def test_remember_me_decides_how_long_a_sign_in_lasts(anon):
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import select
+
+    from app.core.db import scoped_session
+    from app.core.security import hash_token
+    from app.models import Session
+
+    email = f"remember-{uuid.uuid4().hex[:8]}@example.com"
+    login = {"email": email, "password": "long-enough-password"}
+    assert (await anon.post("/api/v1/auth/register", json={**login, "display_name": "Jake"})).status_code == 201
+
+    async def signed_in(remember: bool) -> tuple[str, Session]:
+        anon.cookies.clear()
+        r = await anon.post("/api/v1/auth/login", json={**login, "remember": remember})
+        assert r.status_code == 200
+        async with scoped_session(None) as db:
+            row = await db.scalar(select(Session).where(Session.token_hash == hash_token(r.cookies["faldo_session"])))
+        assert row is not None
+        return r.headers["set-cookie"].lower(), row
+
+    cookie, session = await signed_in(remember=False)
+    # A browser-session cookie (no max-age or expiry), and the server lets it go after half a day unused.
+    assert "max-age" not in cookie and "expires" not in cookie
+    assert session.remember is False and session.expires_at - datetime.now(UTC) < timedelta(hours=13)
+    assert (await anon.get("/api/v1/me")).status_code == 200
+
+    cookie, session = await signed_in(remember=True)
+    assert f"max-age={30 * 86400}" in cookie
+    assert session.remember is True and session.expires_at - datetime.now(UTC) > timedelta(days=29)
+
+
 async def test_register_with_a_taken_email_does_the_same_work(anon, monkeypatch):
     from app.api.v1 import auth
 
