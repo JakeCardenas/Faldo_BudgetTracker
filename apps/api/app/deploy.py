@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sys
 from urllib.parse import urlsplit
@@ -7,12 +8,17 @@ from app.core.db import pasted_url
 
 
 def outline(url: str) -> str:
-    """Where an address points, without its password, so the build log shows which database it reached for."""
+    """Where an address points, never its password or anything that isn't clearly an address, for the build log."""
+    text = pasted_url(url)
     try:
-        parts = urlsplit(pasted_url(url))
-        return f"{parts.scheme}://{parts.username or '?'}:•••@{parts.hostname or '?'}:{parts.port or 5432}{parts.path}"
+        parts = urlsplit(text)
+        port = parts.port
     except ValueError:
-        return "(not a database address)"
+        parts, port = None, None
+    if not (parts and parts.scheme.startswith("postgres") and parts.hostname and "://" in text):
+        return f"not a database address: {len(text)} characters that don't start with postgresql:// (value not shown)"
+    database = parts.path if re.fullmatch(r"/[\w.-]*", parts.path or "/") else "/…"
+    return f"{parts.scheme}://{parts.username or '?'}:•••@{parts.hostname}:{port or 5432}{database}"
 
 
 def main() -> None:
