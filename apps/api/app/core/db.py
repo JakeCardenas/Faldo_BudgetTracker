@@ -16,8 +16,17 @@ _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 _SSL_PARAMS = {"sslmode", "ssl", "channel_binding", "sslrootcert", "sslcert", "sslkey"}
 
 
+def pasted_url(url: str) -> str:
+    """The address as it may arrive from a dashboard paste: surrounding spaces or quotes, even its NAME= in front."""
+    text = url.strip().strip("\"'").strip()
+    head, sep, _ = text.partition("://")
+    if sep and "=" in head:
+        text = text[head.rindex("=") + 1 :].strip().strip("\"'")
+    return text
+
+
 def normalize_database_url(url: str) -> tuple[str, dict[str, Any]]:
-    parts = urlsplit(url)
+    parts = urlsplit(pasted_url(url))
     scheme = parts.scheme
     if scheme in {"postgres", "postgresql"}:
         scheme = "postgresql+asyncpg"

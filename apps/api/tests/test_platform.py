@@ -37,6 +37,16 @@ def test_database_url_normalization():
     assert normalize_database_url("postgresql+asyncpg://u:p@localhost/app")[1] == {}
 
 
+def test_database_url_survives_a_sloppy_paste():
+    clean = "postgresql+asyncpg://u:p@db.example.com:5432/app"
+    for pasted in ("MIGRATION_DATABASE_URL=postgresql://u:p@db.example.com:5432/app?sslmode=require",
+                   ' "postgresql://u:p@db.example.com:5432/app?sslmode=require" ',
+                   "DATABASE_URL='postgresql://u:p@db.example.com:5432/app?sslmode=require'\n"):
+        assert normalize_database_url(pasted) == (clean, {"ssl": "require"})
+    # An = inside the password is part of the password, not a name in front.
+    assert normalize_database_url("postgresql://u:p=q@db.example.com/app")[0] == "postgresql+asyncpg://u:p=q@db.example.com/app"
+
+
 def test_allowed_origins_accept_comma_separated_values(monkeypatch):
     from app.core.config import Settings
 
