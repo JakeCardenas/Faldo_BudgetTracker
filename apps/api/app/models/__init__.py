@@ -11,7 +11,7 @@ from app.models.ai import (
     StoredFile,
 )
 from app.models.base import Base
-from app.models.identity import AuthToken, Session, User, UserSettings
+from app.models.identity import AuthToken, OAuthIdentity, Session, User, UserSettings
 from app.models.ledger import (
     Account,
     Category,
@@ -64,6 +64,7 @@ __all__ = [
     "Receipt",
     "RecurringPayment",
     "SavingsGoal",
+    "OAuthIdentity",
     "Session",
     "Tag",
     "Transaction",

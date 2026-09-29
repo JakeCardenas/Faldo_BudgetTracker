@@ -2,10 +2,8 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { ArrowLeft, Loader2, MailCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Loader2, Mail, MailCheck } from "lucide-react"
+import { AuthField, PRIMARY_PILL } from "@/components/auth/fields"
 import { api, ApiError } from "@/lib/api"
 
 export default function ForgotPasswordPage() {
@@ -29,30 +27,29 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="space-y-7">
-      <Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Back to sign in</Link>
+    <div className="space-y-6">
       {sent ? (
-        <div className="space-y-4">
-          <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary"><MailCheck className="size-5" strokeWidth={2} /></span>
-          <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">Check your email</h1>
+        <div className="space-y-3 text-center">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-secondary text-primary"><MailCheck className="size-5" strokeWidth={2} /></span>
+          <h1 className="text-[1.75rem] leading-tight font-bold tracking-[-0.025em]">Check your email</h1>
           <p className="text-[0.9375rem] text-muted-foreground">If an account exists for <span className="font-medium text-foreground">{email}</span>, we sent a link to reset your password. It expires in 30 minutes.</p>
         </div>
       ) : (
         <>
-          <div className="space-y-2">
-            <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">Reset your password</h1>
-            <p className="text-[0.9375rem] text-muted-foreground">Enter your email and we'll send you a reset link.</p>
+          <div className="space-y-2 text-center">
+            <h1 className="text-[1.75rem] leading-tight font-bold tracking-[-0.025em]">Reset password</h1>
+            <p className="text-[0.9375rem] text-muted-foreground">Enter your email and we&apos;ll send you a reset link.</p>
           </div>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-12" />
-            </div>
-            {error && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">{error}</p>}
-            <Button type="submit" size="lg" className="w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Send reset link</Button>
+          <form onSubmit={submit} className="space-y-3">
+            <AuthField icon={Mail} label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            {error && <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">{error}</p>}
+            <button type="submit" disabled={busy} className={PRIMARY_PILL}>{busy && <Loader2 className="size-4 animate-spin" />} Send reset link</button>
           </form>
         </>
       )}
+      <p className="text-center text-sm text-muted-foreground">
+        Remembered it? <Link href="/login" className="font-semibold text-foreground hover:underline">Log in</Link>
+      </p>
     </div>
   )
 }

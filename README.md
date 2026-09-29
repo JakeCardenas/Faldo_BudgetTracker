@@ -46,7 +46,7 @@ Faldo is organised around four tabs: **Home** (today), **Wallet** (where your mo
 - **Learn:** ten short money lessons written for the Philippines, each with takeaways and a quick check; progress is saved to your account.
 - **Tools:** split a bill (creates "owed to you" entries), loan and installment calculator with true yearly cost and one-tap tracking, PH income tax calculator, currency converter, emergency fund planner, a shortcut to the Money Plan, and quick notes.
 - **Talk to Faldo:** chat that logs plain-language entries straight away ("Paid 70 on the bus from Cash") with a Cancel button, answers questions with tools and calculations, and supports voice dictation where the browser allows it.
-- **Auth:** email/password (argon2id), server-side sessions in an httpOnly SameSite=Lax cookie, CSRF header + Origin checks, login throttling, password reset by email, password change, and active-session management.
+- **Auth:** email/password (argon2id), **Continue with Google** and **Continue with Apple** (OpenID Connect code flow on the server, a one-time state cookie, verified emails only; a first sign-in joins the account with that email or makes one, and later ones find it by the service's own id), server-side sessions in an httpOnly SameSite=Lax cookie, CSRF header + Origin checks, login throttling, password reset by email, password change, and active-session management. Each "Continue with" button shows only once its keys are set (`GOOGLE_CLIENT_*`, `APPLE_*`).
 - **Transactions:** full CRUD, income/expense/transfer, merchant, category + subcategory, account, payment method, notes, tags, **item-level purchases**, search (merchant, items, notes, tags, categories), filters (type, account, category, tag, dates), sorting, infinite loading, detail sheet, and a queue for receipts awaiting review.
 - **Statement import:** upload a CSV exported from a bank or e-wallet into one of your accounts. Faldo finds the header row, the date, description and amount columns (or debit and credit, or a DR/CR column), the date order and the sign convention, then shows a review list before anything is saved. Rows already imported are skipped, rows that look like something you already logged are left unticked as possible duplicates, cash-ins and transfers that name another of your accounts become transfers instead of income or spending, and categories come from your learned merchants and the built-in rules. Each import can be undone as a whole from Recent imports. PDF statements need to be saved as CSV first.
 - **Natural-language entry:** "Bought Nike shoes for ₱4,500 yesterday", Taglish ("nag-grab 180 kanina"), multiple transactions per message. Drafts show a confirmation card; unclear accounts, categories, dates and possible duplicates are highlighted with one-tap fixes. Merchant categories are learned from history. When the built-in rules already understand every entry (amount, category, date, accounts), no paid AI call is made.
@@ -109,6 +109,7 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 | `ai_conversations`, `ai_messages` | assistant history with blocks, sources, tool calls and validation status |
 | `jobs` | background job queue |
 | `auth_tokens` | single-use, hashed password reset tokens |
+| `oauth_identities` | which Google or Apple account signs in as which user (no RLS: read before sign-in, like `users`) |
 | `stored_files` | receipt images when `STORAGE_BACKEND=database` (RLS protected) |
 | `rate_limit_hits` | fixed-window counters when `RATE_LIMIT_BACKEND=database` |
 
@@ -184,6 +185,8 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 | `STORAGE_BACKEND` | `local` | `database` | receipt images |
 | `RATE_LIMIT_BACKEND` | `memory` | `database` | |
 | `RESEND_API_KEY` / `EMAIL_FROM` | — | for password reset emails | without a key, reset links are only logged in development |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | for Continue with Google | redirect URI: `PUBLIC_APP_URL/api/v1/auth/google/callback` |
+| `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | — | for Continue with Apple | needs the Apple Developer Program; return URL `PUBLIC_APP_URL/api/v1/auth/apple/callback` |
 | `SEED_DEMO_PASSWORD` | `faldo-demo-2026` | — | |
 
 Vercel defaults in the right column apply automatically when the `VERCEL` environment variable is present.

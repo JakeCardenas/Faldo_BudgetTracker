@@ -64,6 +64,17 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
 
+    # Sign in with Google: an OAuth client (Web application) from Google Cloud whose authorized redirect URI is
+    # PUBLIC_APP_URL + /api/v1/auth/google/callback. Free.
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    # Sign in with Apple (needs the Apple Developer Program): the Services ID, the team and key ids, and the .p8 key's
+    # contents. Its return URL is PUBLIC_APP_URL + /api/v1/auth/apple/callback.
+    apple_client_id: str | None = None
+    apple_team_id: str | None = None
+    apple_key_id: str | None = None
+    apple_private_key: SecretStr | None = None
+
     storage_backend: Literal["local", "database"] = "database" if ON_VERCEL else "local"
     receipt_storage_dir: Path = Path("var/receipts")
     receipt_max_bytes: int = 8 * 1024 * 1024
@@ -153,6 +164,15 @@ class Settings(BaseSettings):
         if self.email_provider == "auto":
             return "resend" if self.resend_api_key and self.resend_api_key.get_secret_value() else "log"
         return self.email_provider
+
+    @property
+    def google_sign_in(self) -> bool:
+        return bool(self.google_client_id and self.google_client_secret and self.google_client_secret.get_secret_value())
+
+    @property
+    def apple_sign_in(self) -> bool:
+        key = self.apple_private_key.get_secret_value() if self.apple_private_key else ""
+        return bool(self.apple_client_id and self.apple_team_id and self.apple_key_id and key)
 
     @property
     def effective_migration_url(self) -> str:

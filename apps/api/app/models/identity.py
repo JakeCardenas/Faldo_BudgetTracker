@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import ARRAY, CITEXT, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,6 +15,19 @@ class User(UUIDPk, Timestamps, Base):
     email: Mapped[str] = mapped_column(CITEXT, unique=True)
     password_hash: Mapped[str | None] = mapped_column(Text)
     display_name: Mapped[str] = mapped_column(String(80))
+
+
+class OAuthIdentity(UUIDPk, Timestamps, Base):
+    """A Google or Apple account that signs in as this user: the service's own id for the person (`subject`), which
+    stays the same when they change their email there. Looked up before anyone is signed in, like users."""
+
+    __tablename__ = "oauth_identities"
+    __table_args__ = (UniqueConstraint("provider", "subject"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(20))
+    subject: Mapped[str] = mapped_column(String(255))
+    email: Mapped[str | None] = mapped_column(CITEXT)
 
 
 class UserSettings(Timestamps, Base):

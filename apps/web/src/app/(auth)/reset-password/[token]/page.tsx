@@ -4,10 +4,8 @@ import Link from "next/link"
 import { use, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Loader2, LockKeyhole } from "lucide-react"
+import { PasswordField, PRIMARY_PILL } from "@/components/auth/fields"
 import { api, ApiError } from "@/lib/api"
 import type { Me } from "@/lib/types"
 
@@ -36,27 +34,21 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
   }
 
   return (
-    <div className="space-y-7">
-      <div className="space-y-2">
-        <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">Choose a new password</h1>
-        <p className="text-[0.9375rem] text-muted-foreground">You'll be signed out on your other devices.</p>
+    <div className="space-y-6">
+      <div className="space-y-2 text-center">
+        <h1 className="text-[1.75rem] leading-tight font-bold tracking-[-0.025em]">New password</h1>
+        <p className="text-[0.9375rem] text-muted-foreground">You&apos;ll be signed out on your other devices.</p>
       </div>
-      <form onSubmit={submit} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="password">New password</Label>
-          <Input id="password" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} className="h-12" />
-          <p className="text-xs text-muted-foreground">At least 10 characters.</p>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="confirm">Confirm password</Label>
-          <Input id="confirm" type="password" autoComplete="new-password" minLength={10} required value={confirm} onChange={(e) => setConfirm(e.target.value)} className="h-12" />
-        </div>
+      <form onSubmit={submit} className="space-y-3">
+        <PasswordField icon={LockKeyhole} label="New password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} />
+        <PasswordField icon={LockKeyhole} label="Confirm password" autoComplete="new-password" minLength={10} required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <p className="px-4 text-xs text-muted-foreground">At least 10 characters.</p>
         {error && (
-          <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-destructive">
+          <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">
             {error} {error.includes("expired") && <Link href="/forgot-password" className="font-medium underline">Request a new link</Link>}
           </p>
         )}
-        <Button type="submit" size="lg" className="w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Update password</Button>
+        <button type="submit" disabled={busy} className={PRIMARY_PILL}>{busy && <Loader2 className="size-4 animate-spin" />} Update password</button>
       </form>
     </div>
   )

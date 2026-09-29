@@ -1,9 +1,11 @@
 import html
 import json
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Form, Query, Request, Response
+from fastapi.responses import RedirectResponse
 from sqlalchemy import delete, select, update
 
 from app.ai.factory import get_llm
@@ -36,6 +38,7 @@ from app.schemas.auth import (
     SettingsOut,
     SettingsUpdate,
 )
+from app.services import oauth
 from app.services.categories import create_default_categories
 from app.services.email import send_email
 from app.services.engagement import check_outfit
@@ -103,6 +106,58 @@ async def login(data: LoginIn, request: Request, response: Response, db: AnonDbD
         raise Unauthorized("Account is not fully set up.")
     await _start_session(db, response, request, user)
     return _me(user, user_settings)
+
+
+@router.get("/auth/providers", tags=["auth"])
+async def sign_in_providers() -> dict[str, bool]:
+    """Which "Continue with…" buttons to show: only the services this server is set up for."""
+    return {provider: oauth.enabled(provider) for provider in oauth.PROVIDERS}
+
+
+@router.get("/auth/{provider}/start", tags=["auth"])
+async def oauth_start(provider: str, request: Request, next_path: Annotated[str, Query(alias="next")] = "/") -> Response:
+    if provider not in oauth.PROVIDERS or not oauth.enabled(provider):
+        return RedirectResponse("/login?error=unavailable", status_code=302)
+    await limiter.hit(f"oauth:{_client_ip(request)}", 30, 900)
+    state, cookie = oauth.new_state(provider, next_path)
+    response = RedirectResponse(oauth.authorize_url(provider, state, oauth.get_settings()), status_code=302)
+    secure = get_settings().cookie_secure
+    # Apple comes back by a cross-site POST, which only carries SameSite=None cookies (and those must be Secure).
+    response.set_cookie(oauth.STATE_COOKIE, cookie, max_age=oauth.STATE_SECONDS, httponly=True, secure=secure,
+                        samesite="none" if provider == "apple" and secure else "lax", path="/api/v1/auth")
+    return response
+
+
+async def _finish_oauth(provider: str, request: Request, db: Any, code: str | None, state: str | None, error: str | None,
+                        identity: Callable[[str], Awaitable[oauth.Identity]]) -> Response:
+    """Back from Google or Apple: check the state, learn who it is, sign them in and go where they were going."""
+    try:
+        next_path = oauth.check_state(provider, state, request.cookies.get(oauth.STATE_COOKIE))
+        if error:
+            raise oauth.SignInError("cancelled" if error in {"access_denied", "user_cancelled_authorize"} else provider)
+        if not code:
+            raise oauth.SignInError(provider)
+        user = await oauth.sign_in(db, await identity(code))
+    except oauth.SignInError as exc:
+        response: Response = RedirectResponse(f"/login?error={exc.code}", status_code=302)
+    else:
+        response = RedirectResponse(next_path, status_code=302)
+        await _start_session(db, response, request, user)
+    response.delete_cookie(oauth.STATE_COOKIE, path="/api/v1/auth")
+    return response
+
+
+@router.get("/auth/google/callback", tags=["auth"])
+async def google_callback(request: Request, db: AnonDbDep, code: str | None = None, state: str | None = None,
+                          error: str | None = None) -> Response:
+    return await _finish_oauth("google", request, db, code, state, error, oauth.google_identity)
+
+
+@router.post("/auth/apple/callback", tags=["auth"])
+async def apple_callback(request: Request, db: AnonDbDep, code: Annotated[str | None, Form()] = None,
+                         state: Annotated[str | None, Form()] = None, error: Annotated[str | None, Form()] = None,
+                         user: Annotated[str | None, Form()] = None) -> Response:
+    return await _finish_oauth("apple", request, db, code, state, error, lambda c: oauth.apple_identity(c, user))
 
 
 @router.post("/auth/logout", status_code=204)

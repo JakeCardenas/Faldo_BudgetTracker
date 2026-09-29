@@ -48,7 +48,9 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def csrf_and_headers(request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/"):
+        # Apple's sign-in comes back by a POST from Apple's page, without the client header; its one-time state
+        # cookie (checked against what Apple returns) protects it instead.
+        if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/") and request.url.path != "/api/v1/auth/apple/callback":
             origin = request.headers.get("origin")
             if origin and origin not in settings.allowed_origins:
                 return JSONResponse({"title": "Forbidden", "status": 403, "detail": "Cross-origin request blocked."},
