@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Loader2, Mail, MailCheck } from "lucide-react"
-import { AuthField, PRIMARY_PILL } from "@/components/auth/fields"
+import { Loader2, MailCheck } from "lucide-react"
+import { useAuthDraft } from "@/components/auth/draft"
+import { AuthError, AuthField, AuthHeading, PRIMARY_PILL } from "@/components/auth/fields"
 import { api, ApiError } from "@/lib/api"
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("")
+  // Starts with whatever was typed on Log in, and hands any change back to it.
+  const [{ email }, setDraft] = useAuthDraft()
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,19 +38,17 @@ export default function ForgotPasswordPage() {
         </div>
       ) : (
         <>
-          <div className="space-y-2 text-center">
-            <h1 className="text-[1.75rem] leading-tight font-bold tracking-[-0.025em]">Reset password</h1>
-            <p className="text-[0.9375rem] text-muted-foreground">Enter your email and we&apos;ll send you a reset link.</p>
-          </div>
-          <form onSubmit={submit} className="space-y-3">
-            <AuthField icon={Mail} label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            {error && <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">{error}</p>}
+          <AuthHeading title="Forgot your password?">Enter your email and we&apos;ll send you a link to reset it.</AuthHeading>
+          <form onSubmit={submit} className="space-y-4">
+            <AuthField label="Email" type="email" inputMode="email" placeholder="you@example.com" autoComplete="email" required
+              value={email} onChange={(e) => setDraft({ email: e.target.value })} />
+            {error && <AuthError>{error}</AuthError>}
             <button type="submit" disabled={busy} className={PRIMARY_PILL}>{busy && <Loader2 className="size-4 animate-spin" />} Send reset link</button>
           </form>
         </>
       )}
       <p className="text-center text-sm text-muted-foreground">
-        Remembered it? <Link href="/login" className="font-semibold text-foreground hover:underline">Log in</Link>
+        Remembered it? <Link href="/login" className="font-semibold text-foreground underline-offset-4 hover:underline">Log in</Link>
       </p>
     </div>
   )

@@ -4,8 +4,8 @@ import Link from "next/link"
 import { use, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { Loader2, LockKeyhole } from "lucide-react"
-import { PasswordField, PRIMARY_PILL } from "@/components/auth/fields"
+import { Loader2 } from "lucide-react"
+import { AuthError, AuthHeading, PasswordField, PRIMARY_PILL } from "@/components/auth/fields"
 import { api, ApiError } from "@/lib/api"
 import type { Me } from "@/lib/types"
 
@@ -35,18 +35,16 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-[1.75rem] leading-tight font-bold tracking-[-0.025em]">New password</h1>
-        <p className="text-[0.9375rem] text-muted-foreground">You&apos;ll be signed out on your other devices.</p>
-      </div>
-      <form onSubmit={submit} className="space-y-3">
-        <PasswordField icon={LockKeyhole} label="New password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} />
-        <PasswordField icon={LockKeyhole} label="Confirm password" autoComplete="new-password" minLength={10} required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-        <p className="px-4 text-xs text-muted-foreground">At least 10 characters.</p>
+      <AuthHeading title="Set a new password">You&apos;ll be signed out on your other devices.</AuthHeading>
+      <form onSubmit={submit} className="space-y-4">
+        <PasswordField label="New password" hint="At least 10 characters." autoComplete="new-password" minLength={10} required
+          value={password} onChange={(e) => setPassword(e.target.value)} />
+        <PasswordField label="Confirm new password" autoComplete="new-password" minLength={10} required
+          value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         {error && (
-          <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">
+          <AuthError>
             {error} {error.includes("expired") && <Link href="/forgot-password" className="font-medium underline">Request a new link</Link>}
-          </p>
+          </AuthError>
         )}
         <button type="submit" disabled={busy} className={PRIMARY_PILL}>{busy && <Loader2 className="size-4 animate-spin" />} Update password</button>
       </form>
