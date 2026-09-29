@@ -79,11 +79,16 @@ function Viewfinder({ onClose, onResult }: { onClose: () => void; onResult: (res
   useEffect(() => {
     if (!cameraSupported()) return
     let cancelled = false
+    let starting = false
     const stop = () => {
       stream.current?.getTracks().forEach((track) => track.stop())
       stream.current = null
     }
     const start = async () => {
+      // One at a time: switching away and back while the camera is still starting mustn't open a second stream,
+      // which nothing would stop and which would keep the camera on after closing.
+      if (starting || stream.current) return
+      starting = true
       try {
         const media = await navigator.mediaDevices.getUserMedia({
           audio: false,
@@ -103,11 +108,13 @@ function Viewfinder({ onClose, onResult }: { onClose: () => void; onResult: (res
         if (cancelled) return
         const name = error instanceof DOMException ? error.name : ""
         setStatus(name === "NotAllowedError" || name === "SecurityError" ? "denied" : "unavailable")
+      } finally {
+        starting = false
       }
     }
     const onVisibility = () => {
       if (document.hidden) stop()
-      else if (!stream.current) void start()
+      else void start()
     }
     void start()
     document.addEventListener("visibilitychange", onVisibility)
@@ -130,7 +137,15 @@ function Viewfinder({ onClose, onResult }: { onClose: () => void; onResult: (res
       const element = video.current
       if (stopped || !context) return
       if (element && element.readyState >= 2 && element.videoWidth && !done.current) {
-        read ??= await makeReader()
+        if (!read) {
+          try {
+            read = await makeReader()
+          } catch {
+            // The QR reader didn't load (a dropped connection, say): try again shortly; the shutter works meanwhile.
+            timer = window.setTimeout(look, 2000)
+            return
+          }
+        }
         const scale = Math.min(1, LOOK_SIZE / Math.max(element.videoWidth, element.videoHeight))
         canvas.width = Math.round(element.videoWidth * scale)
         canvas.height = Math.round(element.videoHeight * scale)

@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from app.ai import factory
-from app.ai.providers.base import ModelTurn, ProviderUnavailable, ToolCall, TranscriptItem
+from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, ToolCall, TranscriptItem
 from app.ai.providers.compatible_provider import CompatibleProvider, rest_seconds
 from app.core.config import Settings
 
@@ -149,3 +149,53 @@ async def test_groq_reads_photos_with_a_vision_model_and_never_sees_gemini_only_
     assert "extra_content" not in sent_call and sent_call["function"]["name"] == "get_balance"
     await _ask(provider)
     assert bodies[1]["model"] == provider.chat_models[0], "text-only chats use the chat model"
+
+
+def test_a_wait_in_milliseconds_is_read_too():
+    assert rest_seconds({}, b'{"error": {"message": "Rate limit reached on tokens per minute (TPM). Please try again in 450ms."}}') == 5
+    assert rest_seconds({}, b'{"error": {"message": "Please try again in 2m5s."}}') == 125
+
+
+async def test_a_receipt_still_goes_to_models_the_chat_is_resting():
+    models: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        models.append(json.loads(request.content)["model"])
+        call = {"id": "r1", "type": "function", "function": {"name": "record_receipt", "arguments": json.dumps({"total": 229})}}
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "tool_calls": [call]}}]})
+
+    provider = _gemini(handler, gemini_fallback_models="gemini-2.5-flash")
+    for model in provider.chat_models:
+        provider.model_rest[model] = time.monotonic() + 600
+    assert provider.is_resting()
+    context = CaptureContext(today="2026-09-23", currency="PHP", accounts=[], expense_categories=[], income_categories=[],
+                             known_merchants=[])
+    raw = await provider.extract_receipt(b"\xff\xd8jpeg", "image/jpeg", context)
+    assert raw == {"total": 229} and models == ["gemini-flash-latest"]
+
+
+async def test_gemini_3_asking_for_thought_signatures_hands_over_to_the_next_model():
+    models: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        models.append(json.loads(request.content)["model"])
+        if len(models) == 1:
+            return httpx.Response(400, json=[{"error": {"code": 400, "message": "Function call is missing a thought_signature in functionCall parts."}}])
+        return httpx.Response(200, text=_sse("Okay."), headers={"content-type": "text/event-stream"})
+
+    provider = _gemini(handler, gemini_fallback_models="gemini-2.5-flash")
+    turn = await _ask(provider)
+    assert turn.text == "Okay." and models == ["gemini-flash-latest", "gemini-2.5-flash"]
+    assert "gemini-flash-latest" not in provider.missing and not provider.model_rest, "the model is fine, just not for this turn"
+
+
+async def test_models_that_all_no_longer_exist_say_so_instead_of_blaming_the_free_limit():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json=[{"error": {"code": 404, "message": "models/x is not found for API version v1beta"}}])
+
+    provider = _gemini(handler, gemini_chat_model="gemini-old", gemini_fallback_models="gemini-older")
+    for _ in range(2):
+        with pytest.raises(ProviderUnavailable) as caught:
+            await _ask(provider)
+        hint = caught.value.hint or ""
+        assert "free limit" not in hint and "model" in hint and "GEMINI_CHAT_MODEL" in hint

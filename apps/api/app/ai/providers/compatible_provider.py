@@ -39,6 +39,8 @@ UNAVAILABLE = "The AI service is temporarily unavailable."
 KEY_REST_SECONDS = 30 * 60
 RETRY_STATUSES = {500, 502, 503, 504}
 MISSING_MODEL = re.compile(r"not (be )?found|does not exist|decommissioned|no longer supported|model_not_found", re.I)
+# Gemini 3 refuses a tool-calling turn started on another model (its calls carry no thought signatures); the next can take it.
+NOT_THIS_MODEL = re.compile(r"thought[_ ]signature", re.I)
 
 
 def rest_seconds(headers: Mapping[str, str], body: bytes) -> float:
@@ -52,9 +54,9 @@ def rest_seconds(headers: Mapping[str, str], body: bytes) -> float:
             wait = None
     if wait is None and (found := re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', text)):
         wait = float(found.group(1))
-    if wait is None and (found := re.search(r"(?:retry|try again) in (?:(\d+)h)?(?:(\d+)m)?(\d+(?:\.\d+)?)s", text, re.I)):
-        hours, minutes, seconds = found.groups()
-        wait = int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(seconds)
+    if wait is None and (found := re.search(r"(?:retry|try again) in (?:(\d+)h)?(?:(\d+)m(?!s))?(\d+(?:\.\d+)?)(ms|s)\b", text, re.I)):
+        hours, minutes, amount, unit = found.groups()
+        wait = int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(amount) / (1000 if unit.lower() == "ms" else 1)
     if wait is None:
         wait = 3600 if re.search(r"per ?day|PerDay|\bRPD\b|daily", text, re.I) else 60
     return min(max(wait, 5), 6 * 3600)
@@ -267,6 +269,8 @@ class CompatibleProvider:
         if status == 404 or (status == 400 and MISSING_MODEL.search(message) and "model" in message.lower()):
             self.missing.add(model)
             return ProviderUnavailable(UNAVAILABLE, f"{self.label} doesn't have the model {model}."), True
+        if status == 400 and NOT_THIS_MODEL.search(message):
+            return ProviderUnavailable(UNAVAILABLE, f"{self.label} ({model}) couldn't continue this answer."), True
         if status >= 500:
             return ProviderUnavailable(UNAVAILABLE, f"{self.label} had a problem answering (error {status}"
                                                     f"{': ' + message[:90] if message else ''}). Try again shortly."), True
@@ -279,9 +283,13 @@ class CompatibleProvider:
         when = "in a minute" if soonest <= 90 else f"in about {round(soonest / 60)} minutes" if soonest < 3000 else "in about an hour"
         return f"{self.label}'s free limit is used up for now. Faldo will try it again {when}."
 
-    def _none_ready(self) -> ProviderUnavailable:
+    def _none_ready(self, models: list[str]) -> ProviderUnavailable:
         if time.monotonic() < self.rest_until:
             return ProviderUnavailable(UNAVAILABLE, f"{self.label} isn't answering: the API key isn't valid. Check {self.key_setting} in Vercel.")
+        if models and all(m in self.missing for m in models):
+            setting = "GEMINI_CHAT_MODEL and GEMINI_FALLBACK_MODELS" if self.name == "gemini" else f"the {self.label.upper()}_*_MODELS settings"
+            return ProviderUnavailable(UNAVAILABLE, f"{self.label} doesn't have any of the models Faldo asks for "
+                                                    f"({', '.join(models[:3])}). Check {setting} in Vercel.")
         return ProviderUnavailable(UNAVAILABLE, self._out_hint())
 
     async def _post_stream(self, body: dict[str, Any]) -> Any:
@@ -299,7 +307,7 @@ class CompatibleProvider:
     async def _open_stream(self, body: dict[str, Any], models: list[str]) -> Any:
         """The first model that accepts the request, its stream open; the rest step in when one has run out."""
         if time.monotonic() < self.rest_until:
-            raise self._none_ready()
+            raise self._none_ready(models)
         refused: ProviderUnavailable | None = None
         for model in self._ready(models):
             response = await self._post_stream({**body, "model": model})
@@ -310,7 +318,7 @@ class CompatibleProvider:
             refused, next_model = self._refused(model, response.status_code, content, response.headers)
             if not next_model:
                 raise refused
-        raise refused or self._none_ready()
+        raise self._none_ready(models) if all(m in self.missing for m in models) else refused or self._none_ready(models)
 
     async def stream_turn(self, *, system: str, transcript: list[TranscriptItem],
                           tools: list[dict[str, Any]]) -> AsyncIterator[TextDelta | ModelTurn]:
@@ -379,11 +387,14 @@ class CompatibleProvider:
             raise ProviderUnavailable(UNAVAILABLE)
         return final
 
-    async def _complete(self, body: dict[str, Any], models: list[str] | None = None) -> dict[str, Any]:
+    async def _complete(self, body: dict[str, Any], models: list[str] | None = None, *, asked: bool = False) -> dict[str, Any]:
+        """One completion from the first model that answers. `asked`: someone asked for this one (a receipt), so models
+        the chat is resting still get a try; the rest is only this instance's memory, and a limit is often back by then."""
+        models = models or self.chat_models
         if time.monotonic() < self.rest_until:
-            raise self._none_ready()
+            raise self._none_ready(models)
         refused: ProviderUnavailable | None = None
-        for model in self._ready(models or self.chat_models):
+        for model in [m for m in models if m not in self.missing] if asked else self._ready(models):
             payload = {**body, "model": model}
             try:
                 response = await self._http().post(f"{self.base_url}/chat/completions", headers=self._headers, json=payload)
@@ -398,15 +409,15 @@ class CompatibleProvider:
             refused, next_model = self._refused(model, response.status_code, response.content, response.headers)
             if not next_model:
                 raise refused
-        raise refused or self._none_ready()
+        raise self._none_ready(models) if all(m in self.missing for m in models) else refused or self._none_ready(models)
 
     async def _structured(self, instructions: str, content: Any, name: str, schema: dict[str, Any],
-                          models: list[str] | None = None) -> dict[str, Any]:
+                          models: list[str] | None = None, *, asked: bool = False) -> dict[str, Any]:
         data = await self._complete({
             "messages": [{"role": "system", "content": instructions}, {"role": "user", "content": content}],
             "tools": [_function(name, "Record the result.", schema)],
             "tool_choice": {"type": "function", "function": {"name": name}},
-        }, models)
+        }, models, asked=asked)
         for choice in data.get("choices", []):
             for call in (choice.get("message") or {}).get("tool_calls") or []:
                 try:
@@ -431,7 +442,7 @@ class CompatibleProvider:
         content = [{"type": "text", "text": json.dumps(meta)},
                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{base64.b64encode(image).decode()}"}}]
         try:
-            return await self._structured(RECEIPT_INSTRUCTIONS, content, "record_receipt", RECEIPT_SCHEMA, self.vision_models)
+            return await self._structured(RECEIPT_INSTRUCTIONS, content, "record_receipt", RECEIPT_SCHEMA, self.vision_models, asked=True)
         except ProviderUnavailable as exc:
             raise ProviderUnavailable("Receipt reading failed. Try again or enter the details manually.", exc.hint) from exc
 

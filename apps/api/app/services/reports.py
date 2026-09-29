@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engine.money import pct_text, percent, percent_change
@@ -130,8 +131,9 @@ async def report_summary(db: AsyncSession, user_id: uuid.UUID, month: date, toda
     if generated_by != "template":
         await db.execute(delete(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type == "report_summary",
                                                  AIInsight.period_key == period))
-        db.add(AIInsight(user_id=user_id, type="report_summary", severity=InsightSeverity.info, title="Report summary",
-                         body=text, facts={"month": report["month"], "_generated_by": generated_by}, evidence=[],
-                         dedupe_key=key, period_key=period, status=InsightStatus.active))
-        await db.flush()
+        # Two requests at once (two tabs) may both get here; the second one's copy is simply not saved.
+        await db.execute(insert(AIInsight).values(
+            user_id=user_id, type="report_summary", severity=InsightSeverity.info, title="Report summary", body=text,
+            facts={"month": report["month"], "_generated_by": generated_by}, evidence=[], dedupe_key=key,
+            period_key=period, status=InsightStatus.active).on_conflict_do_nothing(index_elements=["user_id", "dedupe_key"]))
     return {"month": report["month"], "text": text, "generated_by": generated_by}

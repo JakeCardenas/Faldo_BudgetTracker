@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.factory import get_llm
@@ -11,7 +12,7 @@ from app.ai.guardrails.numeric import check_numbers
 from app.ai.guardrails.output import sanitize_markdown
 from app.engine.money import format_money, pct_text, percent_change
 from app.engine.periods import add_months, month_end, month_start
-from app.models import AIInsight, BudgetCategory, GoalContribution, SavingsGoal, Transaction
+from app.models import AIInsight, BudgetCategory, Category, GoalContribution, SavingsGoal, Transaction
 from app.models.enums import InsightSeverity, InsightStatus
 from app.models.identity import UserSettings
 from app.services.analytics import totals_by_type
@@ -23,7 +24,8 @@ AI_REWRITE_EVERY = timedelta(hours=1)
 
 async def data_version(db: AsyncSession, user_id: uuid.UUID, today: date) -> str:
     parts = []
-    for model in (Transaction, BudgetCategory, SavingsGoal, GoalContribution):
+    # Categories too: a renamed one changes the names the pulse and report summaries use.
+    for model in (Transaction, BudgetCategory, SavingsGoal, GoalContribution, Category):
         row = (await db.execute(select(func.count(model.id), func.max(model.updated_at)).where(model.user_id == user_id))).one()
         parts.append(f"{row[0]}:{row[1]}")
     parts.append(today.isoformat())
@@ -116,8 +118,10 @@ async def get_pulse(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings
                 text, generated_by = rewritten, provider.name
                 last_ai = datetime.now(UTC).isoformat()
     await db.execute(delete(AIInsight).where(AIInsight.user_id == user_id, AIInsight.type == "pulse"))
-    db.add(AIInsight(user_id=user_id, type="pulse", severity=InsightSeverity.info, title="Financial pulse", body=text,
-                     facts={**facts, "_generated_by": generated_by, "_ai_at": last_ai}, evidence=[], dedupe_key=key,
-                     period_key=today.isoformat(), status=InsightStatus.active))
+    # Two requests at once (two tabs) may both get here; the second one's copy is simply not saved.
+    await db.execute(insert(AIInsight).values(
+        user_id=user_id, type="pulse", severity=InsightSeverity.info, title="Financial pulse", body=text,
+        facts={**facts, "_generated_by": generated_by, "_ai_at": last_ai}, evidence=[], dedupe_key=key,
+        period_key=today.isoformat(), status=InsightStatus.active).on_conflict_do_nothing(index_elements=["user_id", "dedupe_key"]))
     await db.flush()
     return {"text": text, "facts": facts, "generated_by": generated_by, "cached": False}

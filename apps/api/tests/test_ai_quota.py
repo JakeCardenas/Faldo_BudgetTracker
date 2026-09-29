@@ -1,5 +1,6 @@
 """Free AI limits go to chats and receipts: the pieces that only reword numbers ask the AI as rarely as they can."""
 
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -69,4 +70,40 @@ async def test_the_home_pulse_asks_the_ai_at_most_once_an_hour(app, monkeypatch)
         row.facts = {**row.facts, "_ai_at": (datetime.now(UTC) - timedelta(hours=2)).isoformat()}
     await _spend(client, account, 5_000)
     assert (await client.get("/api/v1/pulse")).json()["generated_by"] == "gemini" and writer.asked == 2
+    await client.aclose()
+
+
+class SlowWriter(Writer):
+    """Takes a moment to answer, so two requests at once both reach the AI before either saves."""
+
+    async def write_summary(self, kind: str, facts: dict[str, Any], draft: str) -> str | None:
+        await asyncio.sleep(0.05)
+        return await super().write_summary(kind, facts, draft)
+
+
+async def test_two_reports_opened_at_once_both_get_the_summary(app, monkeypatch):
+    writer = SlowWriter()
+    monkeypatch.setattr(factory, "get_llm", lambda: writer)
+    client = await make_user(app, "TwoTabs")
+    account = (await client.post("/api/v1/accounts", json={"name": "Cash", "type": "cash", "opening_balance_minor": 500_000})).json()
+    await _spend(client, account, 25_000)
+    first, second = await asyncio.gather(client.get("/api/v1/reports/summary"), client.get("/api/v1/reports/summary"))
+    assert first.status_code == second.status_code == 200 and first.json()["text"] == second.json()["text"]
+    await client.aclose()
+
+
+async def test_renaming_a_category_writes_the_summary_again(app, monkeypatch):
+    writer = Writer()
+    monkeypatch.setattr(factory, "get_llm", lambda: writer)
+    client = await make_user(app, "Renamer")
+    account = (await client.post("/api/v1/accounts", json={"name": "Cash", "type": "cash", "opening_balance_minor": 500_000})).json()
+    food = next(c for c in (await client.get("/api/v1/categories")).json() if c["name"] == "Food & Dining")
+    r = await client.post("/api/v1/transactions", json={"type": "expense", "amount_minor": 25_000, "account_id": account["id"],
+                                                        "category_id": food["id"], "occurred_on": TODAY.isoformat()})
+    assert r.status_code == 201, r.text
+    await client.get("/api/v1/reports/summary")
+    renamed = await client.patch(f"/api/v1/categories/{food['id']}", json={"name": "Food"})
+    assert renamed.status_code == 200, renamed.text
+    await client.get("/api/v1/reports/summary")
+    assert writer.asked == 2
     await client.aclose()

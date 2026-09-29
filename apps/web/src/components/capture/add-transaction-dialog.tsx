@@ -366,7 +366,14 @@ function CodeCard({ text, onAgain }: { text: string; onAgain: () => void }) {
       <p className="text-xs text-muted-foreground">It isn&apos;t a payment code, so nothing was filled in.</p>
       <div className="flex flex-wrap gap-2">
         {link && <Button asChild size="sm"><a href={link.href} target="_blank" rel="noopener noreferrer">Open link</a></Button>}
-        <Button size="sm" variant="secondary" onClick={() => navigator.clipboard.writeText(text).then(() => toast.success("Copied"), () => toast.error("Couldn't copy."))}>Copy</Button>
+        <Button size="sm" variant="secondary" onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(text) // missing outside https and in some in-app browsers
+            toast.success("Copied")
+          } catch {
+            toast.error("Couldn't copy.")
+          }
+        }}>Copy</Button>
         <Button size="sm" variant="ghost" onClick={onAgain}>Scan again</Button>
       </div>
     </div>
@@ -402,6 +409,8 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
     })
   }
   const keypad = mode === "expense" || mode === "income" || mode === "transfer"
+  // A scanned payment QR fills in that expense only; Income and Transfer start clean.
+  const qrExpense = mode === "expense" && scanPreset !== undefined
   const entryType: EntryType = keypad ? (mode as EntryType) : lastEntry
 
   const saved = (transaction: Transaction, feedback: string) => {
@@ -448,7 +457,7 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
         </div>
         <DialogDescription className="sr-only">Log an expense, income or transfer.</DialogDescription>
         {keypad ? (
-          <KeypadEntry key={scanPreset ? `${mode}-scan` : mode} type={mode as EntryType} preset={scanPreset ?? preset} onSaved={saved}
+          <KeypadEntry key={qrExpense ? "expense-scan" : mode} type={mode as EntryType} preset={qrExpense ? scanPreset : preset} onSaved={saved}
             onMoreDetails={(values) => { setLastEntry(values.type); setManualInitial(values); onModeChange("manual") }} />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6">
