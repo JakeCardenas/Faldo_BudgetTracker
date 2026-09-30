@@ -40,14 +40,11 @@ export function AccountsRail({ data }: { data: Dashboard }) {
   )
 }
 
-interface Note { title?: string; body: string; href: string; cta: string; tone: "calm" | "warn" | "critical" }
+interface Note { title?: string; body: string; href: string; cta: string; tone: "calm" | "warn" }
 
 function noteFrom(item: AttentionItem): Note | null {
   const amount = formatMoney(item.amount_minor)
   switch (item.kind) {
-    case "short":
-      return { title: `${amount} short before ${item.date ? formatDate(item.date, "MMM d") : "your next income"}`, tone: "critical",
-        body: "Bills, savings and your buffer need more than you have right now.", href: "/forecast", cta: "See what's coming" }
     case "budget_over":
       return { title: `${item.title} is ${amount} over budget`, tone: "warn", body: "Spending in it this month has passed the limit you set.", href: "/budgets", cta: "Review budgets" }
     case "budget_at_risk":
@@ -57,7 +54,10 @@ function noteFrom(item: AttentionItem): Note | null {
   }
 }
 
-/** One useful thing to know: an alert when something needs a decision, otherwise Faldo's short read of the month. */
+/**
+ * One useful thing to know: an alert when something needs a decision, otherwise Faldo's short read of the month.
+ * Never a shortfall: the Safe to Spend card right under the band already says it, with the numbers.
+ */
 export function useFaldoNote(data: Dashboard) {
   const { data: pulse, isLoading } = usePulse()
   const alert = data.attention.map(noteFrom).find(Boolean) ?? null

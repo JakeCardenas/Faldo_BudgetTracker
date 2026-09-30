@@ -1,6 +1,6 @@
 "use client"
 
-import { BookOpen, Flame, Lightbulb, Settings, Wrench } from "lucide-react"
+import { BookOpen, Flame, Lightbulb, MessageCircle, Settings, Wrench } from "lucide-react"
 import { LargeTitle } from "@/shared/ui/ios/nav-header"
 import { ListGroup, ListRow } from "@/shared/ui/ios/list"
 import { Avatar, useLogout } from "@/widgets/navigation"
@@ -9,10 +9,11 @@ import { useMaskedAmounts } from "@/shared/lib/privacy"
 import { useMe } from "@/entities/session"
 
 /**
- * Profile's menu, Threads-style: an icon and a word per row. Import, Statistics and Talk to Faldo live
- * on Wallet, History and the Faldo bubble, so they are not repeated here.
+ * Profile's menu, Threads-style: an icon and a word per row. Import and Statistics live on Wallet and
+ * History, so they are not repeated here. Talk to Faldo is: the bubble that also opens it is optional.
  */
 const MENU = [
+  { href: "/assistant", label: "Talk to Faldo", icon: MessageCircle },
   { href: "/streaks", label: "Streaks and rewards", icon: Flame },
   { href: "/insights", label: "Insights", icon: Lightbulb },
   { href: "/learn", label: "Learn", icon: BookOpen },

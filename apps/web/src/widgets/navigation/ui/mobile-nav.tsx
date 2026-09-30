@@ -44,7 +44,7 @@ function FilledIcon({ item }: { item: TabItem }) {
   const Icon = item.icon
   const id = `tab-fill-${useId().replace(/[^\w-]/g, "")}`
   return (
-    <svg viewBox="0 0 24 24" className="size-[1.625rem] overflow-visible">
+    <svg viewBox="0 0 24 24" className="size-[1.375rem] overflow-visible">
       <mask id={id} maskUnits="userSpaceOnUse" x="-4" y="-4" width="32" height="32">
         <Icon size={24} color="#fff" fill="#fff" strokeWidth={2} />
         {item.cutout && <Icon size={24} color="#000" strokeWidth={2} className={item.cutout} />}
@@ -54,18 +54,23 @@ function FilledIcon({ item }: { item: TabItem }) {
   )
 }
 
-/** The icon row, laid out so each icon sits at the centre of the lens when the lens rests on it. */
+/**
+ * The icon row, laid out so each icon sits at the centre of the lens when the lens rests on it, each with its name
+ * under it: Wallet, Plan and History aren't obvious from a wallet, a calendar and a clock alone. Both copies of the
+ * row set the names in the same weight, so a name half under the moving lens still lines up.
+ */
 function IconRow({ filled }: { filled?: boolean }) {
   return (
-    <div className="absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5 text-foreground">
+    <div className={cn("absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5", filled ? "text-foreground" : "text-foreground/70")}>
       {Array.from({ length: SLOTS }, (_, slot) => {
         const item = TAB_ITEMS[tabOf(slot)]
         const Icon = item?.icon
         return (
-          <span key={slot} className="flex items-center justify-center">
-            {!item ? <Plus className="size-[1.625rem]" strokeWidth={2} />
+          <span key={slot} className="flex flex-col items-center justify-center gap-1">
+            {!item ? <Plus className="size-[1.375rem]" strokeWidth={2} />
               : filled ? <FilledIcon item={item} />
-              : Icon && <Icon className="size-[1.625rem]" strokeWidth={2} />}
+              : Icon && <Icon className="size-[1.375rem]" strokeWidth={2} />}
+            <span className="text-[0.6875rem] leading-none font-semibold tracking-[-0.01em]">{item?.label ?? "Add"}</span>
           </span>
         )
       })}
@@ -75,7 +80,7 @@ function IconRow({ filled }: { filled?: boolean }) {
 
 /**
  * Floating navigation for phones and tablets, after the Threads tab bar: one liquid-glass capsule with
- * the four tabs and the + (record money) in the middle, icons only.
+ * the four tabs and the + (record money) in the middle, each named under its icon.
  *
  * The selected tab sits in a darker lens set into the glass, and whatever the lens covers is drawn
  * filled: slide a finger along the bar and the lens follows it, filling each icon as it passes (half

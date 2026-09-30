@@ -116,10 +116,11 @@ export function HomeBand({ data }: { data: Dashboard }) {
         </div>
 
         {/* Faldo stands on the band's lower edge with his note beside him; on desktop he stands in the grove on the
-            right and the note sits to his left, so the band stays short. */}
+            right and the note sits to his left, so the band stays short. On the narrowest phones he steps down a size
+            so his note has room to finish its sentence. */}
         <div className="mt-3 flex items-end gap-2 lg:mt-0 lg:flex-row-reverse lg:gap-3">
           <Panda pose={pose} priority sizes="(min-width: 1024px) 176px, 144px"
-            className="pointer-events-none -mb-5 -ml-2 w-[8.25rem] shrink-0 drop-shadow-[0_12px_18px_rgb(0_0_0/0.22)] min-[390px]:w-[9rem] sm:w-[10rem] lg:-mb-6 lg:ml-0 lg:w-44" />
+            className="pointer-events-none -mb-5 -ml-2 w-[8.25rem] shrink-0 drop-shadow-[0_12px_18px_rgb(0_0_0/0.22)] max-[359px]:-mb-4 max-[359px]:w-[6.5rem] min-[390px]:w-[9rem] sm:w-[10rem] lg:-mb-6 lg:ml-0 lg:w-44" />
           <FaldoBubble data={data} className="mb-5 flex-1 lg:mb-9 lg:w-[21rem] lg:flex-none" />
         </div>
       </div>

@@ -5,7 +5,9 @@ import { useSyncExternalStore } from "react"
 /**
  * The Faldo bubble: a floating chat head, like Messenger's, that you can drag anywhere and tap to ask
  * Faldo. Whether it shows, where you left it and whether you have seen its hint are per-device
- * preferences, kept in this browser.
+ * preferences, kept in this browser. It is off until turned on in Settings: floating over a money
+ * screen it always sits on something, and there that is usually an amount or a button. Faldo is
+ * always one tap away without it (Home's quick actions, his note, Profile and search).
  */
 const SHOWN_KEY = "faldo:bubble"
 // Renamed when the resting spot moved to the bottom corner, so everyone starts from the new dock once.
@@ -15,9 +17,9 @@ const EVENT = "faldo:bubble"
 
 function read() {
   try {
-    return window.localStorage.getItem(SHOWN_KEY) !== "off"
+    return window.localStorage.getItem(SHOWN_KEY) === "on"
   } catch {
-    return true
+    return false
   }
 }
 

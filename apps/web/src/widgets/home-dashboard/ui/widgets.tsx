@@ -3,8 +3,8 @@
 import Link from "next/link"
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, FileUp, Flag, LineChart, MessageCircle, PieChart, Scale, type LucideIcon } from "lucide-react"
-import { MoneyOwedIcon, TINTED } from "@/shared/ui/category-icon"
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, Flag, MessageCircle, PieChart, Scale, type LucideIcon } from "lucide-react"
+import { TINTED } from "@/shared/ui/category-icon"
 import { Money } from "@/shared/ui/money/money"
 import { Section } from "@/shared/ui/ios/panel"
 import { useAppActions } from "@/shared/lib/app-actions"
@@ -18,29 +18,26 @@ import { cn } from "@/shared/lib/utils"
 
 type QuickAction = { label: string; icon: LucideIcon; tint: string } & ({ href: string } | { action: "check" })
 
+/**
+ * Four, not a second tab bar: deciding on a purchase, the two plans people check most, and Faldo himself. Bills
+ * are on Home already (Payments due); money owed and the forecast are one tap away on Plan, importing on Wallet.
+ */
 const QUICK_ACTIONS: QuickAction[] = [
+  { label: "Check", icon: Scale, tint: PALETTE.green, action: "check" },
   { label: "Budgets", icon: PieChart, tint: PALETTE.gold, href: "/budgets" },
   { label: "Goals", icon: Flag, tint: PALETTE.teal, href: "/goals" },
-  { label: "Bills", icon: CalendarClock, tint: PALETTE.blue, href: "/bills" },
-  { label: "Money owed", icon: MoneyOwedIcon, tint: PALETTE.apricot, href: "/debts" },
-  { label: "Forecast", icon: LineChart, tint: PALETTE.indigo, href: "/forecast" },
-  { label: "Check", icon: Scale, tint: PALETTE.green, action: "check" },
-  { label: "Import", icon: FileUp, tint: PALETTE.slate, href: "/import" },
   { label: "Ask Faldo", icon: MessageCircle, tint: "var(--primary)", href: "/assistant" },
 ]
 
 /** A round button on a soft wash of its colour, drawn like the category icons; it dips when pressed. */
 const tile = cn("flex size-14 items-center justify-center rounded-full transition-[scale,background-color] duration-200 ease-(--ease-out-quint) group-active:scale-[0.94] [&_svg]:size-[1.375rem] group-hover:bg-[color-mix(in_oklab,var(--cat)_22%,transparent)]", TINTED)
 
-/**
- * Shortcuts to the places people open most: round buttons in a 4 by 2 grid (one row of eight from tablets up),
- * every one in view. They sit right under the balance as its action row, so they need no heading.
- */
+/** Shortcuts to the places people open most: one row of round buttons right under the balance, so no heading. */
 export function QuickActions({ className }: { className?: string }) {
   const { openCheck } = useAppActions()
   return (
     <Section className={className}>
-      <ul aria-label="Quick actions" className="cascade grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-8">
+      <ul aria-label="Quick actions" className="cascade grid grid-cols-4 gap-x-2">
         {QUICK_ACTIONS.map((q) => {
           const Icon = q.icon
           const body = (
