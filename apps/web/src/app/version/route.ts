@@ -1,4 +1,4 @@
-import { BUILD_ID } from "@/lib/build"
+import { BUILD_ID } from "@/shared/config/build"
 
 export const dynamic = "force-dynamic"
 

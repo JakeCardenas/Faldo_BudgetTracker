@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { fileFingerprint, keyFor, stableStringify } from "../src/lib/idempotency.ts"
+import { fileFingerprint, keyFor, stableStringify } from "../src/shared/api/idempotency.ts"
 
 let n = 0
 const makeKey = () => `key-${++n}`

@@ -1,12 +1,12 @@
 "use client"
 
 import { BookOpen, Flame, Lightbulb, Settings, Wrench } from "lucide-react"
-import { LargeTitle } from "@/components/ios/nav-header"
-import { ListGroup, ListRow } from "@/components/ios/list"
-import { Avatar, useLogout } from "@/components/layout/user-menu"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useMaskedAmounts } from "@/lib/privacy"
-import { useMe } from "@/lib/queries"
+import { LargeTitle } from "@/shared/ui/ios/nav-header"
+import { ListGroup, ListRow } from "@/shared/ui/ios/list"
+import { Avatar, useLogout } from "@/widgets/navigation"
+import { Skeleton } from "@/shared/ui/skeleton"
+import { useMaskedAmounts } from "@/shared/lib/privacy"
+import { useMe } from "@/entities/session"
 
 /**
  * Profile's menu, Threads-style: an icon and a word per row. Import, Statistics and Talk to Faldo live

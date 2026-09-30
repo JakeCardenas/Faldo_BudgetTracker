@@ -21,4 +21,4 @@ brand's logo usage guidelines.
 
 No suitable official file was found for MariBank, Metrobank, Security Bank, RCBC, China Bank, Tonik,
 Coins.ph, GrabPay or ShopeePay. Their accounts show the provider name as text until an official file is
-added here (and registered in `LOGOS` in `src/lib/providers.ts`).
+added here (and registered in `LOGOS` in `src/entities/account/model/providers.ts`).

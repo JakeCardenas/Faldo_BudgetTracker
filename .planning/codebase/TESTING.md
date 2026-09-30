@@ -133,7 +133,7 @@ async with scoped_session(uuid.UUID(other_me["id"])) as db:
 
 **E2E tests:** Not used. No browser/Playwright/Cypress setup.
 
-**Frontend tests:** Not present. `apps/web/src/lib/format.ts` and `lib/calculator.ts` contain pure logic that would be the first candidates if a runner (Vitest) is added; place tests co-located as `*.test.ts` and add a `test` script in `apps/web/package.json` and a CI step.
+**Frontend tests:** Not present. `apps/web/src/shared/lib/format.ts` and `shared/lib/calculator.ts` contain pure logic that would be the first candidates if a runner (Vitest) is added; place tests co-located as `*.test.ts` and add a `test` script in `apps/web/package.json` and a CI step.
 
 ## Common Patterns
 

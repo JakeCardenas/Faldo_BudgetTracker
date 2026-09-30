@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
-import { AuthForm } from "@/components/auth-form"
+import { AuthForm } from "@/features/auth"
 
 export const metadata: Metadata = { title: "Create account" }
 

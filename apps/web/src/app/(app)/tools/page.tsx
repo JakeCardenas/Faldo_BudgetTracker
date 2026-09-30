@@ -1,9 +1,9 @@
 "use client"
 
-import { ListGroup, ListRow } from "@/components/ios/list"
-import { LargeTitle } from "@/components/ios/nav-header"
-import { useMaskedAmounts } from "@/lib/privacy"
-import { TOOLS } from "@/lib/tools-catalog"
+import { ListGroup, ListRow } from "@/shared/ui/ios/list"
+import { LargeTitle } from "@/shared/ui/ios/nav-header"
+import { useMaskedAmounts } from "@/shared/lib/privacy"
+import { TOOLS } from "@/features/money-tools"
 
 export default function ToolsPage() {
   useMaskedAmounts()

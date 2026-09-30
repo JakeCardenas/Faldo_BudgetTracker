@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { detailView, listView } from "../src/lib/query-view.ts"
+import { detailView, listView } from "../src/shared/lib/query-view.ts"
 
 test("a failed first load of transactions shows an error, not an empty ledger", () => {
   assert.equal(listView({ isLoading: false, isError: true, hasData: false, count: 0 }), "error")

@@ -2,7 +2,7 @@
 // checksums were computed separately, so these also check the checksum code.
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { parseQrPh } from "../src/lib/qrph.ts"
+import { parseQrPh } from "../src/features/receipt-scan/model/qrph.ts"
 
 const GCASH_STORE = "00020101021128400011ph.ppmi.p2m0111GXCHPHM2XXX03061234565204581253036085802PH5918JOLLIBEE KATIPUNAN6011QUEZON CITY630419F9"
 const MAYA_WITH_AMOUNT = "00020101021228400011ph.ppmi.p2m0111PAPHPHM1XXX03069988775204541153036085406150.505802PH59087-ELEVEN6006MAKATI62120508REF123456304F827"

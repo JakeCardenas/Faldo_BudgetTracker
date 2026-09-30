@@ -3,7 +3,7 @@ import { test } from "node:test"
 
 // The privacy module reads and writes the browser's storage; a tiny stand-in is enough for masking text.
 globalThis.window = { localStorage: { setItem() {}, getItem() { return null } }, dispatchEvent() {} }
-const { maskAmounts, setAmountsHidden } = await import("../src/lib/privacy.ts")
+const { maskAmounts, setAmountsHidden } = await import("../src/shared/lib/privacy.ts")
 
 test("Hide amounts masks amounts in every currency Faldo shows, not only pesos", () => {
   setAmountsHidden(true)

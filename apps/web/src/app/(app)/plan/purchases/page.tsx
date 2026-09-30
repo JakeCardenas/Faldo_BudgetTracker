@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { Plus } from "lucide-react"
-import { PlannedPurchases } from "@/components/decide/planned"
-import { HeaderButton, LargeTitle } from "@/components/ios/nav-header"
-import { useMaskedAmounts } from "@/lib/privacy"
+import { PlannedPurchases } from "@/features/purchase-decision"
+import { HeaderButton, LargeTitle } from "@/shared/ui/ios/nav-header"
+import { useMaskedAmounts } from "@/shared/lib/privacy"
 
 /** Things you want to buy: Faldo keeps checking each one against Safe to Spend. */
 export default function PlannedPurchasesPage() {

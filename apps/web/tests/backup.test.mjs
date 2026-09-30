@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { checkBackupFile, restoreAction, restoreRows, restoreWarnings } from "../src/lib/backup.ts"
+import { checkBackupFile, restoreAction, restoreRows, restoreWarnings } from "../src/features/backup-restore/model/backup.ts"
 
 const base = {
   format: "faldo-backup", version: 1, exported_at: "2026-09-25T10:00:00+00:00", currency: "PHP", sha256: "a".repeat(64),

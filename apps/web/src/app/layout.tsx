@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google"
-import { Splash } from "@/components/brand/splash"
-import { MOTION_SCRIPT } from "@/lib/motion-pref"
+import { Splash } from "@/shared/ui/brand/splash"
+import { MOTION_SCRIPT } from "@/shared/lib/motion-pref"
 import { Providers } from "./providers"
 import "./globals.css"
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { SUPPORTED_CURRENCIES, currencySymbol, formatCurrency, setDisplayCurrency } from "../src/lib/currency.ts"
+import { SUPPORTED_CURRENCIES, currencySymbol, formatCurrency, setDisplayCurrency } from "../src/shared/lib/currency.ts"
 
 const EXPECTED = { PHP: "₱", USD: "$", SGD: "S$", EUR: "€" }
 

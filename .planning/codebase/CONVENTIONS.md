@@ -12,24 +12,24 @@ Monorepo: FastAPI backend in `apps/api` (Python 3.12) and Next.js App Router fro
 - Tests: `apps/api/tests/test_<topic>.py`.
 
 **Files (frontend, `apps/web/src`):**
-- `kebab-case.tsx` / `.ts` for components and libs: `components/home/safe-to-spend.tsx`, `lib/tools-catalog.ts`, `components/finance/amount-input.tsx`.
+- `kebab-case.tsx` / `.ts` for components and libs: `widgets/home-dashboard/ui/safe-to-spend.tsx`, `features/money-tools/model/catalog.ts`, `shared/ui/money/amount-input.tsx`.
 - Next.js route files are fixed names: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx` under `app/(app)/<route>/`. Route groups: `(app)` (authenticated), `(auth)`.
-- shadcn primitives live in `components/ui/` (lowercase kebab names).
+- shadcn primitives live in `shared/ui/` (lowercase kebab names).
 
 **Functions:**
 - Python: `snake_case`; private helpers prefixed `_` (`_load` in `services/goals.py`, `_problem` in `core/errors.py`). Services are async and named by verb_noun: `create_goal`, `get_goal_out`, `add_contribution`, `list_goals`.
-- TypeScript: `camelCase` functions; React components and hooks follow `PascalCase` / `useXxx`. Query hooks are `useThing` / `useCreateThing` in `lib/queries.ts` (e.g. `useMe`, `useDeleteTransaction`).
+- TypeScript: `camelCase` functions; React components and hooks follow `PascalCase` / `useXxx`. Query hooks are `useThing` / `useCreateThing` in `entities/*/api/queries.ts` (e.g. `useMe`, `useDeleteTransaction`).
 
 **Variables / constants:**
 - Python module constants `UPPER_SNAKE` (`PERIOD_DAYS`, `DAYS_PER_MONTH` in `engine/money_plan.py`); tests use `P = 100` (pesos-to-centavos) and `TODAY`.
 - TypeScript constants `UPPER_SNAKE` for lookup maps (`SYMBOLS`, `FREQUENCY_LABELS`); locals `camelCase`.
-- Money fields are integers in minor units with a `_minor` suffix everywhere (`amount_minor`, `income_minor`, `limit_minor`). Never use floats for money. The frontend types mirror the API's snake_case field names verbatim (`lib/types.ts`), so JSON keys are snake_case in TS too.
+- Money fields are integers in minor units with a `_minor` suffix everywhere (`amount_minor`, `income_minor`, `limit_minor`). Never use floats for money. The frontend types mirror the API's snake_case field names verbatim (`shared/api/types.ts`), so JSON keys are snake_case in TS too.
 
 **Types / classes:**
 - Python classes `PascalCase`; pydantic request models end `In` / `Update` / `Upsert` (`GoalIn`, `GoalUpdate`, `BudgetUpsert`), response models end `Out` (`GoalOut`, `BudgetOut`). Engine inputs are frozen dataclasses ending `Inputs` (`PlanInputs`, `SafeToSpendInputs`).
 - SQLAlchemy models are singular `PascalCase` with plural `__tablename__` (`SavingsGoal` -> `savings_goals`).
 - Enums are `enum.StrEnum` in `models/enums.py`, stored as non-native varchar with check constraint via `str_enum()` in `models/base.py`.
-- TypeScript types/interfaces `PascalCase`, in `lib/types.ts`.
+- TypeScript types/interfaces `PascalCase`, in `shared/api/types.ts`.
 
 ## Code Style
 
@@ -54,8 +54,8 @@ Monorepo: FastAPI backend in `apps/api` (Python 3.12) and Next.js App Router fro
 **TypeScript:**
 1. `"use client"` directive first (when needed)
 2. `next/*`, `react`, then third-party (`date-fns`, `lucide-react`, `@tanstack/react-query`)
-3. `@/components/...`, then `@/lib/...` (alias `@/*` -> `src/*`, from `tsconfig.json`)
-- Use `import type { ... }` / inline `type` for type-only imports (`import type { SafeToSpend } from "@/lib/types"`).
+3. `@/...` imports (alias `@/*` -> `src/*`, from `tsconfig.json`): slices through their public API (`@/entities/account`), shared modules by file (`@/shared/lib/format`); relative imports only inside a slice
+- Use `import type { ... }` / inline `type` for type-only imports (`import type { SafeToSpend } from "@/shared/api/types"`).
 - No barrel `index.ts` files in frontend; import from the file directly.
 
 ## Error Handling
@@ -68,7 +68,7 @@ Monorepo: FastAPI backend in `apps/api` (Python 3.12) and Next.js App Router fro
 - Routers stay thin: validate with pydantic, call a service, return `response_model` output. Deletes return `Response(status_code=204)`; creates use `status_code=201`.
 
 **Frontend:**
-- All HTTP goes through `request` / `api.get|post|put|patch|delete|upload` in `lib/api.ts`, which throws `ApiError(status, message, fieldErrors)`. 401 outside public paths redirects to `/login?next=...`.
+- All HTTP goes through `request` / `api.get|post|put|patch|delete|upload` in `shared/api/client.ts`, which throws `ApiError(status, message, fieldErrors)`. 401 outside public paths redirects to `/login?next=...`.
 - Mutation callers surface errors with sonner toasts: `toast.error(e instanceof ApiError ? e.message : "Couldn't save settings.")`; success uses `toast.success("Settings saved")`.
 - Route-level fallbacks: `app/(app)/error.tsx`, `app/(app)/loading.tsx`, `app/not-found.tsx`.
 
@@ -91,7 +91,7 @@ Monorepo: FastAPI backend in `apps/api` (Python 3.12) and Next.js App Router fro
 - Engine functions are deterministic and take a frozen dataclass of inputs, returning dataclasses or dicts (`compute_safe_to_spend(inputs, last_day, period)`, `allocate(PlanInputs(...))`).
 - Use modern typing: `X | None`, `list[...]`, PEP 695 generics (`def get_owned[T](...)`, `class Page[T]`).
 - Money rounding uses `Decimal` with explicit rounding (`ROUND_FLOOR`) and `minor_factor(currency)`; zero-decimal currencies (JPY) are handled (`floor_unit`, `formatMoney`).
-- Frontend: function components with named props typed inline (`{ sts, className }: { sts: SafeToSpend; className?: string }`); use `cn(...)` from `lib/utils.ts` for conditional Tailwind classes.
+- Frontend: function components with named props typed inline (`{ sts, className }: { sts: SafeToSpend; className?: string }`); use `cn(...)` from `shared/lib/utils.ts` for conditional Tailwind classes.
 
 ## Module Design
 
@@ -103,9 +103,9 @@ Monorepo: FastAPI backend in `apps/api` (Python 3.12) and Next.js App Router fro
 **Frontend:**
 - Named exports for components/helpers; default exports only for Next.js route files (`page.tsx`, `layout.tsx`).
 - Client components start with `"use client"`.
-- Data fetching only via React Query hooks in `lib/queries.ts`; add a key to the `keys` object and add its root to `invalidateFinancialData` when a new financial query is introduced. Mutations call `invalidateFinancialData(qc)` in `onSuccess`.
-- Shared UI: `components/ui/*` (shadcn, cva), `components/ios/*` (iOS-style list/sheet/segmented), `components/finance/*` (money widgets). Global utility classes (`card-surface`, `section-title`, `display-number`, `tabular`) come from `app/globals.css`.
-- Display formatting (money, dates) goes through `lib/format.ts` (`formatMoney`, `toMinor`, `formatDate`); never format currency inline.
+- Data fetching only via React Query hooks in `entities/*/api/queries.ts`; add a key to the `keys` object in `shared/api/query-keys.ts` and add its root to `invalidateFinancialData` when a new financial query is introduced. Mutations call `invalidateFinancialData(qc)` in `onSuccess`.
+- Shared UI: `shared/ui/*` (shadcn, cva), `shared/ui/ios/*` (iOS-style list/sheet/segmented), `shared/ui/money/*` (money widgets). Global utility classes (`card-surface`, `section-title`, `display-number`, `tabular`) come from `app/globals.css`.
+- Display formatting (money, dates) goes through `shared/lib/format.ts` (`formatMoney`, `toMinor`, `formatDate`); never format currency inline.
 
 ---
 

@@ -87,12 +87,12 @@ Scope: full repo (`apps/api` FastAPI + Postgres, `apps/web` Next.js). The workin
 - Recommendations: Fail startup (or log an error) when `job_mode="inline"` in production and `CRON_SECRET` is missing.
 
 **Session cookie presence is trusted by the web proxy:**
-- Risk: `apps/web/src/proxy.ts` only checks that a `faldo_session` cookie exists; real validation happens in the API. Pages are gated by redirect only, so a forged cookie shows the shell until the first API 401 triggers the redirect in `apps/web/src/lib/api.ts`.
+- Risk: `apps/web/src/proxy.ts` only checks that a `faldo_session` cookie exists; real validation happens in the API. Pages are gated by redirect only, so a forged cookie shows the shell until the first API 401 triggers the redirect in `apps/web/src/shared/api/client.ts`.
 - Recommendations: Acceptable for a client-rendered app; do not put sensitive data in server-rendered page output.
 
 **Demo login and demo credentials:**
 - Risk: `NEXT_PUBLIC_SHOW_DEMO_LOGIN` defaults to `true` in `docker-compose.yml` and the README documents a default `SEED_DEMO_PASSWORD` (`apps/api/app/seed/demo.py`). If production seeds demo data with the default password, the demo account is publicly guessable.
-- Files: `docker-compose.yml`, `apps/web/src/components/auth-form.tsx`, `apps/api/app/seed/demo.py`, `README.md`
+- Files: `docker-compose.yml`, `apps/web/src/features/auth/ui/auth-form.tsx`, `apps/api/app/seed/demo.py`, `README.md`
 - Recommendations: Require `SEED_DEMO_PASSWORD` explicitly when `ENVIRONMENT=production`; default the compose flag to `false`.
 
 **Default DB credentials in config and compose:**
@@ -186,7 +186,7 @@ Scope: full repo (`apps/api` FastAPI + Postgres, `apps/web` Next.js). The workin
 
 **No frontend automated tests:**
 - Problem: `apps/web` has no test runner, no test files, and CI (`.github/workflows/ci.yml`) only runs `npm run lint`, `tsc --noEmit` and `npm run build`.
-- Blocks: Safe refactors of money formatting (`apps/web/src/lib/format.ts`), calculator logic (`apps/web/src/lib/calculator.ts`), and the SSE parser in `apps/web/src/lib/api.ts` (`streamPost`, which does an unguarded `JSON.parse`).
+- Blocks: Safe refactors of money formatting (`apps/web/src/shared/lib/format.ts`), calculator logic (`apps/web/src/shared/lib/calculator.ts`), and the SSE parser in `apps/web/src/shared/api/client.ts` (`streamPost`, which does an unguarded `JSON.parse`).
 
 **No error tracking or metrics:**
 - Problem: Logging goes to stdout via `apps/api/app/core/logging.py` only; no Sentry-style capture, no request IDs, no job-failure alerting (failed jobs only store `last_error` truncated to 500 chars).
@@ -203,7 +203,7 @@ Scope: full repo (`apps/api` FastAPI + Postgres, `apps/web` Next.js). The workin
 ## Test Coverage Gaps
 
 **Frontend (all of `apps/web/src`):**
-- What's not tested: Everything, including complex client components such as `apps/web/src/components/capture/keypad-entry.tsx` (402 lines), `apps/web/src/app/(app)/assistant/page.tsx` (469 lines) and `apps/web/src/app/onboarding/page.tsx` (361 lines).
+- What's not tested: Everything, including complex client components such as `apps/web/src/features/transaction-entry/ui/keypad-entry.tsx` (402 lines), `apps/web/src/app/(app)/assistant/page.tsx` (469 lines) and `apps/web/src/app/onboarding/page.tsx` (361 lines).
 - Risk: Regressions in the money-entry UX go unnoticed.
 - Priority: Medium.
 

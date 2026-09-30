@@ -6,7 +6,7 @@ import { join } from "node:path"
 import { test } from "node:test"
 
 const APP = new URL("../src/app/(app)/", import.meta.url).pathname
-const shell = readFileSync(new URL("../src/components/layout/app-shell.tsx", import.meta.url), "utf8")
+const shell = readFileSync(new URL("../src/app/_shell/app-shell.tsx", import.meta.url), "utf8")
 
 function pages(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -34,7 +34,7 @@ test("server-written insight and report text is masked when amounts are hidden",
     localStorage: { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) },
     dispatchEvent: () => true,
   }
-  const { maskAmounts, setAmountsHidden } = await import("../src/lib/privacy.ts")
+  const { maskAmounts, setAmountsHidden } = await import("../src/shared/lib/privacy.ts")
   const texts = [
     "In September 2026 so far, you earned ₱24,000 and spent ₱47,430, leaving −₱23,430.",
     "You've spent ₱12,360 of your ₱4,000 Shopping budget, ₱8,360 over.",
@@ -54,7 +54,7 @@ test("server-written insight and report text is masked when amounts are hidden",
 
 test("insight cards, the Insights pulse and the Reports summary go through maskAmounts", () => {
   const read = (path) => readFileSync(new URL(`../src/${path}`, import.meta.url), "utf8")
-  assert.match(read("components/finance/insight-card.tsx"), /maskAmounts\(insight\.title\)[\s\S]*maskAmounts\(insight\.body\)/)
+  assert.match(read("entities/insight/ui/insight-card.tsx"), /maskAmounts\(insight\.title\)[\s\S]*maskAmounts\(insight\.body\)/)
   assert.match(read("app/(app)/insights/page.tsx"), /maskAmounts\(pulse\.text\)/)
   assert.match(read("app/(app)/reports/page.tsx"), /maskAmounts\(summary\.data\.text\)/)
 })

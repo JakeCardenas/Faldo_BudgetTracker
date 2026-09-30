@@ -1,7 +1,7 @@
 "use client"
 
 import { RefreshCw, TriangleAlert } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/shared/ui/button"
 
 export default function AppError({ reset }: { error: Error; reset: () => void }) {
   return (

@@ -5,10 +5,10 @@ import { use, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
-import { AuthError, AuthHeading, PasswordField, PRIMARY_PILL } from "@/components/auth/fields"
-import { api, ApiError } from "@/lib/api"
-import { signedIn } from "@/lib/session"
-import type { Me } from "@/lib/types"
+import { AuthError, AuthHeading, PasswordField, PRIMARY_PILL } from "@/features/auth"
+import { api, ApiError } from "@/shared/api/client"
+import { signedIn } from "@/entities/session"
+import type { Me } from "@/shared/api/types"
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)

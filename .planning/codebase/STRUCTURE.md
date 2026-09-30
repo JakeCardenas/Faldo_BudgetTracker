@@ -30,10 +30,11 @@ Faldo/
 │   │   └── vercel.json         # Cron for /api/v1/internal/jobs/run
 │   └── web/                    # Next.js 16 frontend (TypeScript, Tailwind v4)
 │       ├── src/
-│       │   ├── app/            # App Router: (app)/, (auth)/, onboarding/, root layout
-│       │   ├── components/     # Feature + UI components
-│       │   ├── lib/            # api client, queries, types, format, catalogs
-│       │   ├── hooks/          # (empty)
+│       │   ├── app/            # App Router: (app)/, (auth)/, onboarding/, root layout; _shell/ = signed-in shell
+│       │   ├── widgets/        # Screen sections (home dashboard, navigation, assistant chat, add transaction)
+│       │   ├── features/       # User actions (auth, transaction edit/entry, receipt scan, Faldo Check, tools)
+│       │   ├── entities/       # Business things + their React Query hooks (account, transaction, goal, session…)
+│       │   ├── shared/         # Product-agnostic: api/ (client, types, keys), ui/, lib/, config/
 │       │   └── proxy.ts        # Session-cookie route guard
 │       ├── public/             # brand/, sounds/
 │       ├── next.config.ts      # /api rewrite, security headers
@@ -91,18 +92,14 @@ Faldo/
 - `(auth)/`: `login`, `register`, `forgot-password`, `reset-password/[token]` with a shared `layout.tsx`.
 - `onboarding/page.tsx`, `layout.tsx`, `providers.tsx`, `manifest.ts`, `not-found.tsx`, `globals.css`.
 
-**`apps/web/src/components/`:**
-- `ui/`: shadcn/Radix primitives (button, dialog, sheet, select, ...). Generated via shadcn; edit sparingly.
-- `ios/`: iOS-style building blocks (`list`, `nav-header`, `panel`, `segmented`, `sheet`, `stat-tile`).
-- `layout/`: `app-shell.tsx`, `app-context.tsx`, `nav.ts`, `sidebar.tsx`, `mobile-nav.tsx`, `more-sheet.tsx`, `command-search.tsx`, `actions-catalog.tsx`, `notifications.tsx`, `page-header.tsx`, `streak-chip.tsx`, `user-menu.tsx`.
-- `home/`: `safe-to-spend.tsx`, `attention.tsx`, `cards.tsx`, `greeting.tsx`, `quick-actions.tsx`.
-- `decide/`: `faldo-check.tsx`, `planned.tsx`.
-- `capture/`: `add-transaction-dialog.tsx`, `keypad-entry.tsx`, `draft-card.tsx`.
-- `finance/`: shared finance widgets (`money.tsx`, `amount-input.tsx`, `transaction-form.tsx`, `transaction-row.tsx`, `transaction-sheet.tsx`, `account-dialog.tsx`, `calculation-card.tsx`, `insight-card.tsx`, `progress-bar.tsx`, `stat.tsx`, `day-groups.tsx`, `empty-state.tsx`, `category-icon.tsx`).
-- `assistant/`: `blocks.tsx`, `logged-card.tsx`. `wallet/`: `account-card.tsx`. `charts/`: `charts.tsx`. `brand/`: logo, mascot, scene, splash, welcome-splash. `tools/`: one component per tool (`currency`, `emergency`, `loan`, `notes`, `split`, `tax`) plus `shared.tsx`. Top-level: `auth-form.tsx`, `sound-effects.tsx`.
-
-**`apps/web/src/lib/`:**
-- `api.ts` (fetch client, `ApiError`), `queries.ts` (query keys + hooks), `types.ts` (API types), `format.ts` (money/date formatting), `utils.ts` (`cn`), `catalog.ts`, `tools-catalog.ts`, `lessons.ts`, `account-templates.ts`, `goal-icons.tsx`, `calculator.ts`, `sound.ts`.
+**`apps/web/src/` (Feature-Sliced Design; layers import only downward, enforced by `eslint.config.mjs`):**
+- `app/_shell/`: `app-shell.tsx` (provides `AppActionsContext`, mounts the add sheet, Faldo Check, search), `update-check.tsx`, `sound-effects.tsx`.
+- `widgets/`: `home-dashboard`, `navigation` (top nav, mobile nav, user menu), `add-transaction`, `add-menu`, `command-search`, `faldo-bubble`, `assistant-chat`, `settings`, `legal`.
+- `features/`: `auth`, `account-edit`, `ai-consent`, `backup-restore`, `hide-amounts`, `challenges`, `transaction-entry` (keypad, draft card), `transaction-edit` (sheet, form, edit conflicts), `receipt-scan` (scanner, QR Ph), `purchase-decision` (Faldo Check, planned purchases), `notifications`, `push-notifications`, `money-tools`.
+- `entities/`: `account`, `transaction`, `insight`, `goal`, `money-plan`, `lesson`, `engagement`, `session` (me, sign-out, step-up reauth), plus one-hook slices (`category`, `budget`, `recurring`, `debt`, `forecast`, `report`, `dashboard`, `note`, `planned-purchase`, `companion`).
+- Each slice has `index.ts` (its public API) and segments `ui/`, `model/`, `api/` as needed.
+- `shared/api/`: `client.ts` (fetch client, `ApiError`), `types.ts` (API types), `query-keys.ts` (`keys`, `invalidateFinancialData`), `idempotency.ts`, `use-submission-key.ts`.
+- `shared/ui/`: shadcn primitives (edit sparingly), `ios/`, `brand/`, `money/`, `charts/`, and small presentational pieces. `shared/lib/`: `format.ts`, `currency.ts`, `utils.ts` (`cn`), `app-actions.tsx`, `privacy.ts`, `sound.ts` and other helpers. `shared/config/`: `nav.ts`, `build.ts`.
 
 ## Key File Locations
 
@@ -135,16 +132,16 @@ Faldo/
 - Backend: `snake_case.py`; one module per domain, with the same stem across layers (`money_plan.py` exists in `engine/` and `services/`; `planning.py` in `models/`, `schemas/`, `engine/`, `api/v1/`).
 - Migrations: `NNNN_short_description.py` sequential four-digit prefix (`0007_money_plans.py`).
 - Tests: `tests/test_<area>.py`.
-- Web: `kebab-case.tsx` for components (`faldo-check.tsx`), `page.tsx`/`layout.tsx`/`loading.tsx`/`error.tsx` per Next.js convention, `lib/*.ts` lowercase kebab.
+- Web: `kebab-case.tsx` for components (`faldo-check.tsx`), `page.tsx`/`layout.tsx`/`loading.tsx`/`error.tsx` per Next.js convention, `*.ts` lowercase kebab.
 
 **Directories:**
 - Web routes use lowercase kebab-case segments; route groups `(app)`, `(auth)`; dynamic segments `[id]`, `[slug]`, `[tool]`, `[token]`.
-- Web components grouped by feature (`home/`, `decide/`, `capture/`, `finance/`), not by type.
+- Web code grouped by Feature-Sliced layer, then by slice (`entities/account`, `features/receipt-scan`), then by segment (`ui/`, `model/`, `api/`).
 
 **Code identifiers:**
 - Python: functions `snake_case`, classes `PascalCase`, money fields suffixed `_minor`, enums `StrEnum` in `app/models/enums.py`.
 - API paths: kebab-case (`/money-plan`, `/auth/password/forgot`); JSON keys snake_case.
-- TS: components `PascalCase`, hooks `useX` in `lib/queries.ts`, imports via `@/` alias (`@/lib/api`, `@/components/...`).
+- TS: components `PascalCase`, hooks `useX` in `entities/*/api/queries.ts`, imports via `@/` alias; slices only through their public API (`@/entities/account`), shared by file (`@/shared/lib/format`).
 
 ## Where to Add New Code
 
@@ -165,16 +162,16 @@ Faldo/
 - Add an `enqueue_*` helper in `apps/api/app/jobs/queue.py` and a branch in `handle` in `apps/api/app/jobs/worker.py`.
 
 **New web page:**
-- `apps/web/src/app/(app)/<route>/page.tsx` (client components where hooks are used); add to `apps/web/src/components/layout/nav.ts` if it needs navigation (and `PLAN_ROUTES` if it belongs under the Plan tab).
+- `apps/web/src/app/(app)/<route>/page.tsx` (client components where hooks are used); add to `apps/web/src/shared/config/nav.ts` if it needs navigation (and `PLAN_ROUTES` if it belongs under the Plan tab).
 
 **New web data access:**
-- Types in `apps/web/src/lib/types.ts`, key in `keys` and a hook in `apps/web/src/lib/queries.ts`; invalidate related keys on mutation.
+- Types in `apps/web/src/shared/api/types.ts`, key in `keys` (`apps/web/src/shared/api/query-keys.ts`) and a hook in `apps/web/src/entities/<name>/api/queries.ts`; invalidate related keys on mutation.
 
 **New web component:**
-- Feature component in `apps/web/src/components/<feature>/kebab-name.tsx`; iOS-style primitives in `components/ios/`; shadcn primitives in `components/ui/`. Add money-tool UIs in `components/tools/` and register in `apps/web/src/lib/tools-catalog.ts`.
+- Put it in the lowest layer that fits: a business thing in `entities/<name>/`, a user action in `features/<name>/`, a screen section in `widgets/<name>/`, anything product-agnostic in `shared/`. Export what others need from the slice's `index.ts`. iOS-style primitives in `shared/ui/ios/`; shadcn primitives in `shared/ui/`. Add money-tool UIs in `features/money-tools/ui/` and register in `apps/web/src/features/money-tools/model/catalog.ts`.
 
 **Utilities:**
-- Backend shared helpers: `apps/api/app/services/common.py` or `apps/api/app/core/`. Frontend: `apps/web/src/lib/utils.ts`, `apps/web/src/lib/format.ts`.
+- Backend shared helpers: `apps/api/app/services/common.py` or `apps/api/app/core/`. Frontend: `apps/web/src/shared/lib/utils.ts`, `apps/web/src/shared/lib/format.ts`.
 
 ## Special Directories
 

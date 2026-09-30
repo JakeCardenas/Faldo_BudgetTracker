@@ -3,8 +3,8 @@ import { test } from "node:test"
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
 import { createElement as h } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { request, whenSignedOut } from "../src/lib/api.ts"
-import { forgetUser, signedIn, signOut, USER_STORAGE_KEYS } from "../src/lib/session.ts"
+import { request, whenSignedOut } from "../src/shared/api/client.ts"
+import { forgetUser, signedIn, signOut, USER_STORAGE_KEYS } from "../src/entities/session/model/session.ts"
 
 // Screens read what the cache holds; `enabled: false` shows exactly what a screen would paint before any refetch.
 const useCached = (queryKey) => useQuery({ queryKey, queryFn: () => new Promise(() => {}), enabled: false }).data

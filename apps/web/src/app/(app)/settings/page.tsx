@@ -1,9 +1,9 @@
 "use client"
 
-import { LargeTitle } from "@/components/ios/nav-header"
-import { ListGroup, ListRow } from "@/components/ios/list"
-import { SETTINGS_SECTIONS } from "@/components/settings/sections"
-import { useMaskedAmounts } from "@/lib/privacy"
+import { LargeTitle } from "@/shared/ui/ios/nav-header"
+import { ListGroup, ListRow } from "@/shared/ui/ios/list"
+import { SETTINGS_SECTIONS } from "@/widgets/settings"
+import { useMaskedAmounts } from "@/shared/lib/privacy"
 
 /** Settings, Threads-style: a short list, each row opening its own screen. */
 export default function SettingsPage() {

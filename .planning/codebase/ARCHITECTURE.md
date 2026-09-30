@@ -9,9 +9,9 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │  apps/web  (Next.js 16 App Router, React 19, TanStack Query)         │
 ├──────────────────┬───────────────────────┬──────────────────────────┤
-│ Route pages      │ Feature components    │ Data layer               │
-│ `src/app/(app)`  │ `src/components/*`    │ `src/lib/api.ts`,        │
-│ `src/app/(auth)` │ AppShell + sheets     │ `src/lib/queries.ts`     │
+│ Route pages      │ Widgets, features     │ Data layer               │
+│ `src/app/(app)`  │ `src/widgets/*`       │ `src/shared/api/*`       │
+│ `src/app/(auth)` │ `src/features/*`      │ `src/entities/*/api`     │
 └────────┬─────────┴───────────┬───────────┴────────────┬─────────────┘
          │  same-origin `/api/*` rewrite (`next.config.ts`), cookie    │
          │  `faldo_session` + header `x-faldo-client: web`             │
@@ -54,8 +54,8 @@
 | Capture | Natural-language transaction parsing (rules first, LLM fallback) | `apps/api/app/ai/capture/` |
 | Guardrails | Numeric faithfulness check, output sanitizing | `apps/api/app/ai/guardrails/` |
 | Job queue | `jobs` table, `FOR UPDATE SKIP LOCKED` claim, retry with backoff | `apps/api/app/jobs/queue.py`, `apps/api/app/jobs/worker.py` |
-| Web shell | Nav, add-transaction sheet, Faldo Check, search, more sheet, action context | `apps/web/src/components/layout/app-shell.tsx`, `apps/web/src/components/layout/app-context.tsx` |
-| Web data layer | Fetch wrapper + typed TanStack Query hooks and cache keys | `apps/web/src/lib/api.ts`, `apps/web/src/lib/queries.ts`, `apps/web/src/lib/types.ts` |
+| Web shell | Nav, add-transaction sheet, Faldo Check, search, more sheet, action context | `apps/web/src/app/_shell/app-shell.tsx`, `apps/web/src/shared/lib/app-actions.tsx` |
+| Web data layer | Fetch wrapper + typed TanStack Query hooks and cache keys | `apps/web/src/shared/api/client.ts`, `apps/web/src/shared/api/query-keys.ts`, `apps/web/src/entities/*/api/queries.ts`, `apps/web/src/shared/api/types.ts` |
 | Route guard | Redirect to `/login` when session cookie is absent | `apps/web/src/proxy.ts` |
 
 ## Pattern Overview
@@ -64,7 +64,7 @@
 
 **Key Characteristics:**
 - The backend owns all persistence and business rules; the frontend never touches the database.
-- Money is integer minor units everywhere (`*_minor` columns/fields); currency formatting is done in `apps/web/src/lib/format.ts` and `apps/api/app/engine/money.py`.
+- Money is integer minor units everywhere (`*_minor` columns/fields); currency formatting is done in `apps/web/src/shared/lib/format.ts` and `apps/api/app/engine/money.py`.
 - `app/engine/*` has no SQLAlchemy or model imports: it takes plain dataclasses (e.g. `CheckInputs` in `app/engine/check.py`, `PlanInputs` in `app/engine/money_plan.py`) and returns plain data. Services gather DB facts, build the inputs, call the engine.
 - Multi-tenancy is enforced twice: every service query filters `user_id`, and Postgres RLS policies (`<table>_owner`, created in `apps/api/migrations/versions/0001_initial_schema.py`) key off `current_setting('app.user_id')`, set per transaction by `set_user_scope` in `apps/api/app/core/db.py`.
 - AI features never invent numbers: tools return calculated results, `app/ai/guardrails/numeric.py` verifies each figure in the answer against tool output and triggers a repair prompt.
@@ -107,7 +107,7 @@
 
 ### Primary Request Path (authenticated REST call)
 
-1. A page component calls a hook from `apps/web/src/lib/queries.ts` (e.g. `useMoneyPlan`), which calls `api.get("/money-plan")` in `apps/web/src/lib/api.ts` (adds `x-faldo-client: web`, `credentials: same-origin`).
+1. A page component calls a hook from `apps/web/src/entities/money-plan/api/queries.ts` (e.g. `useMoneyPlan`), which calls `api.get("/money-plan")` in `apps/web/src/shared/api/client.ts` (adds `x-faldo-client: web`, `credentials: same-origin`).
 2. `next.config.ts` rewrites `/api/:path*` to `API_ORIGIN`; the httpOnly `faldo_session` cookie travels with it.
 3. `csrf_and_headers` middleware in `apps/api/app/main.py` enforces the Origin allow-list and the client header on POST/PUT/PATCH/DELETE, and sets `Cache-Control: no-store`.
 4. The router handler (e.g. `get_money_plan` in `apps/api/app/api/v1/planning.py`) depends on `CtxDep`; `get_ctx` in `app/api/deps.py` hashes the cookie token, loads `Session`+`User`, opens a transaction, calls `set_user_scope` (RLS), and yields `Ctx(db, user, settings, ...)`.
@@ -130,7 +130,7 @@
 
 **State Management:**
 - Server: Postgres is the only state; sessions are rows in `sessions` (token hash stored, not the token).
-- Client: TanStack Query cache (staleTime 30s, `retry` skips 4xx) with centralized `keys` in `apps/web/src/lib/queries.ts`; UI-level actions (open add sheet, Faldo Check, search) via `AppActionsContext` in `apps/web/src/components/layout/app-context.tsx`. Theme via `next-themes`.
+- Client: TanStack Query cache (staleTime 30s, `retry` skips 4xx) with centralized `keys` in `apps/web/src/shared/api/query-keys.ts`; UI-level actions (open add sheet, Faldo Check, search) via `AppActionsContext` in `apps/web/src/shared/lib/app-actions.tsx`. Theme via `next-themes`.
 
 ## Key Abstractions
 
@@ -187,7 +187,7 @@
 - **Serverless mode:** On Vercel `db_pool` defaults to `null` (`NullPool`) and `job_mode` runs inline; `db_pgbouncer` disables asyncpg prepared statement cache (`app/core/db.py`, `app/core/config.py`).
 - **Circular imports:** Not detected. Late imports are used deliberately in `app/main.py` and `app/api/deps.py` for `app.jobs.worker` and in `app/jobs/worker.py` for `app.services.receipts`.
 - **Tool registration by import side effect:** `app/ai/assistant/service.py` imports `app.ai.tools.definitions` (`# noqa: F401`) so the tools register; new tool modules must be imported the same way.
-- **API contract duplication:** Frontend types in `apps/web/src/lib/types.ts` are hand-maintained mirrors of backend output; there is no generated client. Many endpoints return `dict[str, Any]` instead of Pydantic response models.
+- **API contract duplication:** Frontend types in `apps/web/src/shared/api/types.ts` are hand-maintained mirrors of backend output; there is no generated client. Many endpoints return `dict[str, Any]` instead of Pydantic response models.
 
 ## Anti-Patterns
 
@@ -211,13 +211,13 @@
 
 ### Calling `fetch` directly from the web app
 
-**What happens:** Bypassing `apps/web/src/lib/api.ts`.
+**What happens:** Bypassing `apps/web/src/shared/api/client.ts`.
 **Why it's wrong:** Loses the required `x-faldo-client` header (backend returns 403), 401 redirect handling and `ApiError` shape.
-**Do this instead:** Use `api.get/post/put/patch/delete/upload` and add a hook plus a `keys` entry in `apps/web/src/lib/queries.ts`.
+**Do this instead:** Use `api.get/post/put/patch/delete/upload` and add a hook in `apps/web/src/entities/<name>/api/queries.ts` plus a `keys` entry in `apps/web/src/shared/api/query-keys.ts`.
 
 ## Error Handling
 
-**Strategy:** Raise typed `AppError` subclasses in services; handlers registered in `app/core/errors.py` convert them (and validation errors) into `application/problem+json` with an `errors` list of `{field, message}`. The web `ApiError` (`apps/web/src/lib/api.ts`) parses that shape; 401 outside public paths redirects to `/login?next=...`.
+**Strategy:** Raise typed `AppError` subclasses in services; handlers registered in `app/core/errors.py` convert them (and validation errors) into `application/problem+json` with an `errors` list of `{field, message}`. The web `ApiError` (`apps/web/src/shared/api/client.ts`) parses that shape; 401 outside public paths redirects to `/login?next=...`.
 
 **Patterns:**
 - Routes stay thin; services raise `NotFound`/`Conflict`; ownership via `get_owned`.

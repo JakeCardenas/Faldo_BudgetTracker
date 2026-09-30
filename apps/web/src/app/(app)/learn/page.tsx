@@ -2,13 +2,13 @@
 
 import Link from "next/link"
 import { ChevronRight, CircleCheck } from "lucide-react"
-import { Panda } from "@/components/brand/panda"
-import { ProgressBar } from "@/components/finance/progress-bar"
-import { LargeTitle } from "@/components/ios/nav-header"
-import { LESSONS } from "@/lib/lessons"
-import { useMaskedAmounts } from "@/lib/privacy"
-import { useMe } from "@/lib/queries"
-import { cn } from "@/lib/utils"
+import { Panda } from "@/shared/ui/brand/panda"
+import { ProgressBar } from "@/shared/ui/progress-bar"
+import { LargeTitle } from "@/shared/ui/ios/nav-header"
+import { LESSONS } from "@/entities/lesson"
+import { useMaskedAmounts } from "@/shared/lib/privacy"
+import { useMe } from "@/entities/session"
+import { cn } from "@/shared/lib/utils"
 
 const LEVELS = ["Foundations", "Growing", "Advanced"] as const
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { describeChanges, STALE_REVISION, staleCurrent } from "../src/lib/transaction-conflict.ts"
+import { describeChanges, STALE_REVISION, staleCurrent } from "../src/features/transaction-edit/model/conflict.ts"
 
 const base = {
   id: "t1", type: "expense", amount_minor: 25_000, currency: "PHP", occurred_on: "2026-09-29", account_id: "a1",

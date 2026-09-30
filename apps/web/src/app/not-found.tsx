@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { Panda } from "@/components/brand/panda"
-import { Button } from "@/components/ui/button"
+import { Panda } from "@/shared/ui/brand/panda"
+import { Button } from "@/shared/ui/button"
 
 export default function NotFound() {
   return (

@@ -1,10 +1,10 @@
 "use client"
 
 import { notFound, useParams } from "next/navigation"
-import { LargeTitle } from "@/components/ios/nav-header"
-import { SETTINGS_SECTIONS } from "@/components/settings/sections"
-import { useMaskedAmounts } from "@/lib/privacy"
-import { useMe } from "@/lib/queries"
+import { LargeTitle } from "@/shared/ui/ios/nav-header"
+import { SETTINGS_SECTIONS } from "@/widgets/settings"
+import { useMaskedAmounts } from "@/shared/lib/privacy"
+import { useMe } from "@/entities/session"
 
 export default function SettingsSectionPage() {
   useMaskedAmounts()

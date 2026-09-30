@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { AiProvidersNow, LegalPage } from "@/components/legal/legal-page"
+import { AiProvidersNow, LegalPage } from "@/widgets/legal"
 
 export const metadata: Metadata = {
   title: "Privacy notice",

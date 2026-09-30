@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { MOTION_SCRIPT, resolveMotionReduced } from "../src/lib/motion-pref.ts"
-import { Spring, aim } from "../src/lib/spring.ts"
+import { MOTION_SCRIPT, resolveMotionReduced } from "../src/shared/lib/motion-pref.ts"
+import { Spring, aim } from "../src/shared/lib/spring.ts"
 
 /** Runs the pre-paint script against a fake page and returns what it set. */
 function runScript({ stored = null, deviceReduced = false, storageThrows = false } = {}) {

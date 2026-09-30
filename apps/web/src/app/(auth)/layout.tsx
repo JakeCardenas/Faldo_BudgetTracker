@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { AuthDraftProvider } from "@/components/auth/draft"
-import { Panda } from "@/components/brand/panda"
+import { AuthDraftProvider } from "@/features/auth"
+import { Panda } from "@/shared/ui/brand/panda"
 
 /**
  * Sign-in, sign-up and password screens: one calm column on white, the same on every screen size. Faldo waving beside

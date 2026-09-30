@@ -59,9 +59,9 @@
 - `email-validator` >=2.3 - email field validation
 
 **Critical (Web, `apps/web/package.json`):**
-- `@tanstack/react-query` ^5.102.8 - server-state cache (`apps/web/src/lib/queries.ts`, `apps/web/src/app/providers.tsx`)
-- `radix-ui` ^1.6.7, `cmdk`, `sonner`, `react-day-picker` ^10, `class-variance-authority`, `clsx`, `tailwind-merge` - UI primitives (`apps/web/src/components/ui/`)
-- `recharts` ^3.10.1 - charts (`apps/web/src/components/charts/`)
+- `@tanstack/react-query` ^5.102.8 - server-state cache (`apps/web/src/entities/*/api/queries.ts`, `apps/web/src/app/providers.tsx`)
+- `radix-ui` ^1.6.7, `cmdk`, `sonner`, `react-day-picker` ^10, `class-variance-authority`, `clsx`, `tailwind-merge` - UI primitives (`apps/web/src/shared/ui/`)
+- `recharts` ^3.10.1 - charts (`apps/web/src/shared/ui/charts/`)
 - `date-fns` ^4.4.0 - date handling
 - `next-themes` ^0.4.6 - light/dark theme
 - `lucide-react` - icons

@@ -2,15 +2,9 @@
 
 import { notFound, redirect } from "next/navigation"
 import { use } from "react"
-import { LargeTitle } from "@/components/ios/nav-header"
-import { CurrencyConverter } from "@/components/tools/currency"
-import { EmergencyFund } from "@/components/tools/emergency"
-import { LoanCalculator } from "@/components/tools/loan"
-import { QuickNotes } from "@/components/tools/notes"
-import { SplitBill } from "@/components/tools/split"
-import { TaxCalculator } from "@/components/tools/tax"
-import { useMaskedAmounts } from "@/lib/privacy"
-import { TOOLS } from "@/lib/tools-catalog"
+import { LargeTitle } from "@/shared/ui/ios/nav-header"
+import { CurrencyConverter, EmergencyFund, LoanCalculator, QuickNotes, SplitBill, TaxCalculator, TOOLS } from "@/features/money-tools"
+import { useMaskedAmounts } from "@/shared/lib/privacy"
 
 const VIEWS: Record<string, React.ComponentType> = {
   split: SplitBill, loan: LoanCalculator, tax: TaxCalculator, currency: CurrencyConverter,

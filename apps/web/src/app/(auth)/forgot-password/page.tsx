@@ -3,9 +3,8 @@
 import Link from "next/link"
 import { useState } from "react"
 import { Loader2, MailCheck } from "lucide-react"
-import { useAuthDraft } from "@/components/auth/draft"
-import { AuthError, AuthField, AuthHeading, PRIMARY_PILL } from "@/components/auth/fields"
-import { api, ApiError } from "@/lib/api"
+import { useAuthDraft, AuthError, AuthField, AuthHeading, PRIMARY_PILL } from "@/features/auth"
+import { api, ApiError } from "@/shared/api/client"
 
 export default function ForgotPasswordPage() {
   // Starts with whatever was typed on Log in, and hands any change back to it.

@@ -4,9 +4,9 @@ import Link from "next/link"
 import { use, useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
-import { AuthError, AuthHeading, PRIMARY_PILL } from "@/components/auth/fields"
-import { api, ApiError } from "@/lib/api"
-import type { Me } from "@/lib/types"
+import { AuthError, AuthHeading, PRIMARY_PILL } from "@/features/auth"
+import { api, ApiError } from "@/shared/api/client"
+import type { Me } from "@/shared/api/types"
 
 /**
  * The link from the "Confirm your email" message. It only counts while signed in to the account it was sent to (signed
