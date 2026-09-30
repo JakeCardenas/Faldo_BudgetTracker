@@ -251,6 +251,8 @@ html.ios {
     @apply font-sans;
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    /* No browser pull-to-refresh (a full reload) or rubber band at the top: Faldo's own pull refreshes in place. */
+    overscroll-behavior-y: none;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     /* The parts the browser draws still carry Faldo: the caret, native checks and radios, and scrollbars. */
@@ -960,12 +962,6 @@ html.ios {
 
 .splash-overlay {
   animation: splash-out 320ms var(--ease-out-quint) 2350ms both;
-}
-
-html[data-splash="skip"] .splash-overlay:not([data-force]),
-html[data-splash="skip"] .boot-full,
-html:not([data-splash="skip"]) .boot-quiet {
-  display: none;
 }
 
 @media print {

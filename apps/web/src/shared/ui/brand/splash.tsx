@@ -6,17 +6,17 @@ import { cn } from "@/shared/lib/utils"
 
 const TOTAL = 3000
 
-export function SplashContent({ animated = false, className }: { animated?: boolean; className?: string }) {
+function SplashContent({ className }: { className?: string }) {
   return (
     <div className={cn("relative flex flex-col items-center justify-center font-brand", className)}>
-      <div className={cn("flex flex-col items-center gap-6 sm:flex-row sm:gap-10", animated && "splash-stage")}>
-        <div className={cn(animated && "splash-icon-slide")}>
-          <div className={cn(animated && "splash-icon-in")}>
+      <div className="splash-stage flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
+        <div className="splash-icon-slide">
+          <div className="splash-icon-in">
             <Image src="/brand/faldo-panda-512.png" alt="" width={180} height={180} priority unoptimized
               className="size-28 drop-shadow-[0_18px_30px_rgb(30_58_36/0.22)] sm:size-44" />
           </div>
         </div>
-        <div className={cn("w-[18rem] text-center sm:w-[22rem] sm:text-left", animated && "splash-text-in")}>
+        <div className="splash-text-in w-[18rem] text-center sm:w-[22rem] sm:text-left">
           <span className="inline-flex rounded-full bg-card px-3 py-1 text-xs font-bold text-primary shadow-(--shadow-card)">
             Faldo <span className="mx-1 text-muted-foreground/60">·</span> <span className="font-semibold">Money companion</span>
           </span>
@@ -24,14 +24,15 @@ export function SplashContent({ animated = false, className }: { animated?: bool
           <p className="mt-3 text-sm font-semibold text-muted-foreground">Track · Plan · Save · Learn</p>
         </div>
       </div>
-      <p className={cn("absolute inset-x-0 bottom-[calc(2rem+env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground", animated && "splash-text-in")}>
+      <p className="splash-text-in absolute inset-x-0 bottom-[calc(2rem+env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground">
         Made by: <span className="font-bold text-foreground">Jake Cardenas</span>
       </p>
     </div>
   )
 }
 
-export function Splash({ force = false }: { force?: boolean }) {
+/** The Faldo welcome: the panda, then the name, then it fades into the app. Played once after signing in (see welcome-splash). */
+export function Splash() {
   const [mounted, setMounted] = useState(true)
 
   useEffect(() => {
@@ -41,8 +42,8 @@ export function Splash({ force = false }: { force?: boolean }) {
 
   if (!mounted) return null
   return (
-    <div aria-hidden data-force={force ? "" : undefined} className="splash-overlay fixed inset-0 z-[100] bg-background">
-      <SplashContent animated className="h-full" />
+    <div aria-hidden className="splash-overlay fixed inset-0 z-[100] bg-background">
+      <SplashContent className="h-full" />
     </div>
   )
 }

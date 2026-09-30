@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { usePathname, useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { AddTransactionDialog, type AddMode } from "@/widgets/add-transaction"
 import Image from "next/image"
-import { SplashContent } from "@/shared/ui/brand/splash"
 import { FaldoCheckSheet } from "@/features/purchase-decision"
 import { TransactionSheet } from "@/features/transaction-edit"
 import { AppActionsContext, type AddModeOption, type CheckPreset, type EntryPreset } from "@/shared/lib/app-actions"
@@ -16,6 +16,7 @@ import { CommandSearch } from "@/widgets/command-search"
 import { FaldoBubble } from "@/widgets/faldo-bubble"
 import { MobileNav, TopNav } from "@/widgets/navigation"
 import { Button } from "@/shared/ui/button"
+import { PullToRefresh } from "@/shared/ui/pull-to-refresh"
 import { useBubbleShown } from "@/shared/lib/bubble"
 import { setDisplayCurrency } from "@/shared/lib/currency"
 import { useAmountsHidden } from "@/shared/lib/privacy"
@@ -46,8 +47,26 @@ function PageMain({ pathname, className, children }: { pathname: string; classNa
 }
 
 /**
- * Shown instead of the launch splash when Faldo can't load who's signed in (the server is down, or the phone lost its
- * connection). Without it the splash would wait forever with no word about why. A 401 never gets here: it goes to Log in.
+ * While Faldo loads who's signed in: the plain page colour, like a native app opening, with a spinner only if it takes
+ * a while. The logo and welcome animation belong to signing in (WelcomeSplash), not to every open or refresh.
+ */
+function Booting() {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 700)
+    return () => clearTimeout(timer)
+  }, [])
+  return (
+    <div role="status" className="flex min-h-dvh items-center justify-center">
+      <span className="sr-only">Loading Faldo</span>
+      {slow && <Loader2 aria-hidden className="size-5 animate-spin text-muted-foreground" />}
+    </div>
+  )
+}
+
+/**
+ * Shown instead of the loading screen when Faldo can't load who's signed in (the server is down, or the phone lost its
+ * connection). Without it the screen would wait forever with no word about why. A 401 never gets here: it goes to Log in.
  */
 function Unreachable({ retrying, onRetry }: { retrying: boolean; onRetry: () => void }) {
   return (
@@ -65,6 +84,7 @@ function Unreachable({ retrying, onRetry }: { retrying: boolean; onRetry: () => 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const qc = useQueryClient()
   const { data: me, isLoading, isError, isFetching, refetch } = useMe()
   // Re-renders the shell's own sheets and dialogs when "Hide amounts" changes; pages subscribe themselves.
   useAmountsHidden()
@@ -139,23 +159,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const booting = isLoading || !me || !me.settings.onboarding_completed_at
   const fullBleed = pathname.startsWith("/assistant")
 
+  // Pull to refresh: everything cached goes stale and what's on screen loads again, in place.
+  const refresh = useCallback(async () => {
+    const started = Date.now()
+    await qc.invalidateQueries()
+    const failed = qc.getQueryCache().findAll({ type: "active" }).some((q) => q.state.status === "error" && q.state.errorUpdatedAt >= started)
+    if (failed) toast.error("Couldn't refresh. Check your connection and try again.")
+  }, [qc])
+
   return (
     <>
       <WelcomeSplash />
       {isError && !me ? (
         <Unreachable retrying={isFetching} onRetry={() => void refetch()} />
       ) : booting ? (
-        <>
-          <SplashContent className="boot-full min-h-dvh" />
-          <div className="boot-quiet flex min-h-dvh items-center justify-center">
-            <Image src="/brand/faldo-panda-512.png" alt="" width={56} height={56} priority unoptimized className="size-14 animate-pulse" />
-          </div>
-        </>
+        <Booting />
       ) : (
         <AppActionsContext.Provider value={actions}>
           <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
-          {/* The app paints its own canvas, so the body's colour only shows under the status bar and in overscroll. */}
-          <div className="flex min-h-dvh flex-col bg-background">
+          {/* The app paints its own canvas, so the body's colour only shows under the status bar and above a pull.
+              The chat scrolls on its own and pulls down through its history, so it has no pull to refresh. */}
+          <PullToRefresh onRefresh={refresh} disabled={fullBleed} className="flex min-h-dvh flex-col bg-background">
             {!fullBleed && <TopNav />}
             <PageMain key={pathname} pathname={pathname} className={fullBleed
               ? "w-full flex-1"
@@ -164,7 +188,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 bubble ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(6.5rem+env(safe-area-inset-bottom))]")}>
               {children}
             </PageMain>
-          </div>
+          </PullToRefresh>
           <MobileNav />
           <FaldoBubble />
           <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} text={text} />

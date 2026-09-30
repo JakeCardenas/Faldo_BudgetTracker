@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { OrDivider, PILL } from "./fields"
 import { api } from "@/shared/api/client"
+import { markWelcome } from "@/shared/ui/brand/welcome-splash"
 import { cn } from "@/shared/lib/utils"
 
 type Provider = "google" | "apple"
@@ -56,14 +57,14 @@ export function SocialSignIn({ next }: { next: string }) {
     <div className="space-y-3">
       <OrDivider />
       {available.includes("google") && (
-        <a href={href("google")} onClick={() => setLeaving("google")} aria-disabled={leaving !== null}
+        <a href={href("google")} onClick={() => { markWelcome(); setLeaving("google") }} aria-disabled={leaving !== null}
           className={cn(PILL, "bg-[#eef1ec] text-foreground hover:bg-[#e5e9e2] aria-disabled:pointer-events-none dark:bg-white/10 dark:hover:bg-white/15")}>
           {leaving === "google" ? <Loader2 className="size-[1.15rem] animate-spin" /> : <GoogleMark />} Continue with Google
         </a>
       )}
       {/* Apple's rules: its sign-in button is black (or white on dark), with its logo. */}
       {available.includes("apple") && (
-        <a href={href("apple")} onClick={() => setLeaving("apple")} aria-disabled={leaving !== null}
+        <a href={href("apple")} onClick={() => { markWelcome(); setLeaving("apple") }} aria-disabled={leaving !== null}
           className={cn(PILL, "bg-black text-white hover:bg-black/85 aria-disabled:pointer-events-none dark:bg-white dark:text-black dark:hover:bg-white/90")}>
           {leaving === "apple" ? <Loader2 className="size-[1.15rem] animate-spin" /> : <AppleMark />} Continue with Apple
         </a>

@@ -27,5 +27,5 @@ export default function WelcomeSplash() {
       window.sessionStorage.removeItem(WELCOME_KEY)
     } catch {}
   }, [show])
-  return show ? <Splash force /> : null
+  return show ? <Splash /> : null
 }
