@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { AuthError, AuthHeading, PasswordField, PRIMARY_PILL } from "@/components/auth/fields"
 import { api, ApiError } from "@/lib/api"
+import { signedIn } from "@/lib/session"
 import type { Me } from "@/lib/types"
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
@@ -25,7 +26,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
     setError(null)
     try {
       const me = await api.post<Me>("/auth/password/reset", { token, password })
-      qc.setQueryData(["me"], me)
+      signedIn(qc, me)
       router.replace(me.settings.onboarding_completed_at ? "/" : "/onboarding")
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")

@@ -48,6 +48,13 @@ class IdempotencyKeyReused(Conflict):
     problem_type = "urn:faldo:problem:idempotency-key-reused"
 
 
+class ReauthenticationRequired(AppError):
+    """A sensitive action needs a recent sign-in on this session; `methods` says how to confirm (password, google…)."""
+    status_code = 403
+    title = "Confirm it's you"
+    problem_type = "urn:faldo:problem:reauthentication-required"
+
+
 class Unauthorized(AppError):
     status_code = 401
     title = "Unauthorized"

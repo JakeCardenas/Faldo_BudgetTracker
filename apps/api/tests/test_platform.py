@@ -66,6 +66,8 @@ async def test_password_reset_flow(anon, app, monkeypatch):
     await anon.post("/api/v1/auth/register", json={"email": email, "password": "original-password-1", "display_name": "Reset"})
     other_device = ApiClient(transport=anon._transport, base_url="http://test")
     assert (await other_device.post("/api/v1/auth/login", json={"email": email, "password": "original-password-1"})).status_code == 200
+    assert len(sent) == 1 and "/verify-email/" in sent[0], "signing up asks to confirm the email"
+    sent.clear()
 
     unknown = await anon.post("/api/v1/auth/password/forgot", json={"email": "nobody@example.com"})
     assert unknown.status_code == 202 and not sent

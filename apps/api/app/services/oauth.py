@@ -4,7 +4,7 @@ The browser goes to the service with a one-time `state` that Faldo also keeps in
 the person back with a code, and Faldo trades the code for who they are, straight from the service over TLS (so that
 answer can be believed without checking a token signature). A returning account is found by the service's own id for
 the person, which survives a changed email; a first sign-in joins the Faldo account with that verified email, or makes
-one. Google is free to set up; Apple needs the Apple Developer Program, so its button only shows once it's configured.
+one. Joining never lets someone who merely registered that address first keep access (see `sign_in`). Google is free to set up; Apple needs the Apple Developer Program, so its button only shows once it's configured.
 """
 
 import base64
@@ -13,6 +13,7 @@ import secrets
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote, unquote, urlencode
 
@@ -20,12 +21,12 @@ import httpx
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.db import set_user_scope
-from app.models import OAuthIdentity, User, UserSettings
+from app.models import AuthToken, OAuthIdentity, Session, User, UserSettings
 from app.services.categories import create_default_categories
 
 GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -179,8 +180,41 @@ async def apple_identity(code: str, user_form: str | None) -> Identity:
     return apple_claims(token.json()["id_token"], settings, user if isinstance(user, dict) else None)
 
 
-async def sign_in(db: AsyncSession, identity: Identity) -> User:
-    """The Faldo account this Google or Apple account signs into, joining or making one on its first sign-in."""
+@dataclass
+class SignedIn:
+    user: User
+    secured: bool = False
+    """True when this sign-in took the account back from an unconfirmed password: earlier sessions were signed out and
+    that password was turned off. The app tells the person, and how to set a password again."""
+
+
+def _proves_email(identity: Identity, user: User) -> bool:
+    return bool(identity.email and identity.email_verified and identity.email.lower() == user.email.lower())
+
+
+async def _claim(db: AsyncSession, user: User) -> bool:
+    """The person who proved they own this email takes the account over from whoever registered it with a password.
+
+    Every existing session and unused emailed link is revoked and the password is turned off, so neither can keep
+    access. The account's records stay. Returns whether anything had to be taken away (and so is worth telling them).
+    """
+    now = datetime.now(UTC)
+    revoked = await db.execute(update(Session).where(Session.user_id == user.id, Session.revoked_at.is_(None))
+                               .values(revoked_at=now))
+    await db.execute(update(AuthToken).where(AuthToken.user_id == user.id, AuthToken.used_at.is_(None)).values(used_at=now))
+    had_password = user.password_hash is not None
+    user.password_hash = None
+    user.email_verified_at = now
+    return had_password or bool(revoked.rowcount)  # type: ignore[attr-defined]
+
+
+async def sign_in(db: AsyncSession, identity: Identity) -> SignedIn:
+    """The Faldo account this Google or Apple account signs into, joining or making one on its first sign-in.
+
+    An account is only joined when the service has verified the email. If the account itself never proved it owns that
+    email (a password sign-up nobody confirmed), this sign-in claims it: see `_claim`. Accounts that did prove it are
+    joined as they are.
+    """
     link = (await db.execute(select(OAuthIdentity).where(OAuthIdentity.provider == identity.provider,
                                                          OAuthIdentity.subject == identity.subject))).scalar_one_or_none()
     if link:
@@ -188,13 +222,18 @@ async def sign_in(db: AsyncSession, identity: Identity) -> User:
         if user is None:
             raise SignInError(identity.provider)
         await set_user_scope(db, user.id)
-        return user
+        # Linked before accounts tracked confirmation, with a password nobody confirmed: secure it the same way now.
+        secured = await _claim(db, user) if user.email_verified_at is None and _proves_email(identity, user) else False
+        await db.flush()
+        return SignedIn(user, secured)
     if not identity.email or not identity.email_verified:
         raise SignInError("unverified")
     user = (await db.execute(select(User).where(User.email == identity.email))).scalar_one_or_none()
+    secured = False
     if user is None:
         name = (identity.name or identity.email.split("@")[0]).strip()[:80] or "Friend"
-        user = User(id=uuid.uuid4(), email=identity.email, password_hash=None, display_name=name)
+        user = User(id=uuid.uuid4(), email=identity.email, password_hash=None, display_name=name,
+                    email_verified_at=datetime.now(UTC))
         db.add(user)
         await db.flush()
         await set_user_scope(db, user.id)
@@ -202,6 +241,8 @@ async def sign_in(db: AsyncSession, identity: Identity) -> User:
         await create_default_categories(db, user.id)
     else:
         await set_user_scope(db, user.id)
+        if user.email_verified_at is None:
+            secured = await _claim(db, user)
     db.add(OAuthIdentity(user_id=user.id, provider=identity.provider, subject=identity.subject, email=identity.email))
     await db.flush()
-    return user
+    return SignedIn(user, secured)

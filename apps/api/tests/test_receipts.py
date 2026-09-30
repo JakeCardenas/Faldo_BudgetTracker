@@ -125,8 +125,10 @@ async def test_a_scanned_transfer_becomes_income_into_the_right_account(app, mon
     assert extraction["amount_minor"] == 1_000_000 and extraction["notes"] == "Ref 9001"
     assert reader.seen["accounts"] == ["Cash", "GCash"] and income[0]["name"] in reader.seen["income"]
 
-    retried = (await client.post(f"/api/v1/receipts/{receipt['id']}/retry")).json()
-    assert retried["status"] == "processing" and len(queued) == 2
+    assert read["can_retry"] is False
+    # It was read fine, so reading it again would only spend the AI limit: fix the form instead.
+    retried = await client.post(f"/api/v1/receipts/{receipt['id']}/retry")
+    assert retried.status_code == 400 and len(queued) == 1
     await client.aclose()
 
 

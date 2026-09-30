@@ -1,12 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { CircleUserRound, LogOut, Settings } from "lucide-react"
+import { toast } from "sonner"
 import { initialsOf } from "@/components/layout/mobile-nav"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { api } from "@/lib/api"
+import { forgetPushOnThisDevice } from "@/lib/push"
 import { useMe } from "@/lib/queries"
+import { signOut } from "@/lib/session"
 
 export function Avatar({ name, className }: { name?: string | null; className?: string }) {
   return (
@@ -16,13 +18,18 @@ export function Avatar({ name, className }: { name?: string | null; className?: 
   )
 }
 
+const post = (path: string) => fetch(path, { method: "POST", credentials: "same-origin", headers: { "x-faldo-client": "web" } })
+
+/** Signing out forgets everything this tab knows about the person, even when the server can't be reached. */
 export function useLogout() {
-  const router = useRouter()
-  return async () => {
-    await api.post("/auth/logout").catch(() => undefined)
-    router.replace("/login")
-    router.refresh()
-  }
+  const qc = useQueryClient()
+  return () => signOut(qc, {
+    unsubscribePush: forgetPushOnThisDevice,
+    revokeSession: async () => { if (!(await post("/api/v1/auth/logout")).ok) throw new Error("not signed out") },
+    dropCookie: () => post("/logout"),
+    afterward: () => toast.dismiss(),
+    navigate: (path) => window.location.replace(path),
+  })
 }
 
 export function UserMenu() {

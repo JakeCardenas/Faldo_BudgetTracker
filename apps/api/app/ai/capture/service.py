@@ -5,9 +5,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai import consent
 from app.ai.capture.rules import parse_with_rules
-from app.ai.factory import get_llm
+from app.ai.factory import get_llm, local_llm
 from app.ai.providers.base import CaptureContext
+from app.ai.usage import metered
 from app.engine.money import format_money, to_minor
 from app.models import Account, Category, Merchant, Transaction
 from app.models.enums import CategoryKind
@@ -178,7 +180,8 @@ def rules_are_confident(parsed: dict[str, Any]) -> bool:
 
 async def parse_capture(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings, today: date, text: str) -> dict[str, Any]:
     context = await build_context(db, user_id, settings, today)
-    provider = get_llm()
+    chosen = get_llm()
+    provider = metered(chosen, user_id) if consent.permits(settings, chosen) else local_llm()
     rules = parse_with_rules(text, context)
     ai = None if rules_are_confident(rules) or rules.get("is_request") else await provider.parse_transactions(text, context)
     raw = rules

@@ -6,7 +6,15 @@ from typing import Any
 
 from openai import APIError, AsyncOpenAI
 
-from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, TextDelta, ToolCall, TranscriptItem
+from app.ai.providers.base import (
+    CaptureContext,
+    ModelTurn,
+    ProviderUnavailable,
+    TextDelta,
+    ToolCall,
+    TranscriptItem,
+    with_context,
+)
 from app.ai.schemas import CAPTURE_SCHEMA, RECEIPT_SCHEMA
 from app.core.config import Settings
 
@@ -83,7 +91,7 @@ class OpenAIProvider:
 
     def _input(self, transcript: list[TranscriptItem]) -> list[Any]:
         items: list[Any] = []
-        for entry in transcript:
+        for entry in with_context(transcript):
             if entry.kind == "user" and entry.images:
                 items.append({"role": "user", "content": [
                     *({"type": "input_image", "image_url": f"data:{i['media_type']};base64,{i['data']}", "detail": "high"}

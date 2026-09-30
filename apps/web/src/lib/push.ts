@@ -53,6 +53,25 @@ export async function disablePush(): Promise<void> {
   }
 }
 
+/**
+ * Signing out: stop this device's notifications for the person leaving. The server is told first, while the session
+ * still says whose they are, then the browser drops the subscription so nothing more can arrive for them even if that
+ * request failed. Plain fetch, so an already-expired session doesn't bounce the tab to Log in halfway through.
+ */
+export async function forgetPushOnThisDevice(): Promise<void> {
+  const subscription = pushSupported() ? await currentSubscription() : null
+  if (!subscription) return
+  try {
+    await fetch("/api/v1/push/unsubscribe", {
+      method: "POST", credentials: "same-origin",
+      headers: { "content-type": "application/json", "x-faldo-client": "web" },
+      body: JSON.stringify({ endpoint: subscription.endpoint }),
+    })
+  } finally {
+    await subscription.unsubscribe()
+  }
+}
+
 export function usePushEnabled(): [boolean | null, (on: boolean) => void] {
   const [enabled, setEnabled] = useState<boolean | null>(() => (pushSupported() ? null : false))
   useEffect(() => {

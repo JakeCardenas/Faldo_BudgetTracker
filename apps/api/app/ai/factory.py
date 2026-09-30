@@ -44,6 +44,11 @@ def get_llm() -> LLMProvider:
     return _provider("local")
 
 
+def local_llm() -> LLMProvider:
+    """Faldo's own rules: no outside service, no limits."""
+    return _provider("local")
+
+
 def next_llm(after: str) -> LLMProvider:
     """The provider to try when `after` fails: the next available one in the chain, ending with the local rules."""
     chain = get_settings().ai_provider_chain

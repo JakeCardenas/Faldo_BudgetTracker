@@ -11,9 +11,11 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai import consent
 from app.ai.capture.service import build_context
 from app.ai.factory import vision_readers
 from app.ai.providers.base import ProviderUnavailable
+from app.ai.usage import AIBudgetExceeded, metered
 from app.core.config import get_settings
 from app.core.errors import AppError, NotFound
 from app.engine.money import to_minor
@@ -30,6 +32,10 @@ logger = logging.getLogger(__name__)
 NOT_SET_UP = "Receipt reading isn't set up on this server. Your image is saved; fill in the details below."
 BUSY = ("Faldo couldn't read it just now: the AI is busy or at its free limit for the moment. Tap Read it again in a "
         "minute, or fill in the details below.")
+LIMIT = "Faldo's AI has reached today's limit for reading photos. Fill in the details below, or read it again tomorrow."
+READ = "This receipt was already read. Fix anything that's off in the form instead."
+# A read that got nothing usable out of the photo: worth another try. Other issues are for the person to check.
+UNREADABLE = {"not_receipt", "missing_total", "legibility"}
 
 ALLOWED_FORMATS = {"JPEG": ("image/jpeg", "jpg"), "PNG": ("image/png", "png"), "WEBP": ("image/webp", "webp")}
 MAX_DIMENSION = 2400
@@ -214,6 +220,14 @@ def match_category(categories: list[Category], name: str | None) -> tuple[Catego
     return found, None
 
 
+async def _readers(db: AsyncSession, user_id: uuid.UUID) -> tuple[list[Any], str]:
+    """Outside services allowed to read this person's photos, and what to say when there are none."""
+    configured = vision_readers()
+    settings = await db.get(UserSettings, user_id)
+    allowed = [r for r in configured if settings is not None and consent.permits(settings, r)]
+    return allowed, (NOT_SET_UP if not configured else consent.DECLINED_PHOTOS)
+
+
 async def upload_receipt(db: AsyncSession, user_id: uuid.UUID, data: bytes) -> Receipt:
     clean, mime, ext = sanitize_image(data)
     digest = hashlib.sha256(clean).hexdigest()
@@ -221,12 +235,12 @@ async def upload_receipt(db: AsyncSession, user_id: uuid.UUID, data: bytes) -> R
                                                        Receipt.status != ReceiptStatus.discarded))).scalars().first()
     if existing:
         return existing
-    readers = vision_readers()
+    readers, why_not = await _readers(db, user_id)
     receipt = Receipt(user_id=user_id, mime_type=mime, size_bytes=len(clean), sha256=digest,
                       status=ReceiptStatus.processing if readers else ReceiptStatus.unavailable,
                       provider=readers[0].name if readers else "local", validation_issues=[])
     if not readers:
-        receipt.error = NOT_SET_UP
+        receipt.error = why_not
     db.add(receipt)
     await db.flush()
     key = receipt_key(user_id, receipt.id, ext)
@@ -244,16 +258,21 @@ async def process_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid
     context = await build_context(db, user_id, settings, today)
     image = await get_storage(db, user_id).get(receipt.storage_key)
     raw: dict[str, Any] | None = None
-    for reader in vision_readers():
+    limited = False
+    readers, why_not = await _readers(db, user_id)
+    for reader in readers:
         try:
-            raw = await reader.extract_receipt(image, receipt.mime_type, context)
+            raw = await metered(reader, user_id).extract_receipt(image, receipt.mime_type, context)
             receipt.provider = reader.name
+            break
+        except AIBudgetExceeded:
+            limited = True
             break
         except ProviderUnavailable as exc:
             logger.warning("Receipt %s: %s couldn't read it: %s", receipt.id, reader.name, exc)
     if raw is None:
         receipt.status = ReceiptStatus.failed
-        receipt.error = BUSY if vision_readers() else NOT_SET_UP
+        receipt.error = LIMIT if limited else BUSY if readers else why_not
         return
     extraction, issues = validate_extraction(raw, today, settings.currency)
     kind = CategoryKind.income if extraction["type"] == "income" else CategoryKind.expense
@@ -274,14 +293,25 @@ async def process_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid
 async def retry_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid.UUID) -> Receipt:
     """Read a failed or unreadable receipt again, now that the AI may be back."""
     receipt = await get_receipt(db, user_id, receipt_id)
-    if receipt.status not in {ReceiptStatus.failed, ReceiptStatus.unavailable, ReceiptStatus.needs_review} or not receipt.storage_key:
-        raise AppError("This receipt can't be read again.")
-    readers = vision_readers()
+    if not can_read_again(receipt):
+        raise AppError(READ if receipt.status == ReceiptStatus.needs_review else "This receipt can't be read again.")
+    readers, why_not = await _readers(db, user_id)
     if not readers:
-        raise AppError(NOT_SET_UP)
+        raise AppError(why_not)
     receipt.status, receipt.error, receipt.provider = ReceiptStatus.processing, None, readers[0].name
     await enqueue(db, "extract_receipt", user_id, {"receipt_id": str(receipt.id)})
     return receipt
+
+
+def can_read_again(receipt: Receipt) -> bool:
+    """Only reads that failed, or that got nothing usable from the photo. A read with details to check isn't sent again
+    (each read is a call to the outside AI and counts against today's limit)."""
+    if not receipt.storage_key:
+        return False
+    if receipt.status in {ReceiptStatus.failed, ReceiptStatus.unavailable}:
+        return True
+    codes = {issue.get("code") for issue in receipt.validation_issues or []}
+    return receipt.status == ReceiptStatus.needs_review and bool(codes & UNREADABLE)
 
 
 async def get_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid.UUID) -> Receipt:

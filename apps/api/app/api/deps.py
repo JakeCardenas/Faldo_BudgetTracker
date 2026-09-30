@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_sessionmaker, set_user_scope
-from app.core.errors import Unauthorized
+from app.core.errors import ReauthenticationRequired, Unauthorized
 from app.core.security import hash_token, session_window
 from app.engine.periods import today_in
 from app.models import Session, User, UserSettings
@@ -25,6 +25,7 @@ class Ctx:
     user: User
     settings: UserSettings
     session_token_hash: str
+    reauthenticated_at: datetime | None = None
 
     @property
     def user_id(self) -> uuid.UUID:
@@ -75,7 +76,8 @@ async def get_ctx(request: Request) -> AsyncIterator[Ctx]:
                 .values(last_seen_at=now, expires_at=now + session_window(sess.remember))
             )
         user_id = user.id
-        yield Ctx(db=session, user=user, settings=user_settings, session_token_hash=token_hash)
+        yield Ctx(db=session, user=user, settings=user_settings, session_token_hash=token_hash,
+                  reauthenticated_at=sess.reauthenticated_at)
     if settings.job_mode == "inline" and request.method in {"POST", "PUT", "PATCH", "DELETE"} and user_id:
         from app.jobs.worker import drain
 
@@ -83,6 +85,23 @@ async def get_ctx(request: Request) -> AsyncIterator[Ctx]:
             await drain(settings.inline_job_limit, user_id)
         except Exception:
             logger.exception("Inline job processing failed")
+
+
+# How recently this session must have proved who it is before deleting the account or downloading all its data.
+REAUTH_WINDOW = timedelta(minutes=10)
+
+
+async def require_recent_sign_in(ctx: Ctx) -> None:
+    """Refuse a sensitive action unless this session signed in or re-entered its password within REAUTH_WINDOW, so a
+    borrowed phone or a stolen session cookie alone can't export or delete everything."""
+    if ctx.reauthenticated_at and datetime.now(UTC) - ctx.reauthenticated_at <= REAUTH_WINDOW:
+        return
+    from app.models import OAuthIdentity
+
+    providers = sorted(set((await ctx.db.execute(select(OAuthIdentity.provider)
+                                                 .where(OAuthIdentity.user_id == ctx.user_id))).scalars()))
+    methods = (["password"] if ctx.user.password_hash else []) + providers
+    raise ReauthenticationRequired("To keep your data safe, confirm it's you first.", extra={"methods": methods})
 
 
 CtxDep = Annotated[Ctx, Depends(get_ctx, scope="function")]

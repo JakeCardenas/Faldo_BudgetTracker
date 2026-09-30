@@ -14,6 +14,10 @@ from app.core import db as db_module
 from app.core.rate_limit import limiter
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "real_consent: check the real outside-AI consent rule instead of assuming consent")
+
+
 @pytest.fixture(scope="session", autouse=True)
 async def engine_setup():
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -26,8 +30,21 @@ async def engine_setup():
 
 
 @pytest.fixture(autouse=True)
+def ai_consent_given(request, monkeypatch):
+    """Most tests are about what the AI does, so they act as if the person allowed outside AI. Tests marked
+    real_consent check the actual rule (tests/test_ai_consent.py)."""
+    if "real_consent" not in request.keywords:
+        from app.ai import consent
+
+        monkeypatch.setattr(consent, "permits", lambda user_settings, provider: True)
+
+
+@pytest.fixture(autouse=True)
 def reset_limits():
+    from app.ai import usage
+
     limiter.reset()
+    usage.reset()
 
 
 @pytest.fixture(scope="session")

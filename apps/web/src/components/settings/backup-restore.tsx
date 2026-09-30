@@ -6,6 +6,7 @@ import { ArchiveRestore, FileJson, HardDriveDownload, Loader2 } from "lucide-rea
 import { toast } from "sonner"
 import { ListGroup, ListRow } from "@/components/ios/list"
 import { IosSheet } from "@/components/ios/sheet"
+import { saveFile, useConfirmIdentity } from "@/components/settings/reauth"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { api, ApiError } from "@/lib/api"
@@ -25,6 +26,7 @@ function form(file: File, confirm?: string) {
 
 /** Download a versioned backup, or restore one: preview first, then an explicit confirmation. */
 export function BackupRestore() {
+  const { guard, dialog } = useConfirmIdentity()
   const qc = useQueryClient()
   const input = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
@@ -68,14 +70,24 @@ export function BackupRestore() {
     }
   }
 
+  // A full download needs a recent sign-in on this device; the dialog asks when the server does.
+  async function save(query: { receipts?: boolean }) {
+    try {
+      await guard(() => saveFile("/me/backup", query))
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Couldn't download the backup.")
+    }
+  }
+
   const summary = step.kind === "review" || step.kind === "restoring" || step.kind === "done" ? step.summary : null
   const action = summary && step.kind !== "done" ? restoreAction(summary) : null
 
   return (
     <>
+      {dialog}
       <ListGroup className="mt-3">
-        <ListRow icon={HardDriveDownload} title="Download a backup" detail="Everything, with receipt images" href="/api/v1/me/backup" external />
-        <ListRow icon={FileJson} title="Download without receipt images" detail="Smaller, for large histories" href="/api/v1/me/backup?receipts=false" external />
+        <ListRow icon={HardDriveDownload} title="Download a backup" detail="Everything, with receipt images" onClick={() => save({})} />
+        <ListRow icon={FileJson} title="Download without receipt images" detail="Smaller, for large histories" onClick={() => save({ receipts: false })} />
         <ListRow icon={ArchiveRestore} title="Restore from a backup" detail="Preview first; nothing changes until you confirm" onClick={() => reset(true)} />
       </ListGroup>
 

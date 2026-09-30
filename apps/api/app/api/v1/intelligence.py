@@ -8,7 +8,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, File, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import Field, StringConstraints
+from pydantic import Field, StringConstraints, field_validator
 from sqlalchemy import func, or_, select
 
 from app.ai.assistant.service import list_conversations, message_out, stream_answer
@@ -68,7 +68,7 @@ async def monthly_report(ctx: CtxDep, month: MonthQuery = None) -> dict[str, Any
 @router.get("/reports/summary", tags=["reports"])
 async def report_summary(ctx: CtxDep, month: MonthQuery = None) -> dict[str, Any]:
     target = parse_month(month) if month else ctx.today
-    return await reports.report_summary(ctx.db, ctx.user_id, target, ctx.today, ctx.currency)
+    return await reports.report_summary(ctx.db, ctx.user_id, target, ctx.today, ctx.currency, ctx.settings)
 
 
 @router.get("/health", tags=["reports"])
@@ -190,7 +190,7 @@ async def capture_confirm(data: CaptureConfirmIn, ctx: CtxDep, idempotency_key: 
 def _receipt_out(r: Any) -> dict[str, Any]:
     return {"id": str(r.id), "status": r.status.value, "provider": r.provider, "extraction": r.extraction,
             "issues": r.validation_issues, "error": r.error, "transaction_id": str(r.transaction_id) if r.transaction_id else None,
-            "has_image": bool(r.storage_key), "created_at": r.created_at.isoformat()}
+            "has_image": bool(r.storage_key), "can_retry": receipts.can_read_again(r), "created_at": r.created_at.isoformat()}
 
 
 @router.post("/receipts", status_code=201, tags=["receipts"])
@@ -226,6 +226,7 @@ async def get_receipt(receipt_id: uuid.UUID, ctx: CtxDep) -> dict[str, Any]:
 
 @router.post("/receipts/{receipt_id}/retry", tags=["receipts"])
 async def retry_receipt(receipt_id: uuid.UUID, ctx: CtxDep) -> dict[str, Any]:
+    await limiter.hit(f"receipt-retry:{ctx.user_id}", get_settings().receipt_retries_per_hour, 3600)
     return _receipt_out(await receipts.retry_receipt(ctx.db, ctx.user_id, receipt_id))
 
 
@@ -327,6 +328,15 @@ class PushKeys(ApiModel):
 class PushSubscriptionIn(ApiModel):
     endpoint: Annotated[str, StringConstraints(min_length=20, max_length=1000, pattern=r"^https://")]
     keys: PushKeys
+
+    @field_validator("endpoint")
+    @classmethod
+    def known_push_service(cls, value: str) -> str:
+        from app.services.push import valid_endpoint
+
+        if not valid_endpoint(value):
+            raise ValueError("That isn't a browser push service address.")
+        return value
 
 
 class PushEndpointIn(ApiModel):

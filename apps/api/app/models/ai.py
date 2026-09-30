@@ -179,7 +179,7 @@ class IdempotencyKey(UUIDPk, UserOwned, Base):
     key: Mapped[str] = mapped_column(String(255))
     request_hash: Mapped[str] = mapped_column(String(64))
     response_status: Mapped[int | None] = mapped_column(Integer)
-    response_body: Mapped[Any] = mapped_column(JSONB)
+    response_body: Mapped[Any] = mapped_column(JSONB, nullable=True)  # empty while the first request is still running
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

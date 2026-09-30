@@ -15,6 +15,7 @@ import { LoggedCard, ReviewCard, draftToInput, looksLikeLogging } from "@/compon
 import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { AiConsentCard } from "@/components/assistant/ai-consent"
 import { api, streamPost } from "@/lib/api"
 import { useSubmissionKey } from "@/lib/use-submission-key"
 import { formatDate, timeAgo } from "@/lib/format"
@@ -346,9 +347,11 @@ function AssistantView() {
     }
   }, [qc, submission])
 
+  // Nothing goes to an outside AI service before the person chooses (the server refuses too); the card asks.
+  const needsConsent = Boolean(me?.ai.needs_consent)
   const ask = useCallback(async (question: string, attached: Photo | null = null) => {
     const text = question.trim() || (attached ? "What can you tell me about this?" : "")
-    if (!text || busy) return
+    if (!text || busy || needsConsent) return
     play("send")
     setInput("")
     setPhoto(null)
@@ -404,7 +407,7 @@ function AssistantView() {
       qc.invalidateQueries({ queryKey: ["conversations"] })
       textareaRef.current?.focus()
     }
-  }, [busy, conversationId, qc, tryLog])
+  }, [busy, conversationId, needsConsent, qc, tryLog])
 
   useEffect(() => {
     const q = params.get("q")
@@ -529,6 +532,7 @@ function AssistantView() {
         </div>
 
         <div className="px-3 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-5">
+          {me && needsConsent && <div className="mx-auto mb-2 max-w-3xl"><AiConsentCard me={me} /></div>}
           <form onSubmit={(e) => { e.preventDefault(); ask(input, photo) }} className="mx-auto max-w-3xl rounded-xl border bg-card p-2 shadow-(--shadow-float) transition-[border-color] focus-within:border-input">
             <label htmlFor="assistant-input" className="sr-only">Ask Faldo or log a transaction</label>
             {photo && (
@@ -578,7 +582,7 @@ function AssistantView() {
               {busy ? (
                 <Button type="button" size="icon" variant="secondary" onClick={() => abortRef.current?.abort()} aria-label="Stop"><Square className="size-3.5" /></Button>
               ) : (
-                <Button type="submit" size="icon" disabled={!input.trim() && !photo} aria-label="Send"><ArrowUp /></Button>
+                <Button type="submit" size="icon" disabled={needsConsent || (!input.trim() && !photo)} aria-label="Send"><ArrowUp /></Button>
               )}
             </div>
           </form>

@@ -103,10 +103,13 @@ def draft_report_summary(report: dict[str, Any], currency: str) -> str:
     return " ".join(parts)
 
 
-async def report_summary(db: AsyncSession, user_id: uuid.UUID, month: date, today: date, currency: str) -> dict[str, Any]:
+async def report_summary(db: AsyncSession, user_id: uuid.UUID, month: date, today: date, currency: str,
+                         user_settings: Any = None) -> dict[str, Any]:
+    from app.ai import consent
     from app.ai.factory import get_llm
     from app.ai.guardrails.numeric import check_numbers
     from app.ai.guardrails.output import sanitize_markdown
+    from app.ai.usage import metered
     from app.services.pulse import data_version
 
     # An AI-written summary is kept until the data changes, so opening Reports again doesn't spend free AI limits.
@@ -119,8 +122,9 @@ async def report_summary(db: AsyncSession, user_id: uuid.UUID, month: date, toda
     report = await monthly_report(db, user_id, month, today)
     draft = draft_report_summary(report, currency)
     text, generated_by = draft, "template"
-    if report["summary"]["transaction_count"]:
-        provider = get_llm()
+    chosen = get_llm()
+    if report["summary"]["transaction_count"] and user_settings is not None and consent.permits(user_settings, chosen):
+        provider = metered(chosen, user_id)
         facts = {"summary": report["summary"], "top_categories": report["spending_by_category"][:5],
                  "category_changes": report["category_changes"][:5], "top_merchants": report["top_merchants"][:3]}
         rewritten = await provider.write_summary("report", facts, draft)

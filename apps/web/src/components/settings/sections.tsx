@@ -2,15 +2,16 @@
 
 import Image from "next/image"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Bell, Brain, Database, Download, EyeOff, KeyRound, Monitor, Moon, Palette, Plus, SlidersHorizontal, Smartphone, Sun, Tags, Trash2, Volume2, Wind, type LucideIcon } from "lucide-react"
+import { Bell, Brain, Database, Download, EyeOff, KeyRound, Mail, Monitor, Moon, Palette, Plus, SlidersHorizontal, Smartphone, Sun, Tags, Trash2, Volume2, Wind, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
 import { ListGroup, ListRow } from "@/components/ios/list"
 import { Segmented } from "@/components/ios/segmented"
+import { useAiChoice } from "@/components/assistant/ai-consent"
 import { BackupRestore } from "@/components/settings/backup-restore"
+import { saveFile, useConfirmIdentity } from "@/components/settings/reauth"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -26,6 +27,7 @@ import { setMotionReduced, useMotionReduced } from "@/lib/motion"
 import { setAmountsHidden, useAmountsHidden } from "@/lib/privacy"
 import { disablePush, enablePush, needsHomeScreen, pushSupported, usePushEnabled } from "@/lib/push"
 import { invalidateFinancialData, useAccounts, useCategories, useUpdateSettings } from "@/lib/queries"
+import { forgetUser } from "@/lib/session"
 import { setSoundsEnabled, soundsEnabled } from "@/lib/sound"
 import { useSmoothTheme } from "@/lib/theme"
 import type { Category, Me } from "@/lib/types"
@@ -140,7 +142,34 @@ function Preferences({ me }: { me: Me }) {
   )
 }
 
-function Security() {
+/** Whether the account has confirmed its email, and a way to confirm it or (without a password) to set one. */
+function EmailAndPassword({ me }: { me: Me }) {
+  const [busy, setBusy] = useState<"confirm" | "password" | null>(null)
+  async function send(kind: "confirm" | "password") {
+    setBusy(kind)
+    try {
+      if (kind === "confirm") await api.post("/auth/email/resend")
+      else await api.post("/auth/password/forgot", { email: me.email })
+      toast.success(`Check ${me.email}`, { description: kind === "confirm" ? "Open the link while signed in to confirm your email." : "The link lets you set a password. It works for 30 minutes." })
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't send the email.")
+    } finally {
+      setBusy(null)
+    }
+  }
+  return (
+    <ListGroup title="Email">
+      <ListRow icon={Mail} title={me.email} detail={me.email_verified ? "Confirmed" : "Not confirmed yet"}
+        trailing={!me.email_verified && <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => send("confirm")}>{busy === "confirm" ? "Sending…" : "Send link"}</Button>} />
+      {!me.has_password && (
+        <ListRow icon={KeyRound} title="No password yet" detail="You sign in with Google or Apple. We can email you a link to set one."
+          trailing={<Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => send("password")}>{busy === "password" ? "Sending…" : "Email me a link"}</Button>} />
+      )}
+    </ListGroup>
+  )
+}
+
+function Security({ me }: { me: Me }) {
   const qc = useQueryClient()
   const { data: sessions = [] } = useQuery({
     queryKey: ["sessions"],
@@ -186,11 +215,12 @@ function Security() {
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-      <form onSubmit={changePassword} className="space-y-3">
+      <EmailAndPassword me={me} />
+      {me.has_password && <form onSubmit={changePassword} className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="pw-current">Current password</Label><Input id="pw-current" type="password" autoComplete="current-password" required value={current} onChange={(e) => setCurrent(e.target.value)} /></div>
         <div className="space-y-1.5"><Label htmlFor="pw-new">New password</Label><Input id="pw-new" type="password" autoComplete="new-password" minLength={10} required placeholder="At least 10 characters" value={next} onChange={(e) => setNext(e.target.value)} /></div>
         <Button type="submit" variant="secondary" disabled={busy}>{busy ? "Updating…" : "Change password"}</Button>
-      </form>
+      </form>}
       <ListGroup title="Devices">
         {sessions.map((s) => (
           <ListRow key={s.id} icon={Monitor} title={<>{device(s.user_agent)}{s.current && <span className="ml-2 text-sm text-muted-foreground">This device</span>}</>}
@@ -357,18 +387,52 @@ function Memory() {
   )
 }
 
-function YourData() {
-  const router = useRouter()
+/** Whether chats, photos and summaries may go to the outside AI service this Faldo uses (see the Privacy page). */
+function OutsideAi({ me }: { me: Me }) {
+  const { choose, saving } = useAiChoice()
+  const names = me.ai.providers.map((p) => p.name).join(" and ")
+  if (!names) {
+    return <ListGroup title="AI"><ListRow title="Faldo's own rules" detail="This Faldo doesn't send your data to an outside AI service." /></ListGroup>
+  }
+  return (
+    <ListGroup title="AI">
+      <ListRow title={`Use ${names}`} detail={me.ai.allowed ? "On: chats, photos and summaries use it." : "Off: Faldo answers with its own rules."}
+        trailing={<Switch checked={me.ai.allowed} disabled={saving !== null} aria-label={`Use ${names}`}
+          onCheckedChange={(on) => choose(on ? "allowed" : "declined")} />} />
+      <ListRow title="What's sent and why" href="/privacy" />
+    </ListGroup>
+  )
+}
+
+function YourData({ me }: { me: Me }) {
+  const qc = useQueryClient()
+  const { guard, dialog } = useConfirmIdentity()
   const [confirm, setConfirm] = useState(false)
   const [typed, setTyped] = useState("")
+  // Both need a recent sign-in on this device; the dialog asks for it when the server does.
+  async function exportData() {
+    try {
+      await guard(() => saveFile("/me/export"))
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't download your data.")
+    }
+  }
   async function destroy() {
-    await api.delete("/me")
-    router.replace("/register")
+    try {
+      const done = await guard(async () => { await api.delete("/me"); return true })
+      if (!done) return
+      forgetUser(qc)
+      window.location.replace("/register")
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't delete your account.")
+    }
   }
   return (
     <>
-      <ListGroup>
-        <ListRow icon={Download} title="Download your data" detail="A readable copy, not for restoring" href="/api/v1/me/export" external />
+      {dialog}
+      <OutsideAi me={me} />
+      <ListGroup className="mt-3">
+        <ListRow icon={Download} title="Download your data" detail="A readable copy, not for restoring" onClick={exportData} />
       </ListGroup>
       <BackupRestore />
       <ListGroup divider className="mt-3">

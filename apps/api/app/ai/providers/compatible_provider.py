@@ -24,7 +24,15 @@ from typing import Any
 
 import httpx
 
-from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, TextDelta, ToolCall, TranscriptItem
+from app.ai.providers.base import (
+    CaptureContext,
+    ModelTurn,
+    ProviderUnavailable,
+    TextDelta,
+    ToolCall,
+    TranscriptItem,
+    with_context,
+)
 from app.ai.providers.openai_provider import (
     CAPTURE_INSTRUCTIONS,
     RECEIPT_INSTRUCTIONS,
@@ -158,7 +166,7 @@ def _standard(message: dict[str, Any]) -> dict[str, Any]:
 
 def _messages(system: str, transcript: list[TranscriptItem], standard: bool = False) -> list[dict[str, Any]]:
     messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
-    for entry in transcript:
+    for entry in with_context(transcript):
         if entry.kind == "user" and entry.images:
             messages.append({"role": "user", "content": [
                 {"type": "text", "text": entry.text or "What can you tell me about this?"},

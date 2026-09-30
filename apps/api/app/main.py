@@ -7,13 +7,16 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import RequestResponseEndpoint
 
-from app.api.v1 import auth, backup, engagement, intelligence, internal, ledger, planning
+from app.api.v1 import auth, backup, engagement, intelligence, internal, ledger, planning, security
 from app.core.config import get_settings
 from app.core.db import dispose_engine
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging
 
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# Posted by other sites or browsers without the app's header, each protected its own way: Apple's sign-in by its one-time
+# state cookie; CSP reports only write a short, rate-limited log line.
+CSRF_EXEMPT = {"/api/v1/auth/apple/callback", "/api/v1/security/csp-report"}
 
 
 @asynccontextmanager
@@ -48,9 +51,7 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def csrf_and_headers(request: Request, call_next: RequestResponseEndpoint) -> Response:
-        # Apple's sign-in comes back by a POST from Apple's page, without the client header; its one-time state
-        # cookie (checked against what Apple returns) protects it instead.
-        if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/") and request.url.path != "/api/v1/auth/apple/callback":
+        if request.method in UNSAFE_METHODS and request.url.path.startswith("/api/") and request.url.path not in CSRF_EXEMPT:
             origin = request.headers.get("origin")
             if origin and origin not in settings.allowed_origins:
                 return JSONResponse({"title": "Forbidden", "status": 403, "detail": "Cross-origin request blocked."},
@@ -66,7 +67,7 @@ def create_app() -> FastAPI:
             response.headers["Cache-Control"] = "no-store"
         return response
 
-    for module in (auth, backup, ledger, planning, intelligence, engagement, internal):
+    for module in (auth, backup, ledger, planning, intelligence, engagement, internal, security):
         app.include_router(module.router, prefix="/api/v1")
 
     @app.get("/api/health", include_in_schema=False)

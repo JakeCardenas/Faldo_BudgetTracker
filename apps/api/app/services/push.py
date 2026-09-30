@@ -7,11 +7,12 @@ opens Ask Faldo with that question. Subscriptions the push service reports as go
 
 import asyncio
 import base64
+import ipaddress
 import json
 import logging
 import uuid
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -58,8 +59,35 @@ async def unsubscribe(db: AsyncSession, user_id: uuid.UUID, endpoint: str | None
     await db.execute(stmt)
 
 
+# The browsers' push services. A subscription's endpoint is a URL the server POSTs to, so only these hosts are accepted:
+# anything else could point the server at an internal or private address.
+PUSH_HOSTS = frozenset({"fcm.googleapis.com", "updates.push.services.mozilla.com", "web.push.apple.com"})
+PUSH_HOST_SUFFIXES = (".push.apple.com", ".notify.windows.com", ".push.services.mozilla.com")
+
+
+def valid_endpoint(url: str) -> bool:
+    """An https URL on a known push service's host, on the default port, with no credentials and no IP address."""
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return False
+    host = (parts.hostname or "").lower().rstrip(".")
+    if parts.scheme != "https" or parts.username or parts.password or port not in (None, 443) or not host:
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return False
+    except ValueError:
+        pass
+    return host in PUSH_HOSTS or host.endswith(PUSH_HOST_SUFFIXES)
+
+
 def _send(sub: PushSubscription, payload: dict[str, Any], pem: str) -> int:
-    """Send one notification; the push service's HTTP status (201 when accepted)."""
+    """Send one notification; the push service's HTTP status (201 when accepted). An endpoint that isn't a known push
+    service is never contacted and counts as gone, so it's removed (rows saved before the check existed)."""
+    if not valid_endpoint(sub.endpoint):
+        return 410
     from py_vapid import Vapid
     from pywebpush import WebPushException, webpush
 

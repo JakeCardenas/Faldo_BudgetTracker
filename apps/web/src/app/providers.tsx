@@ -2,12 +2,14 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "next-themes"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { SoundEffects } from "@/components/sound-effects"
 import { Toaster } from "@/components/ui/sonner"
 import { UpdateCheck } from "@/components/update-check"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { ApiError } from "@/lib/api"
+import { ApiError, whenSignedOut } from "@/lib/api"
+import { forgetUser } from "@/lib/session"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -22,6 +24,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }),
   )
+  // A request found the session gone: nothing of that person's stays in memory while the tab goes to Log in.
+  useEffect(() => {
+    whenSignedOut(() => { forgetUser(client); toast.dismiss() })
+    return () => whenSignedOut(null)
+  }, [client])
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={client}>

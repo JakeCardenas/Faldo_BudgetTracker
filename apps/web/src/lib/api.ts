@@ -52,11 +52,27 @@ async function parseError(response: Response): Promise<ApiError> {
   } catch {
     if (response.status >= 500) detail = "The server is unavailable right now."
   }
-  const publicPaths = ["/login", "/register", "/forgot-password", "/reset-password"]
-  if (response.status === 401 && typeof window !== "undefined" && !publicPaths.some((p) => window.location.pathname.startsWith(p))) {
-    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`
-  }
+  if (response.status === 401) signedOutElsewhere()
   return new ApiError(response.status, detail, errors, type, problem)
+}
+
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"]
+let onSignedOut: (() => void) | null = null
+
+/** What to forget when a request finds the session gone (the query cache, set up in providers.tsx). */
+export function whenSignedOut(handler: (() => void) | null) {
+  onSignedOut = handler
+}
+
+/**
+ * The server no longer accepts this tab's session (it expired, or was signed out from another device): forget the
+ * last person's data first, then go to Log in. A 401 on the sign-in screens themselves is just a wrong password.
+ */
+function signedOutElsewhere() {
+  const onPublicPage = typeof window !== "undefined" && PUBLIC_PATHS.some((p) => window.location.pathname.startsWith(p))
+  if (onPublicPage) return
+  onSignedOut?.()
+  if (typeof window !== "undefined") window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`
 }
 
 // Answers that mean "the request may never have been handled": worth sending again, but only when an Idempotency-Key
@@ -95,6 +111,17 @@ export async function request<T>(
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
+
+/** A file from the API (a data export or backup), with the name the server gave it. Errors come back as ApiError, so a
+ *  "confirm it's you" answer can be handled like any other request. */
+export async function download(path: string, query?: Query): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetch(buildUrl(path, query), { credentials: "same-origin", headers: { "x-faldo-client": "web" } })
+  if (!response.ok) throw await parseError(response)
+  const filename = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? "faldo-download.json"
+  return { blob: await response.blob(), filename }
+}
+
+export const REAUTH_REQUIRED = "urn:faldo:problem:reauthentication-required"
 
 export const api = {
   get: <T>(path: string, query?: Query) => request<T>("GET", path, { query }),

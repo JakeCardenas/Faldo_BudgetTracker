@@ -54,12 +54,36 @@ class SettingsUpdate(ApiModel):
     completed_lessons: list[Slug] | None = Field(default=None, max_length=100)
 
 
+class AIProviderOut(OutModel):
+    id: str
+    name: str
+    company: str
+    data_use: str
+    source: str
+
+
+class AIUseOut(OutModel):
+    """Which outside AI services this server uses and the person's choice about sending them data."""
+    providers: list[AIProviderOut]
+    consent: Literal["unset", "allowed", "declined"]
+    needs_consent: bool
+    allowed: bool
+    sends: str
+
+
+class AIConsentIn(ApiModel):
+    choice: Literal["allowed", "declined"]
+
+
 class MeOut(OutModel):
     id: uuid.UUID
     email: str
     display_name: str
     settings: SettingsOut
     ai_provider: str
+    email_verified: bool
+    has_password: bool
+    ai: AIUseOut
 
 
 class ForgotPasswordIn(ApiModel):
@@ -69,6 +93,14 @@ class ForgotPasswordIn(ApiModel):
 class ResetPasswordIn(ApiModel):
     token: Annotated[str, StringConstraints(min_length=20, max_length=200)]
     password: Password
+
+
+class ReauthenticateIn(ApiModel):
+    password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
+
+
+class VerifyEmailIn(ApiModel):
+    token: Annotated[str, StringConstraints(min_length=20, max_length=200)]
 
 
 class ChangePasswordIn(ApiModel):

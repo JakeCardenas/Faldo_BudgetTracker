@@ -3,13 +3,16 @@ import json
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Form, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import delete, select, update
 
+from app.ai import consent
 from app.ai.factory import get_llm
-from app.api.deps import AnonDbDep, CtxDep
+from app.api.deps import AnonDbDep, CtxDep, require_recent_sign_in
+from app.core.client_ip import client_ip
 from app.core.config import get_settings
 from app.core.db import set_user_scope
 from app.core.errors import AppError, Conflict, Unauthorized
@@ -28,15 +31,19 @@ from app.models import (
     UserSettings,
 )
 from app.schemas.auth import (
+    AIConsentIn,
+    AIUseOut,
     ChangePasswordIn,
     ForgotPasswordIn,
     LoginIn,
     MeOut,
+    ReauthenticateIn,
     RegisterIn,
     ResetPasswordIn,
     SessionOut,
     SettingsOut,
     SettingsUpdate,
+    VerifyEmailIn,
 )
 from app.services import oauth
 from app.services.categories import create_default_categories
@@ -47,19 +54,12 @@ from app.services.transactions import TransactionFilters, list_transactions
 router = APIRouter(tags=["auth"])
 
 
-def _client_ip(request: Request) -> str:
-    if get_settings().trust_proxy_headers:
-        forwarded = request.headers.get("x-real-ip") or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-        if forwarded:
-            return forwarded
-    return request.client.host if request.client else "unknown"
-
-
 async def _start_session(db: Any, response: Response, request: Request, user: User, *, remember: bool = True) -> None:
     settings = get_settings()
     token = new_session_token()
-    db.add(Session(token_hash=hash_token(token), user_id=user.id, remember=remember,
-                   expires_at=datetime.now(UTC) + session_window(remember),
+    now = datetime.now(UTC)
+    db.add(Session(token_hash=hash_token(token), user_id=user.id, remember=remember, reauthenticated_at=now,
+                   expires_at=now + session_window(remember),
                    user_agent=(request.headers.get("user-agent") or "")[:255]))
     # Not remembered: no max-age, so the browser drops the cookie when it closes.
     response.set_cookie(
@@ -69,13 +69,50 @@ async def _start_session(db: Any, response: Response, request: Request, user: Us
 
 
 def _me(user: User, user_settings: UserSettings) -> MeOut:
+    llm = get_llm()
     return MeOut(id=user.id, email=user.email, display_name=user.display_name,
-                 settings=SettingsOut.model_validate(user_settings), ai_provider=get_llm().name)
+                 settings=SettingsOut.model_validate(user_settings),
+                 ai_provider=llm.name if consent.permits(user_settings, llm) else "local",
+                 ai=AIUseOut.model_validate(consent.summary(user_settings)),
+                 email_verified=user.email_verified_at is not None, has_password=user.password_hash is not None)
+
+
+VERIFY_PURPOSE = "verify_email"
+
+
+async def _send_verification(db: Any, user: User) -> None:
+    """Email a link that confirms this account owns its address. Opening it only counts while signed in to the same
+    account, so someone who registered another person's email can't get it confirmed by that person clicking it."""
+    cfg = get_settings()
+    now = datetime.now(UTC)
+    await db.execute(update(AuthToken).where(AuthToken.user_id == user.id, AuthToken.purpose == VERIFY_PURPOSE,
+                                             AuthToken.used_at.is_(None)).values(used_at=now))
+    token = new_session_token()
+    db.add(AuthToken(token_hash=hash_token(token), user_id=user.id, purpose=VERIFY_PURPOSE,
+                     expires_at=now + timedelta(hours=cfg.email_verification_ttl_hours)))
+    await db.flush()
+    link = f"{cfg.public_app_url.rstrip('/')}/verify-email/{token}"
+    await send_email(
+        user.email,
+        "Confirm your email for Faldo",
+        f"Hi {user.display_name},\n\nConfirm this is your email by opening this link while signed in to Faldo:\n{link}\n\n"
+        "If you didn't sign up for Faldo, ignore this email: without the password, nobody can confirm it.",
+        f"<p>Hi {html.escape(user.display_name)},</p><p>Confirm this is your email by opening this link while signed in "
+        f"to Faldo.</p><p><a href=\"{html.escape(link)}\">Confirm email</a></p>"
+        "<p>If you didn't sign up for Faldo, ignore this email: without the password, nobody can confirm it.</p>",
+    )
+
+
+def _with_notice(path: str, notice: str) -> str:
+    """The same in-app path with a notice for the app to show once (it removes the parameter after)."""
+    parts = urlsplit(path)
+    query = [*parse_qsl(parts.query, keep_blank_values=True), ("notice", notice)]
+    return urlunsplit(("", "", parts.path or "/", urlencode(query), parts.fragment))
 
 
 @router.post("/auth/register", response_model=MeOut, status_code=201)
 async def register(data: RegisterIn, request: Request, response: Response, db: AnonDbDep) -> MeOut:
-    await limiter.hit(f"register:{_client_ip(request)}", 10, 3600)
+    await limiter.hit(f"register:{client_ip(request)}", 10, 3600)
     # Hash first so a taken email takes as long to answer as a new one.
     password_hash = hash_password(data.password)
     if await db.scalar(select(User.id).where(User.email == data.email)):
@@ -88,6 +125,7 @@ async def register(data: RegisterIn, request: Request, response: Response, db: A
     db.add(user_settings)
     await create_default_categories(db, user.id)
     await _start_session(db, response, request, user)
+    await _send_verification(db, user)
     await db.flush()
     await db.refresh(user_settings)
     return _me(user, user_settings)
@@ -96,7 +134,7 @@ async def register(data: RegisterIn, request: Request, response: Response, db: A
 @router.post("/auth/login", response_model=MeOut)
 async def login(data: LoginIn, request: Request, response: Response, db: AnonDbDep) -> MeOut:
     cfg = get_settings()
-    await limiter.hit(f"login-ip:{_client_ip(request)}", cfg.login_attempts_per_15_min * 3, 900)
+    await limiter.hit(f"login-ip:{client_ip(request)}", cfg.login_attempts_per_15_min * 3, 900)
     await limiter.hit(f"login-email:{data.email.lower()}", cfg.login_attempts_per_15_min, 900)
     user = (await db.execute(select(User).where(User.email == data.email))).scalar_one_or_none()
     if not verify_password(data.password, user.password_hash if user else None) or user is None:
@@ -119,7 +157,7 @@ async def sign_in_providers() -> dict[str, bool]:
 async def oauth_start(provider: str, request: Request, next_path: Annotated[str, Query(alias="next")] = "/") -> Response:
     if provider not in oauth.PROVIDERS or not oauth.enabled(provider):
         return RedirectResponse("/login?error=unavailable", status_code=302)
-    await limiter.hit(f"oauth:{_client_ip(request)}", 30, 900)
+    await limiter.hit(f"oauth:{client_ip(request)}", 30, 900)
     state, cookie = oauth.new_state(provider, next_path)
     response = RedirectResponse(oauth.authorize_url(provider, state, oauth.get_settings()), status_code=302)
     secure = get_settings().cookie_secure
@@ -138,12 +176,13 @@ async def _finish_oauth(provider: str, request: Request, db: Any, code: str | No
             raise oauth.SignInError("cancelled" if error in {"access_denied", "user_cancelled_authorize"} else provider)
         if not code:
             raise oauth.SignInError(provider)
-        user = await oauth.sign_in(db, await identity(code))
+        signed_in = await oauth.sign_in(db, await identity(code))
     except oauth.SignInError as exc:
         response: Response = RedirectResponse(f"/login?error={exc.code}", status_code=302)
     else:
-        response = RedirectResponse(next_path, status_code=302)
-        await _start_session(db, response, request, user)
+        target = _with_notice(next_path, "account-secured") if signed_in.secured else next_path
+        response = RedirectResponse(target, status_code=302)
+        await _start_session(db, response, request, signed_in.user)
     response.delete_cookie(oauth.STATE_COOKIE, path="/api/v1/auth")
     return response
 
@@ -205,6 +244,23 @@ async def update_settings(data: SettingsUpdate, ctx: CtxDep) -> MeOut:
     return _me(ctx.user, ctx.settings)
 
 
+@router.put("/me/ai-consent", response_model=MeOut)
+async def set_ai_consent(data: AIConsentIn, ctx: CtxDep) -> MeOut:
+    """The person's choice about sending their data to the outside AI services configured right now."""
+    ctx.settings.ai_consent = data.choice
+    ctx.settings.ai_consent_at = datetime.now(UTC)
+    ctx.settings.ai_consent_providers = consent.external_providers() if data.choice == "allowed" else []
+    await ctx.db.flush()
+    return _me(ctx.user, ctx.settings)
+
+
+@router.get("/ai/providers")
+async def ai_providers() -> dict[str, Any]:
+    """For the Privacy page, signed in or not: which outside AI services this Faldo uses and what they say they do
+    with data. Names only, never keys."""
+    return {"providers": consent.describe(), "sends": consent.WHAT_IS_SENT}
+
+
 @router.post("/me/onboarding/complete", response_model=MeOut)
 async def complete_onboarding(ctx: CtxDep) -> MeOut:
     ctx.settings.onboarding_completed_at = datetime.now(UTC)
@@ -214,6 +270,7 @@ async def complete_onboarding(ctx: CtxDep) -> MeOut:
 
 @router.get("/me/export")
 async def export_data(ctx: CtxDep) -> Response:
+    await require_recent_sign_in(ctx)
     listing = await list_transactions(ctx.db, ctx.user_id, TransactionFilters(), limit=100)
     all_items = list(listing.items)
     cursor = listing.next_cursor
@@ -247,6 +304,7 @@ async def export_data(ctx: CtxDep) -> Response:
 
 @router.delete("/me", status_code=204)
 async def delete_account(ctx: CtxDep, response: Response) -> Response:
+    await require_recent_sign_in(ctx)
     from app.models import Receipt
     from app.storage.files import get_storage
 
@@ -265,7 +323,7 @@ RESET_PURPOSE = "password_reset"
 @router.post("/auth/password/forgot", status_code=202)
 async def forgot_password(data: ForgotPasswordIn, request: Request, db: AnonDbDep) -> dict[str, str]:
     cfg = get_settings()
-    await limiter.hit(f"forgot-ip:{_client_ip(request)}", 10, 3600)
+    await limiter.hit(f"forgot-ip:{client_ip(request)}", 10, 3600)
     await limiter.hit(f"forgot-email:{data.email.lower()}", 3, 3600)
     user = (await db.execute(select(User).where(User.email == data.email))).scalar_one_or_none()
     if user is not None:
@@ -289,7 +347,7 @@ async def forgot_password(data: ForgotPasswordIn, request: Request, db: AnonDbDe
 
 @router.post("/auth/password/reset", response_model=MeOut)
 async def reset_password(data: ResetPasswordIn, request: Request, response: Response, db: AnonDbDep) -> MeOut:
-    await limiter.hit(f"reset-ip:{_client_ip(request)}", 20, 3600)
+    await limiter.hit(f"reset-ip:{client_ip(request)}", 20, 3600)
     now = datetime.now(UTC)
     token = (await db.execute(select(AuthToken).where(AuthToken.token_hash == hash_token(data.token),
                                                       AuthToken.purpose == RESET_PURPOSE))).scalar_one_or_none()
@@ -299,6 +357,8 @@ async def reset_password(data: ResetPasswordIn, request: Request, response: Resp
     if user is None:
         raise AppError("This reset link is invalid or has expired. Request a new one.")
     user.password_hash = hash_password(data.password)
+    # The link arrived in this inbox, so whoever used it owns the email; everything else is signed out below.
+    user.email_verified_at = user.email_verified_at or now
     token.used_at = now
     await db.execute(update(Session).where(Session.user_id == user.id, Session.revoked_at.is_(None)).values(revoked_at=now))
     await db.execute(update(AuthToken).where(AuthToken.user_id == user.id, AuthToken.used_at.is_(None)).values(used_at=now))
@@ -308,6 +368,45 @@ async def reset_password(data: ResetPasswordIn, request: Request, response: Resp
         raise Unauthorized("Account is not fully set up.")
     await _start_session(db, response, request, user)
     return _me(user, user_settings)
+
+
+@router.post("/auth/email/verify", response_model=MeOut)
+async def verify_email(data: VerifyEmailIn, ctx: CtxDep) -> MeOut:
+    """Confirm the signed-in account owns its email. The link must have been sent to this same account."""
+    await limiter.hit(f"verify-email:{ctx.user_id}", 20, 3600)
+    now = datetime.now(UTC)
+    token = (await ctx.db.execute(select(AuthToken).where(AuthToken.token_hash == hash_token(data.token),
+                                                          AuthToken.purpose == VERIFY_PURPOSE))).scalar_one_or_none()
+    if ctx.user.email_verified_at is not None and (token is None or token.user_id == ctx.user_id):
+        return _me(ctx.user, ctx.settings)
+    if token is None or token.user_id != ctx.user_id or token.used_at is not None or token.expires_at < now:
+        raise AppError("This link is invalid, has expired, or is for a different account. Send a new one from Settings.")
+    token.used_at = now
+    ctx.user.email_verified_at = now
+    await ctx.db.flush()
+    return _me(ctx.user, ctx.settings)
+
+
+@router.post("/auth/email/resend", status_code=204)
+async def resend_verification(ctx: CtxDep) -> Response:
+    if ctx.user.email_verified_at is None:
+        await limiter.hit(f"verify-resend:{ctx.user_id}", 3, 3600)
+        await _send_verification(ctx.db, ctx.user)
+    return Response(status_code=204)
+
+
+@router.post("/auth/reauthenticate", status_code=204)
+async def reauthenticate(data: ReauthenticateIn, ctx: CtxDep) -> Response:
+    """Re-enter the password to confirm it's you before a sensitive action. Accounts without a password confirm by
+    signing in with Google or Apple again, which starts a fresh session."""
+    await limiter.hit(f"reauth:{ctx.user_id}", 10, 900)
+    if ctx.user.password_hash is None:
+        raise AppError("Your account signs in with Google or Apple. Sign in with it again to confirm it's you.")
+    if not verify_password(data.password, ctx.user.password_hash):
+        raise AppError("That password is incorrect.")
+    await ctx.db.execute(update(Session).where(Session.token_hash == ctx.session_token_hash)
+                         .values(reauthenticated_at=datetime.now(UTC)))
+    return Response(status_code=204)
 
 
 @router.post("/me/password", status_code=204)

@@ -7,9 +7,11 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai import consent
 from app.ai.factory import get_llm
 from app.ai.guardrails.numeric import check_numbers
 from app.ai.guardrails.output import sanitize_markdown
+from app.ai.usage import metered
 from app.engine.money import format_money, pct_text, percent_change
 from app.engine.periods import add_months, month_end, month_start
 from app.models import AIInsight, BudgetCategory, Category, GoalContribution, SavingsGoal, Transaction
@@ -109,8 +111,9 @@ async def get_pulse(db: AsyncSession, user_id: uuid.UUID, settings: UserSettings
     last_ai = previous.facts.get("_ai_at") if previous else None
     cooling = bool(last_ai) and datetime.fromisoformat(str(last_ai)) > datetime.now(UTC) - AI_REWRITE_EVERY
     text, generated_by = draft, "template"
-    if facts["transaction_count"] and not cooling:
-        provider = get_llm()
+    chosen = get_llm()
+    if facts["transaction_count"] and not cooling and consent.permits(settings, chosen):
+        provider = metered(chosen, user_id)
         rewritten = await provider.write_summary("pulse", facts, draft)
         if rewritten:
             rewritten = sanitize_markdown(rewritten)

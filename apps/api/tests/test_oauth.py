@@ -84,8 +84,11 @@ async def test_google_signs_into_the_existing_account_with_that_email(app, googl
     person["email"] = me["email"]
     async with ApiClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         state = await _start(client)
-        await client.get("/api/v1/auth/google/callback", params={"code": "good-code", "state": state})
+        r = await client.get("/api/v1/auth/google/callback", params={"code": "good-code", "state": state})
         assert (await client.get("/api/v1/me")).json()["id"] == me["id"]
+        # The password sign-up never confirmed its email, so Google's verified email takes the account over.
+        assert r.headers["location"] == "/?notice=account-secured"
+        assert (await existing.get("/api/v1/me")).status_code == 401
         # Later the person changes their Gmail address: the Google account still signs into the same Faldo account.
         person["email"] = f"new-{person['sub']}@example.com"
         await client.post("/api/v1/auth/logout")

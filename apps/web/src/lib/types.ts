@@ -25,6 +25,18 @@ export interface Me {
   display_name: string
   settings: Settings
   ai_provider: string
+  /** The account proved it owns its email (an emailed link, a password reset, or Google/Apple). */
+  email_verified: boolean
+  /** False for accounts that sign in only with Google or Apple. */
+  has_password: boolean
+  /** Outside AI services this server uses, and this person's choice about sending them data. */
+  ai: {
+    providers: { id: string; name: string; company: string; data_use: string; source: string }[]
+    consent: "unset" | "allowed" | "declined"
+    needs_consent: boolean
+    allowed: boolean
+    sends: string
+  }
 }
 
 export interface Account {
@@ -530,6 +542,8 @@ export interface Receipt {
   error: string | null
   transaction_id: string | null
   has_image: boolean
+  /** The server allows reading it again: the read failed or got nothing usable from the photo. */
+  can_retry?: boolean
   created_at: string
 }
 

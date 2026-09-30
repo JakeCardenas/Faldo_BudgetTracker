@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     cookie_secure: bool = ON_VERCEL
     allowed_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
     trust_proxy_headers: bool = ON_VERCEL
+    proxy_shared_secret: SecretStr | None = None
+    """Shared with the web app so it can tell the API the visitor's address (core/client_ip.py). Set the same random
+    value on both projects; without it, rate limits behind the web rewrite see Vercel's address."""
 
     # "auto" picks Claude when an Anthropic key is set, then OpenAI, then the local development provider.
     ai_provider: Literal["auto", "anthropic", "gemini", "groq", "openai", "local"] = "auto"
@@ -45,6 +48,9 @@ class Settings(BaseSettings):
     gemini_chat_model: str = "gemini-flash-latest"
     gemini_fast_model: str = "gemini-3.5-flash-lite"
     """Conversation summaries and short notes; its own free allowance leaves more of the chat model's for answers."""
+    gemini_paid_tier: bool = False
+    """Whether the Gemini key is on the paid tier. It changes what people are told about Google's use of their data
+    (ai/consent.py); leave it off unless billing is on for the key's project."""
     gemini_fallback_models: str = "gemini-flash-lite-latest,gemini-2.5-flash,gemini-2.5-flash-lite"
     """Comma-separated. Each Gemini model has its own free limit, so when one runs out the next takes over."""
     groq_api_key: SecretStr | None = None
@@ -90,11 +96,16 @@ class Settings(BaseSettings):
     capture_requests_per_hour: int = 120
     receipt_uploads_per_day: int = 40
     login_attempts_per_15_min: int = 10
+    receipt_retries_per_hour: int = 10
+    # Calls to outside AI services per Philippine calendar day (see ai/usage.py). Past either, Faldo's own rules answer.
+    ai_user_daily_calls: int = 150
+    ai_global_daily_calls: int = 1500
 
     email_provider: Literal["auto", "resend", "log"] = "auto"
     resend_api_key: SecretStr | None = None
     email_from: str = "Faldo <no-reply@faldo.app>"
     password_reset_ttl_minutes: int = 30
+    email_verification_ttl_hours: int = 72
 
     @model_validator(mode="before")
     @classmethod

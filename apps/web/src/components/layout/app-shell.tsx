@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { usePathname, useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { AddTransactionDialog, type AddMode } from "@/components/capture/add-transaction-dialog"
 import type { EntryPreset } from "@/components/capture/keypad-entry"
 import Image from "next/image"
@@ -109,6 +110,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => openAddTransaction({ mode: add }), 0)
     return () => clearTimeout(timer)
   }, [me, openAddTransaction, pathname, router])
+
+  // Google or Apple just took this account back from a password nobody had confirmed (see services/oauth.py).
+  useEffect(() => {
+    // Not onboarded yet: onboarding's own redirect wins, and a first-time account has nothing to explain.
+    if (!me?.settings.onboarding_completed_at) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("notice") !== "account-secured") return
+    params.delete("notice")
+    router.replace(`${pathname}${params.size ? `?${params}` : ""}`)
+    toast("We secured your account", {
+      description: "This email had a password that was never confirmed, so we turned it off and signed out every other "
+        + "device. Your records are all here. You can set a new password in Settings.",
+      duration: Infinity,
+      action: { label: "Settings", onClick: () => router.push("/settings/security") },
+    })
+  }, [me, pathname, router])
 
   const actions = useMemo(() => ({
     openAddTransaction,

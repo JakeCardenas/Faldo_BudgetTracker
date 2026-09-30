@@ -225,8 +225,10 @@ async def test_faldo_remembers_you_and_earlier_chats(app):
         conversation = await db.get(AIConversation, conversation_id)
         assert conversation is not None and conversation.summary == "They planned a graduation iPhone for July 2028."
     await _ask(uid, recorder, "Hi again")
-    latest = recorder.systems[-1]
-    assert "my allowance is ₱8,000 a month" in latest and "graduation iPhone for July 2028" in latest
+    context = next(item.text or "" for item in recorder.transcripts[-1] if item.kind == "context")
+    assert "my allowance is ₱8,000 a month" in context and "graduation iPhone for July 2028" in context
+    # Memory and earlier chats are the user's data: they travel with the question, never in Faldo's instructions.
+    assert "₱8,000" not in recorder.systems[-1] and "graduation iPhone" not in recorder.systems[-1]
 
 
 async def test_the_fallback_writes_a_plain_summary(app):
@@ -324,7 +326,7 @@ async def test_daily_check_ins_go_out_once_and_gone_phones_are_dropped(app, monk
     today = today_in("Asia/Manila")
     await client.post("/api/v1/recurring", json={"name": "Meralco", "kind": "bill", "amount_minor": 2_300 * P, "frequency": "monthly",
                                                  "next_due_on": today.isoformat(), "account_id": account["id"]})
-    phone = f"https://push.example/{uuid.uuid4().hex}"
+    phone = f"https://fcm.googleapis.com/fcm/send/{uuid.uuid4().hex}"
     assert (await client.post("/api/v1/push/subscriptions", json={"endpoint": phone, "keys": {"p256dh": "k" * 40, "auth": "a" * 16}})).status_code == 204
 
     sent: list[dict[str, Any]] = []

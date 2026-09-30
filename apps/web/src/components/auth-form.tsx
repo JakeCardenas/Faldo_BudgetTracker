@@ -11,6 +11,7 @@ import { SIGN_IN_ERRORS, SocialSignIn } from "@/components/auth/social"
 import { markWelcome } from "@/components/brand/welcome-splash"
 import { Checkbox } from "@/components/ui/checkbox"
 import { api, ApiError } from "@/lib/api"
+import { signedIn } from "@/lib/session"
 import type { Me } from "@/lib/types"
 
 /** Only same-origin paths. Browsers treat "/\evil.com" like "//evil.com", so resolve before trusting it. */
@@ -55,7 +56,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       const me = login
         ? await api.post<Me>("/auth/login", { ...(override ?? { email, password }), remember: override ? true : remember })
         : await api.post<Me>("/auth/register", { email, password, display_name: name })
-      qc.setQueryData(["me"], me)
+      signedIn(qc, me)
       if (me.settings.onboarding_completed_at) markWelcome()
       router.replace(!me.settings.onboarding_completed_at ? "/onboarding" : next)
     } catch (err) {

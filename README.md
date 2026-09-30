@@ -46,7 +46,7 @@ Faldo is organised around four tabs: **Home** (today), **Wallet** (where your mo
 - **Learn:** ten short money lessons written for the Philippines, each with takeaways and a quick check; progress is saved to your account.
 - **Tools:** split a bill (creates "owed to you" entries), loan and installment calculator with true yearly cost and one-tap tracking, PH income tax calculator, currency converter, emergency fund planner, a shortcut to the Money Plan, and quick notes.
 - **Talk to Faldo:** chat that logs plain-language entries straight away ("Paid 70 on the bus from Cash") with a Cancel button, answers questions with tools and calculations, and supports voice dictation where the browser allows it.
-- **Auth:** email/password (argon2id), **Continue with Google** and **Continue with Apple** (OpenID Connect code flow on the server, a one-time state cookie, verified emails only; a first sign-in joins the account with that email or makes one, and later ones find it by the service's own id), server-side sessions in an httpOnly SameSite=Lax cookie, CSRF header + Origin checks, login throttling, password reset by email, password change, and active-session management. Each "Continue with" button shows only once its keys are set (`GOOGLE_CLIENT_*`, `APPLE_*`).
+- **Auth:** email/password (argon2id), **Continue with Google** and **Continue with Apple** (OpenID Connect code flow on the server, a one-time state cookie, verified emails only; a first sign-in joins the account with that email or makes one, and later ones find it by the service's own id; if that account's password sign-up never confirmed its email, the sign-in claims it: every earlier session and emailed link is revoked and that password is turned off, so whoever registered the address first loses access, and the person is told how to set a new password), server-side sessions in an httpOnly SameSite=Lax cookie, CSRF header + Origin checks, login throttling, password reset by email, email confirmation (the link only counts while signed in to the account it was sent to; a password reset also confirms the email), password change, and active-session management. Each "Continue with" button shows only once its keys are set (`GOOGLE_CLIENT_*`, `APPLE_*`).
 - **Transactions:** full CRUD, income/expense/transfer, merchant, category + subcategory, account, payment method, notes, tags, **item-level purchases**, search (merchant, items, notes, tags, categories), filters (type, account, category, tag, dates), sorting, infinite loading, detail sheet, and a queue for receipts awaiting review.
 - **Statement import:** upload a CSV exported from a bank or e-wallet into one of your accounts. Faldo finds the header row, the date, description and amount columns (or debit and credit, or a DR/CR column), the date order and the sign convention, then shows a review list before anything is saved. Rows already imported are skipped, rows that look like something you already logged are left unticked as possible duplicates, cash-ins and transfers that name another of your accounts become transfers instead of income or spending, and categories come from your learned merchants and the built-in rules. Each import can be undone as a whole from Recent imports. PDF statements need to be saved as CSV first.
 - **Natural-language entry:** "Bought Nike shoes for ₱4,500 yesterday", Taglish ("nag-grab 180 kanina"), multiple transactions per message. Drafts show a confirmation card; unclear accounts, categories, dates and possible duplicates are highlighted with one-tap fixes. Merchant categories are learned from history. When the built-in rules already understand every entry (amount, category, date, accounts), no paid AI call is made.
@@ -90,7 +90,7 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 
 | Table | Purpose |
 |---|---|
-| `users`, `user_settings`, `sessions` | identity, preferences (including theme, mascot outfit, home background, quick actions and completed lessons), hashed session tokens |
+| `users`, `user_settings`, `sessions` | identity (`email_verified_at` records when the account proved it owns its email), preferences (including `ai_consent`: whether this person allowed sending data to the outside AI services in `ai_consent_providers`) (including theme, mascot outfit, home background, quick actions and completed lessons), hashed session tokens |
 | `accounts` | manual accounts with opening balance, a user-defined sort order and optional last four digits (`card_last4`, four digits only); balances are computed from transactions |
 | `categories` | expense/income categories with subcategories (`parent_id`) |
 | `merchants` | normalized merchants with learned default category |
@@ -135,7 +135,11 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 - Each tool runs in a savepoint; failures return safe error messages to the model.
 - Tools return both formatted and minor-unit values, plus UI blocks (calculation, risk, forecast, comparison, breakdown, progress, transactions, list, bars, health).
 
-**Guardrails:** every money amount and percentage in an answer must match a tool result or the user's message. On mismatch the model gets one repair turn; if it still fails, the answer falls back to the calculated cards only. Output is stripped of links, images and HTML; unknown citations are removed; investment and loan product advice triggers a professional-advice note. The system prompt treats tool content as data, forbids invented records, and requires estimates to be labelled.
+**Guardrails:** every money amount and percentage in an answer must match a tool result or the user's message, however it's written (₱1,200, Php 1,200, 1,200 pesos, 1,200 piso, 1.2k, 12 thousand, 7 libo). Only money fields vouch for a figure (`*_minor` values, formatted amounts, the calculator's result); dates, ids and counts don't. On mismatch the model gets one repair turn; if it still fails, the answer falls back to the calculated cards only. Output is stripped of links, images and HTML; unknown citations are removed; investment and loan product advice triggers a professional-advice note. The system prompt holds only Faldo's instructions: the money snapshot, saved memory, earlier-chat summaries and check-ins travel with the question as a capped `<faldo_context>` data block, with angle brackets in record text neutralised so nothing inside can close it. Tool results and that block are data; the prompt forbids following instructions in them, forbids invented records, and requires estimates to be labelled.
+
+**Consent:** nothing personal goes to an outside AI service until the person allows the services configured right now (`app/ai/consent.py`, enforced on the server for chat, typed entries, receipts and summaries). The app asks once, before the first chat or receipt scan, naming the service, what is sent and what that service's published terms say about data use (with links); declining keeps Faldo on its own rules, and a newly configured service asks again. The choice can be changed in Settings, Your data. Set `GEMINI_PAID_TIER=true` only when billing is on for the Gemini key, since it changes what people are told. Draft Privacy and Terms pages are public at `/privacy` and `/terms`; they need review by a qualified professional before being relied on.
+
+**Limits:** every call to an outside model (chat rounds, reading typed entries, reading receipts, summaries) is counted before it's sent, failed ones included, against a per-person and a server-wide daily limit (`AI_USER_DAILY_CALLS`, `AI_GLOBAL_DAILY_CALLS`; Philippine calendar days; stored in Postgres when `RATE_LIMIT_BACKEND=database`, so every serverless instance shares them). A person over their limit is refused before the server-wide count moves. Past either limit Faldo answers with its own rules, reads typed entries with rules only, asks for manual receipt entry and keeps template summaries. A receipt is only read again when the first read failed or got nothing usable from the photo, at most `RECEIPT_RETRIES_PER_HOUR` times an hour.
 
 **Providers:** `AI_PROVIDER=auto` uses **Claude** (`claude-sonnet-5` for answers and receipts, `claude-haiku-4-5` for quick capture and summaries) when `ANTHROPIC_API_KEY` is set, then OpenAI when `OPENAI_API_KEY` is set. Otherwise the **local development provider** runs: a rule-based planner that calls the same tools and writes templated answers from their results, hashed lexical embeddings for RAG, and no receipt vision. The UI labels this mode. Search embeddings come from OpenAI when its key is set (Anthropic has no embeddings) and from local hashing otherwise.
 
@@ -177,14 +181,18 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 | `ANTHROPIC_API_KEY` | — | recommended | server-side only; makes Claude the assistant |
 | `ANTHROPIC_CHAT_MODEL` / `ANTHROPIC_FAST_MODEL` / `ANTHROPIC_VISION_MODEL` | `claude-sonnet-5` / `claude-haiku-4-5-20251001` / `claude-sonnet-5` | same | |
 | `GEMINI_API_KEY` | — | optional | server-side only; Google Gemini through its OpenAI-compatible API. The free tier needs no billing, but Google may use free-tier prompts and answers to improve its products |
+| `GEMINI_PAID_TIER` | `false` | set it to match the key | whether the Gemini key's project has billing on; changes the data-use statement people see before allowing AI |
 | `GEMINI_CHAT_MODEL` / `GEMINI_FAST_MODEL` | `gemini-flash-latest` / `gemini-3.5-flash-lite` | same | the fast model writes summaries, on its own free allowance |
 | `OPENAI_API_KEY` | — | recommended | server-side only; the assistant when there is no Anthropic key, and search embeddings |
 | `OPENAI_CHAT_MODEL` / `OPENAI_FAST_MODEL` / `OPENAI_VISION_MODEL` / `OPENAI_EMBEDDING_MODEL` | `gpt-5-mini` / `gpt-5-nano` / `gpt-5-mini` / `text-embedding-3-small` | same | |
 | `JOB_MODE` | `worker` | `inline` | inline processes queued jobs right after each write |
+| `PROXY_SHARED_SECRET` | — | recommended, same value on the web project | lets the web proxy pass the visitor's address for rate limits (see Hardening) |
 | `CRON_SECRET` | — | recommended | protects the daily cron runs (job sweep and phone check-ins); without it they don't run |
 | `AI_WEB_SEARCH` | `true` | `true` | lets Claude search the web for current prices, rates and news (Anthropic bills each search); if web search isn't enabled for the Anthropic organization, Faldo continues without it |
 | `STORAGE_BACKEND` | `local` | `database` | receipt images |
-| `RATE_LIMIT_BACKEND` | `memory` | `database` | |
+| `RATE_LIMIT_BACKEND` | `memory` | `database` | also holds the daily AI counters |
+| `AI_USER_DAILY_CALLS` / `AI_GLOBAL_DAILY_CALLS` | `150` / `1500` | same | outside AI calls per person and for the whole server per Philippine day; set the global one below the provider's own daily quota |
+| `RECEIPT_RETRIES_PER_HOUR` | `10` | same | "Read it again" per person |
 | `RESEND_API_KEY` / `EMAIL_FROM` | — | for password reset emails | without a key, reset links are only logged in development |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | for Continue with Google | redirect URI: `PUBLIC_APP_URL/api/v1/auth/google/callback` |
 | `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | — | for Continue with Apple | needs the Apple Developer Program; return URL `PUBLIC_APP_URL/api/v1/auth/apple/callback` |
@@ -198,6 +206,7 @@ Vercel defaults in the right column apply automatically when the `VERCEL` enviro
 |---|---|---|
 | `API_ORIGIN` | `http://localhost:8000` | **required on Vercel**; the build fails without it |
 | `NEXT_PUBLIC_SHOW_DEMO_LOGIN` | `true` locally | set `false` in production unless you seed a demo account |
+| `PROXY_SHARED_SECRET` | — | the same random value as the API's; passes the visitor's address to the API for rate limits |
 
 ## Run locally
 
@@ -247,6 +256,16 @@ Faldo deploys as **two Vercel projects from the same GitHub repository** plus a 
 
 Open copies of the web app keep themselves current: each build carries its commit (`VERCEL_GIT_COMMIT_SHA`), `/version` reports the live one, and when the app comes back to the front after a newer deploy it reloads (or, if a sheet is open or you are typing, loads the new version on your next page change). This matters most for Faldo added to an iPhone home screen, which resumes instead of reloading.
 
+Tables without row-level security, each for a reason (a test fails if a new one appears): `users`, `sessions`, `auth_tokens` and `oauth_identities` are read before anyone is signed in; `jobs` and `push_subscriptions` are worked through across people by the queue worker and the daily check-in cron (every per-person query filters by `user_id`); `app_keys` holds the server's push signing key; `rate_limit_hits` holds hashed counters; `alembic_version`. `transaction_tags` enforces that a link belongs to whoever owns both its transaction and its tag.
+
+**Hardening:**
+- Deleting the account, exporting and downloading a backup need a sign-in on this session within the last 10 minutes (`sessions.reauthenticated_at`); otherwise the API answers 403 `urn:faldo:problem:reauthentication-required` with the ways to confirm (password, or Google/Apple again) and the app asks.
+- Rate limits use the visitor's address only from headers a caller can't forge (`app/core/client_ip.py`): Vercel's own headers on Vercel, or the web proxy's `X-Faldo-Client-IP` when it carries `PROXY_SHARED_SECRET`. Without that secret, requests through the web rewrite share Vercel's address.
+- Phone notification endpoints must be a browser push service (FCM, Mozilla, Apple, Windows) over https; other addresses are refused when saved and never contacted.
+- A Content-Security-Policy runs in report-only mode, reporting to `/api/v1/security/csp-report` (short, rate-limited log lines). Scripts still allow inline code; enforcing it needs per-request nonces.
+- Logs redact keys, tokens, passwords, cookies, emails, reset and confirmation links, database passwords in URLs and values echoed in database errors; SQL parameters are never logged.
+- CI runs with a read-only token, actions pinned to commit SHAs, `npm audit` and `pip-audit`.
+
 Every user-owned table uses `FORCE ROW LEVEL SECURITY`, so policies apply to the table owner as well. Roles with the `BYPASSRLS` attribute skip policies entirely; on hosts whose default owner role has it (Neon's project owner does), run the app as a separate role created with `NOBYPASSRLS` and keep the owner for migrations. Check with `SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user;`.
 
 ## Quality checks
@@ -275,7 +294,7 @@ The backend suite covers the finance engine (exact money math, periods, pacing, 
 - Single currency per user. No live bank or e-wallet syncing yet; statements come in by CSV import.
 - Statement import reads CSV only. When every date in a file works in both day-first and month-first order, month-first is assumed and the review screen offers to switch. When a file has only positive amounts and no debit/credit column, they're treated as spending, with a toggle to flip them.
 - Money Plan follows your main repeating income. Without an income schedule (freelancers, students between allowances) it plans by calendar month from a typical monthly amount you enter.
-- No email verification or MFA yet.
+- Email confirmation isn't required to use the app; it decides whether a Google or Apple sign-in may join the account as it is. No MFA yet.
 - Health score weights are a transparent heuristic, not a professional assessment.
 
 ## Next steps

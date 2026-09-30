@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { AuthDraftProvider } from "@/components/auth/draft"
 import { Panda } from "@/components/brand/panda"
 
@@ -16,6 +17,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </header>
           <main className="mt-7"><AuthDraftProvider>{children}</AuthDraftProvider></main>
         </div>
+        <nav aria-label="Legal" className="mt-5 flex justify-center gap-4 text-xs text-muted-foreground">
+          <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>
+          <Link href="/terms" className="underline underline-offset-2">Terms</Link>
+        </nav>
       </div>
     </div>
   )

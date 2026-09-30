@@ -3,7 +3,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, File, Form, Query, Response, UploadFile
 
-from app.api.deps import CtxDep
+from app.api.deps import CtxDep, require_recent_sign_in
 from app.core.rate_limit import limiter
 from app.services import backup
 
@@ -16,6 +16,7 @@ async def _read(file: UploadFile) -> bytes:
 
 @router.get("/me/backup")
 async def download_backup(ctx: CtxDep, receipts: Annotated[bool, Query()] = True) -> Response:
+    await require_recent_sign_in(ctx)
     payload = await backup.build_backup(ctx.db, ctx.user_id, ctx.currency, include_receipts=receipts)
     name = f"faldo-backup-{ctx.today.isoformat()}.json"
     return Response(json.dumps(payload, separators=(",", ":")), media_type="application/json",

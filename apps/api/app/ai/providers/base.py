@@ -38,12 +38,31 @@ class ModelTurn:
 @dataclass
 class TranscriptItem:
     kind: str
+    """user, assistant, model_output, tool_result, or context: Faldo's data block for the next user message (see
+    with_context). Context is never an instruction, so it never goes in the system prompt."""
     text: str | None = None
     call: ToolCall | None = None
     output: dict[str, Any] | None = None
     raw: list[Any] = field(default_factory=list)
     images: list[dict[str, str]] = field(default_factory=list)
     """Photos sent with a user message: media_type and base64 data."""
+
+
+def with_context(transcript: list["TranscriptItem"]) -> list["TranscriptItem"]:
+    """The transcript as a model should see it: each context block joined to the front of the user message after it,
+    so the conversation still alternates user and assistant turns."""
+    out: list[TranscriptItem] = []
+    pending: list[str] = []
+    for item in transcript:
+        if item.kind == "context":
+            if item.text:
+                pending.append(item.text)
+            continue
+        if item.kind == "user" and pending:
+            item = TranscriptItem("user", text="\n\n".join([*pending, item.text or ""]), images=item.images)
+            pending = []
+        out.append(item)
+    return out
 
 
 @dataclass

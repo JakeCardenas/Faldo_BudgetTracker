@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { ArrowDownUp, Download, Loader2, PieChart, Plus, Receipt as ReceiptIcon, ScanLine, Search, SlidersHorizontal, X } from "lucide-react"
+import { toast } from "sonner"
 import { DayGroups } from "@/components/finance/day-groups"
 import { EmptyState } from "@/components/finance/empty-state"
 import { Money } from "@/components/finance/money"
@@ -13,12 +14,13 @@ import { HeaderButton, LargeTitle } from "@/components/ios/nav-header"
 import { Chip, UnderlineTabs } from "@/components/ios/segmented"
 import { IosSheet } from "@/components/ios/sheet"
 import { useAppActions } from "@/components/layout/app-context"
+import { saveFile, useConfirmIdentity } from "@/components/settings/reauth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { api } from "@/lib/api"
+import { api, ApiError } from "@/lib/api"
 import { setChromeAway, useChromeAway } from "@/lib/chrome"
 import { formatDate } from "@/lib/format"
 import { useMaskedAmounts } from "@/lib/privacy"
@@ -47,6 +49,14 @@ const SORTS = [
 ]
 
 function HistoryView() {
+  const { guard, dialog: confirmDialog } = useConfirmIdentity()
+  async function exportData() {
+    try {
+      await guard(() => saveFile("/me/export"))
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't download your data.")
+    }
+  }
   const params = useSearchParams()
   const { openAddTransaction, openTransaction } = useAppActions()
   const [q, setQ] = useState(params.get("q") ?? "")
@@ -97,7 +107,9 @@ function HistoryView() {
     <div className="space-y-4">
       <LargeTitle title="History"
         actions={<>
-          <a href="/api/v1/me/export" className="glass-control pressable hidden h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold lg:flex"><Download className="size-[1.05rem] text-foreground/75" /> Export</a>
+          {confirmDialog}
+          {/* Downloading everything needs a recent sign-in on this device; the dialog asks when the server does. */}
+          <button type="button" onClick={exportData} className="glass-control pressable hidden h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold lg:flex"><Download className="size-[1.05rem] text-foreground/75" /> Export</button>
           <HeaderButton onClick={() => openAddTransaction({ mode: "expense" })} aria-label="Add"><Plus /><span className="max-lg:sr-only">Add</span></HeaderButton>
         </>} />
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowUp, ChevronLeft, FileImage, Loader2, MessageCircle, RotateCcw, ScanLine, X } from "lucide-react"
 import { toast } from "sonner"
+import { AiConsentCard } from "@/components/assistant/ai-consent"
 import { DraftCard } from "@/components/capture/draft-card"
 import { TransactionForm, type TransactionFormValues } from "@/components/finance/transaction-form"
 import { KeypadEntry, type EntryPreset, type EntryType } from "@/components/capture/keypad-entry"
@@ -18,7 +19,7 @@ import { formatMoney } from "@/lib/format"
 import { fileFingerprint } from "@/lib/idempotency"
 import { parseQrPh, type QrPh } from "@/lib/qrph"
 import { play } from "@/lib/sound"
-import { invalidateFinancialData, useSaveTransaction } from "@/lib/queries"
+import { invalidateFinancialData, useMe, useSaveTransaction } from "@/lib/queries"
 import type { CaptureDraft, CaptureResult, Receipt, Transaction, TransactionInput } from "@/lib/types"
 import { useSubmissionKey } from "@/lib/use-submission-key"
 import { cn } from "@/lib/utils"
@@ -211,7 +212,10 @@ function ReceiptTab({ onDone, initialReceipt, onPayment }: { onDone: () => void;
   const uploadKey = useSubmissionKey()
   const confirmKey = useSubmissionKey()
   // On phones the scanner opens straight away; on a computer it's a button next to drag and drop.
-  const [scanning, setScanning] = useState(() => !initialReceipt && window.matchMedia("(pointer: coarse)").matches)
+  const { data: me } = useMe()
+  // Reading a photo sends it to an outside AI service, so the camera waits until the person has chosen.
+  const askFirst = Boolean(me?.ai.needs_consent)
+  const [scanning, setScanning] = useState(() => !initialReceipt && !askFirst && window.matchMedia("(pointer: coarse)").matches)
   const [code, setCode] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(initialReceipt ?? null)
   const [preview, setPreview] = useState<string | null>(initialReceipt?.has_image ? `/api/v1/receipts/${initialReceipt.id}/image` : null)
@@ -258,6 +262,7 @@ function ReceiptTab({ onDone, initialReceipt, onPayment }: { onDone: () => void;
   if (!receipt) {
     return (
       <div className="space-y-3">
+        {me && askFirst && <AiConsentCard me={me} purpose="photos" />}
         <Scanner open={scanning} onOpenChange={setScanning} onResult={scanned} />
         {code && <CodeCard text={code} onAgain={() => { setCode(null); setScanning(true) }} />}
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
@@ -285,7 +290,7 @@ function ReceiptTab({ onDone, initialReceipt, onPayment }: { onDone: () => void;
           {receipt.status === "unavailable" && receipt.error}
           {receipt.status === "failed" && receipt.error}
         </p>
-        {(receipt.status === "failed" || receipt.status === "unavailable") && receipt.has_image && (
+        {(receipt.can_retry ?? (receipt.status === "failed" || receipt.status === "unavailable")) && receipt.has_image && (
           <Button variant="secondary" size="sm" className="w-full" disabled={retrying} onClick={async () => {
             setRetrying(true)
             try {

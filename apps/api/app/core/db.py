@@ -45,7 +45,8 @@ def build_engine(url: str) -> AsyncEngine:
     if settings.db_pgbouncer:
         connect_args["statement_cache_size"] = 0
         connect_args["prepared_statement_name_func"] = lambda: f"__faldo_{uuid.uuid4().hex}__"
-    options: dict[str, Any] = {"pool_pre_ping": True, "connect_args": connect_args}
+    # hide_parameters: a failed statement's error names the SQL but never the values (emails, amounts, notes).
+    options: dict[str, Any] = {"pool_pre_ping": True, "connect_args": connect_args, "hide_parameters": True}
     if settings.db_pool == "null":
         options["poolclass"] = NullPool
     else:

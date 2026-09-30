@@ -15,7 +15,15 @@ from typing import Any
 
 import httpx
 
-from app.ai.providers.base import CaptureContext, ModelTurn, ProviderUnavailable, TextDelta, ToolCall, TranscriptItem
+from app.ai.providers.base import (
+    CaptureContext,
+    ModelTurn,
+    ProviderUnavailable,
+    TextDelta,
+    ToolCall,
+    TranscriptItem,
+    with_context,
+)
 from app.ai.providers.openai_provider import (
     CAPTURE_INSTRUCTIONS,
     RECEIPT_INSTRUCTIONS,
@@ -81,6 +89,7 @@ def _tools(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _messages(transcript: list[TranscriptItem]) -> list[dict[str, Any]]:
     """The transcript as alternating user and assistant messages, tool results grouped into one user turn."""
     messages: list[dict[str, Any]] = []
+    transcript = with_context(transcript)
 
     def add(role: str, content: list[dict[str, Any]]) -> None:
         if not content:
