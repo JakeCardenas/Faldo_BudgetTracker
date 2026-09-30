@@ -96,7 +96,8 @@ SPECS: list[Spec] = [
     Spec("receipts", Receipt, "Receipts", {"transaction_id": "transactions"}, drop=frozenset({"storage_key"})),
 ]
 SPEC_BY_KEY = {s.key: s for s in SPECS}
-SKIPPED_COLUMNS = {"user_id", "updated_at"}
+# Bookkeeping, not data: a restored row gets its own. (A transaction's `version` counts its edits here, not in a backup.)
+SKIPPED_COLUMNS = {"user_id", "updated_at", "version"}
 INDEXED = {"transactions": "transaction", "savings_goals": "goal", "recurring_payments": "recurring_payment",
            "debts": "debt", "budgets": "budget", "financial_notes": "financial_note"}
 EXCLUDED = ["settings and preferences", "Faldo's memory (rebuilt from your records)", "chats and insights",

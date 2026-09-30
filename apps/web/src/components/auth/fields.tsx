@@ -10,8 +10,10 @@ export const PRIMARY_PILL = cn(PILL, "bg-[#1b3d24] text-white hover:bg-[#214a2c]
 
 // 48px tall (past the 44px a thumb needs), 16px text so iOS doesn't zoom in, and Safari's own Caps Lock badge hidden:
 // it would sit beside the eye button, and the password field says it in words instead.
+// Placeholders at 90% of the muted text: 4.8:1 on the white fill and 5.2:1 on the dark one (normal-size text needs
+// 4.5:1), still well below the labels (about 18:1 and 12:1), so they read as examples, not as the field's name.
 const INPUT = cn("h-12 w-full rounded-2xl border border-border bg-card px-4 text-base outline-none transition-[border-color,box-shadow]",
-  "placeholder:text-muted-foreground/70 focus:border-ring focus:ring-3 focus:ring-ring/25 sm:text-[0.9375rem] dark:bg-input/20",
+  "placeholder:text-muted-foreground/90 focus:border-ring focus:ring-3 focus:ring-ring/25 sm:text-[0.9375rem] dark:bg-input/20",
   "[&::-webkit-caps-lock-indicator]:hidden")
 
 type FieldProps = React.ComponentProps<"input"> & {

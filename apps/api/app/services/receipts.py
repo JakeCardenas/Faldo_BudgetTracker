@@ -292,7 +292,13 @@ async def get_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid.UUI
 
 
 async def confirm_receipt(db: AsyncSession, user_id: uuid.UUID, receipt_id: uuid.UUID, data: TransactionIn) -> Transaction:
-    receipt = await get_receipt(db, user_id, receipt_id)
+    # Locked, so two confirms arriving together can't both see "needs review" and make two transactions: the second waits
+    # here, then finds it confirmed.
+    receipt = (await db.execute(
+        select(Receipt).where(Receipt.id == receipt_id, Receipt.user_id == user_id).with_for_update()
+    )).scalar_one_or_none()
+    if receipt is None:
+        raise NotFound("Receipt not found.")
     if receipt.status in {ReceiptStatus.confirmed, ReceiptStatus.discarded}:
         raise AppError("This receipt has already been handled.")
     txn = await create_transaction(db, user_id, data, TransactionSource.receipt)

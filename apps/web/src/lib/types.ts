@@ -89,6 +89,8 @@ export interface Transaction {
   source: string
   recurring_payment_id: string | null
   debt_id: string | null
+  /** Goes up with every edit; an update sends the version it was made from (see TransactionUpdate). */
+  version: number
   created_at: string
   updated_at: string
 }
@@ -115,6 +117,11 @@ export interface TransactionInput {
   tags?: string[]
   items?: { name: string; quantity?: number; amount_minor: number }[]
   recurring_payment_id?: string | null
+}
+
+/** A full replacement made from the copy loaded at `version`; refused (409, stale revision) if it changed since. */
+export interface TransactionUpdate extends TransactionInput {
+  version: number
 }
 
 export interface BudgetLine {

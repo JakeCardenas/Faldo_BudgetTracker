@@ -164,6 +164,25 @@ class StoredFile(UserOwned, Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class IdempotencyKey(UUIDPk, UserOwned, Base):
+    """A write sent with an Idempotency-Key: which request it was and the answer it got. A retry of the same request
+    gets that answer back instead of writing again. The unique key per user and operation is what makes two copies of
+    one request, arriving together, run once: the second waits on the first's row and then reads its answer."""
+
+    __tablename__ = "idempotency_keys"
+    __table_args__ = (
+        UniqueConstraint("user_id", "operation", "key", name="uq_idempotency_keys_user_operation_key"),
+        Index("ix_idempotency_keys_user_created", "user_id", "created_at"),
+    )
+
+    operation: Mapped[str] = mapped_column(String(40))
+    key: Mapped[str] = mapped_column(String(255))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    response_status: Mapped[int | None] = mapped_column(Integer)
+    response_body: Mapped[Any] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class RateLimitHit(Base):
     __tablename__ = "rate_limit_hits"
 

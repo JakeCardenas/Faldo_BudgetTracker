@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { formatDate, formatMoney, minorToInput, toMinor, todayISO } from "@/lib/format"
 import { GOAL_ICONS, GoalIcon, goalIconId } from "@/lib/goal-icons"
 import { goalStatusLine } from "@/lib/goals"
@@ -112,6 +113,8 @@ function ContributeDialog({ goal, onOpenChange }: { goal: Goal; onOpenChange: (o
   const [from, setFrom] = useState<string>(accounts.find((a) => a.is_spendable)?.id ?? "")
   const [withdraw, setWithdraw] = useState(false)
   const [busy, setBusy] = useState(false)
+  // A linked goal's contribution moves money between accounts; one key across retries moves it once.
+  const submission = useSubmissionKey()
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -119,7 +122,9 @@ function ContributeDialog({ goal, onOpenChange }: { goal: Goal; onOpenChange: (o
     if (!minor) return
     setBusy(true)
     try {
-      await api.post(`/goals/${goal.id}/contributions`, { amount_minor: withdraw ? -minor : minor, occurred_on: date, from_account_id: goal.linked_account_id ? from : null })
+      const body = { amount_minor: withdraw ? -minor : minor, occurred_on: date, from_account_id: goal.linked_account_id ? from : null }
+      await api.postOnce(`/goals/${goal.id}/contributions`, body, submission.for({ goal: goal.id, body }))
+      submission.done()
       await invalidateFinancialData(qc)
       toast.success(withdraw ? "Withdrawal recorded" : `Added ${formatMoney(minor)} to ${goal.name}`)
       onOpenChange(false)

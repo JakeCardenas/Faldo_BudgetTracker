@@ -47,8 +47,10 @@ function Field({ label, htmlFor, children, highlight, hint }: { label: string; h
   )
 }
 
-export function TransactionForm({ initial, saved, onSubmit, submitLabel = "Save transaction", busy, onCancel, highlights = {}, extraActions }: {
+export function TransactionForm({ initial, saved, onSubmit, submitLabel = "Save transaction", busy, onCancel, highlights = {}, extraActions, formId }: {
   initial?: Partial<TransactionFormValues>
+  /** Lets a button outside the form submit it (`<button form={formId}>`), with the values as they are now. */
+  formId?: string
   /** Editing a transaction already recorded, so its amount already came out of its account. */
   saved?: boolean
   onSubmit: (input: TransactionInput) => void
@@ -110,7 +112,7 @@ export function TransactionForm({ initial, saved, onSubmit, submitLabel = "Save 
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form id={formId} onSubmit={submit} className="space-y-4">
       <ToggleGroup type="single" value={type} onValueChange={(v) => { if (v) { setType(v as TransactionType); setCategoryId(""); setSubcategoryId("") } }}
         variant="outline" className="grid w-full grid-cols-3">
         <ToggleGroupItem value="expense">Expense</ToggleGroupItem>

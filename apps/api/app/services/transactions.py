@@ -9,7 +9,7 @@ from sqlalchemy import Select, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.errors import AppError, Conflict, NotFound
+from app.core.errors import AppError, Conflict, NotFound, StaleRevision
 from app.engine.periods import month_start
 from app.jobs.queue import enqueue_index, enqueue_monthly_summary, enqueue_unindex
 from app.models import (
@@ -23,7 +23,7 @@ from app.models import (
     transaction_tags,
 )
 from app.models.enums import CategoryKind, TransactionSource, TransactionType
-from app.schemas.ledger import ItemOut, TransactionIn, TransactionList, TransactionOut
+from app.schemas.ledger import ItemOut, TransactionIn, TransactionList, TransactionOut, TransactionUpdateIn
 from app.services.categories import resolve_category_pair
 from app.services.common import get_owned, normalize_name
 
@@ -74,7 +74,8 @@ def to_out(t: Transaction) -> TransactionOut:
         subcategory_id=t.subcategory_id, subcategory_name=t.subcategory.name if t.subcategory else None,
         payment_method=t.payment_method, notes=t.notes, tags=sorted(tag.name for tag in t.tags),
         items=[ItemOut.model_validate(i) for i in t.items], source=t.source,
-        recurring_payment_id=t.recurring_payment_id, debt_id=t.debt_id, created_at=t.created_at, updated_at=t.updated_at,
+        recurring_payment_id=t.recurring_payment_id, debt_id=t.debt_id, version=t.version,
+        created_at=t.created_at, updated_at=t.updated_at,
     )
 
 
@@ -287,8 +288,24 @@ def _ensure_not_money_owed(txn: Transaction) -> None:
 
 
 async def update_transaction(
-    db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionIn
+    db: AsyncSession, user_id: uuid.UUID, transaction_id: uuid.UUID, data: TransactionUpdateIn
 ) -> Transaction:
+    # Lock the row, then compare versions. A second edit made from the same version waits on this lock until the first
+    # commits, then sees the version the first one bumped and is refused, so two edits can't both win. Items and tags
+    # change in this same database transaction, so they land, or roll back, together with the row.
+    current_version = await db.scalar(
+        select(Transaction.version)
+        .where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+        .with_for_update()
+    )
+    if current_version is None:
+        raise NotFound("Transaction not found.")
+    if current_version != data.version:
+        latest = await get_transaction(db, user_id, transaction_id)
+        raise StaleRevision(
+            "This transaction was changed somewhere else after you opened it, so your changes weren't saved.",
+            extra={"current": to_out(latest).model_dump(mode="json")},
+        )
     txn = await get_transaction(db, user_id, transaction_id)
     _ensure_not_money_owed(txn)
     previous_date = txn.occurred_on
@@ -298,6 +315,9 @@ async def update_transaction(
     merchant = await get_or_create_merchant(
         db, user_id, data.merchant, category.id if category and data.type == TransactionType.expense else None
     )
+    # Before any field changes: a new tag is flushed as it's created, and a flush while the row is already changed
+    # would write it (and move its version) twice in one edit.
+    tags = await _tags(db, user_id, data.tags)
     txn.type = data.type
     txn.amount_minor = data.amount_minor
     txn.currency = account.currency
@@ -311,7 +331,9 @@ async def update_transaction(
     txn.notes = data.notes
     txn.recurring_payment_id = data.recurring_payment_id
     txn.items = _items(user_id, data)
-    txn.tags = await _tags(db, user_id, data.tags)
+    txn.tags = tags
+    # Always write the row itself, so the version moves even when only items or tags changed.
+    txn.updated_at = func.now()
     await db.flush()
     txn_id = txn.id
     db.expire(txn)

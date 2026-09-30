@@ -135,7 +135,8 @@ async def test_money_owed_movements_are_locked_in_the_ledger(client):
     assert movement["debt_id"]
     assert (await client.delete(f"/api/v1/transactions/{movement['id']}")).status_code == 409
     edit = await client.put(f"/api/v1/transactions/{movement['id']}", json={
-        "type": "expense", "amount_minor": 100, "occurred_on": TODAY.isoformat(), "account_id": gcash["id"]})
+        "type": "expense", "amount_minor": 100, "occurred_on": TODAY.isoformat(), "account_id": gcash["id"],
+        "version": movement["version"]})
     assert edit.status_code == 409
     direct = await client.post("/api/v1/transactions", json={
         "type": "debt_out", "amount_minor": 100, "occurred_on": TODAY.isoformat(), "account_id": gcash["id"]})

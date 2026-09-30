@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { usePathname, useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import { AddTransactionDialog, type AddMode } from "@/components/capture/add-transaction-dialog"
 import type { EntryPreset } from "@/components/capture/keypad-entry"
 import Image from "next/image"
@@ -15,6 +16,7 @@ import { CommandSearch } from "@/components/layout/command-search"
 import { FaldoBubble } from "@/components/layout/faldo-bubble"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { TopNav } from "@/components/layout/top-nav"
+import { Button } from "@/components/ui/button"
 import { useBubbleShown } from "@/lib/bubble"
 import { useAmountsHidden } from "@/lib/privacy"
 import { useSmoothTheme } from "@/lib/theme"
@@ -43,10 +45,27 @@ function PageMain({ pathname, className, children }: { pathname: string; classNa
   return <main id="main" className={cn(className, firstVisit ? "page-enter" : "page-return")}>{children}</main>
 }
 
+/**
+ * Shown instead of the launch splash when Faldo can't load who's signed in (the server is down, or the phone lost its
+ * connection). Without it the splash would wait forever with no word about why. A 401 never gets here: it goes to Log in.
+ */
+function Unreachable({ retrying, onRetry }: { retrying: boolean; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex min-h-dvh flex-col items-center justify-center gap-5 px-6 text-center">
+      <Image src="/brand/faldo-panda-512.png" alt="" width={56} height={56} priority unoptimized className="size-14" />
+      <div className="max-w-xs space-y-1.5">
+        <h1 className="text-lg font-semibold">Faldo can&apos;t reach its server</h1>
+        <p className="text-sm text-muted-foreground">Check your connection, then try again. Nothing you saved is lost.</p>
+      </div>
+      <Button onClick={onRetry} disabled={retrying}>{retrying && <Loader2 className="animate-spin" />} Try again</Button>
+    </div>
+  )
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { data: me, isLoading } = useMe()
+  const { data: me, isLoading, isError, isFetching, refetch } = useMe()
   // Re-renders the shell's own sheets and dialogs when "Hide amounts" changes; pages subscribe themselves.
   useAmountsHidden()
   const bubble = useBubbleShown()
@@ -105,7 +124,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <WelcomeSplash />
-      {booting ? (
+      {isError && !me ? (
+        <Unreachable retrying={isFetching} onRetry={() => void refetch()} />
+      ) : booting ? (
         <>
           <SplashContent className="boot-full min-h-dvh" />
           <div className="boot-quiet flex min-h-dvh items-center justify-center">

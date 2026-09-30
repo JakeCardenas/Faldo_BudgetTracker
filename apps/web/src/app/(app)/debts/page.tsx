@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { MoreHorizontal, Plus } from "lucide-react"
+import { Loader2, MoreHorizontal, Plus } from "lucide-react"
 import { MoneyOwedIcon, TINTED } from "@/components/finance/category-icon"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { api, ApiError } from "@/lib/api"
 import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { PALETTE } from "@/lib/palette"
 import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useCategories, useDebts } from "@/lib/queries"
@@ -104,18 +105,27 @@ function PaymentDialog({ debt, onOpenChange }: { debt: Debt; onOpenChange: (open
   const [date, setDate] = useState(todayISO())
   const [accountId, setAccountId] = useState("none")
   const [categoryId, setCategoryId] = useState("none")
+  // A payment can move an account balance: one save at a time, and one key across retries, so it's recorded once.
+  const [busy, setBusy] = useState(false)
+  const submission = useSubmissionKey()
   const iOwe = debt.direction === "i_owe"
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (busy) return
+    setBusy(true)
+    const body = { amount_minor: toMinor(amount), paid_on: date,
+      account_id: accountId === "none" ? null : accountId,
+      category_id: iOwe && accountId !== "none" && categoryId !== "none" ? categoryId : null }
     try {
-      await api.post(`/debts/${debt.id}/payments`, { amount_minor: toMinor(amount), paid_on: date,
-        account_id: accountId === "none" ? null : accountId,
-        category_id: iOwe && accountId !== "none" && categoryId !== "none" ? categoryId : null })
+      await api.postOnce(`/debts/${debt.id}/payments`, body, submission.for({ debt: debt.id, body }))
+      submission.done()
       await invalidateFinancialData(qc)
       toast.success("Payment recorded")
       onOpenChange(false)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't save.")
+    } finally {
+      setBusy(false)
     }
   }
   return (
@@ -139,7 +149,7 @@ function PaymentDialog({ debt, onOpenChange }: { debt: Debt; onOpenChange: (open
               <p className="text-xs text-muted-foreground">Choose a category when you&apos;re paying back your share of something, like a meal someone covered.</p>
             </div>
           )}
-          <Button type="submit" className="w-full">Save payment</Button>
+          <Button type="submit" className="w-full" disabled={busy}>{busy && <Loader2 className="animate-spin" />} Save payment</Button>
         </form>
       </DialogContent>
     </Dialog>

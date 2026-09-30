@@ -143,6 +143,11 @@ class Transaction(UUIDPk, UserOwned, Timestamps, Base):
     import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("import_batches.id", ondelete="SET NULL"), index=True
     )
+    # Goes up by one on every ORM update of the row (SQLAlchemy also checks it in the UPDATE's WHERE), so an edit made
+    # from an older copy is caught instead of silently overwriting the newer one.
+    version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
+
+    __mapper_args__ = {"version_id_col": version}
 
     items: Mapped[list["TransactionItem"]] = relationship(
         back_populates="transaction", cascade="all, delete-orphan", order_by="TransactionItem.position"

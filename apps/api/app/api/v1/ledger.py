@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, File, Form, Query, Response, UploadFile
 from sqlalchemy import select
 
-from app.api.deps import CtxDep
+from app.api.deps import CtxDep, IdempotencyKeyHeader
 from app.jobs.queue import enqueue_index, enqueue_unindex
 from app.models import FinancialNote
 from app.models.enums import TransactionType
@@ -25,11 +25,13 @@ from app.schemas.ledger import (
     TransactionIn,
     TransactionList,
     TransactionOut,
+    TransactionUpdateIn,
 )
 from app.schemas.planning import DebtOut
 from app.services import accounts as account_service
 from app.services import categories as category_service
 from app.services import debts as debt_service
+from app.services import idempotency
 from app.services import imports as import_service
 from app.services import transactions as txn_service
 from app.services.common import get_owned
@@ -166,8 +168,12 @@ async def list_transactions(
 
 
 @router.post("/transactions", response_model=TransactionOut, status_code=201, tags=["transactions"])
-async def create_transaction(data: TransactionIn, ctx: CtxDep) -> TransactionOut:
-    return txn_service.to_out(await txn_service.create_transaction(ctx.db, ctx.user_id, data))
+async def create_transaction(data: TransactionIn, ctx: CtxDep, idempotency_key: IdempotencyKeyHeader = None) -> Any:
+    """With an Idempotency-Key, a retry of the same request returns the first result instead of recording it twice."""
+    async def write() -> TransactionOut:
+        return txn_service.to_out(await txn_service.create_transaction(ctx.db, ctx.user_id, data))
+    return await idempotency.run_once(ctx.db, ctx.user_id, "transactions.create", idempotency_key, data, write,
+                                      status_code=201)
 
 
 @router.get("/transactions/{transaction_id}", response_model=TransactionOut, tags=["transactions"])
@@ -175,8 +181,9 @@ async def get_transaction(transaction_id: uuid.UUID, ctx: CtxDep) -> Transaction
     return txn_service.to_out(await txn_service.get_transaction(ctx.db, ctx.user_id, transaction_id))
 
 
-@router.put("/transactions/{transaction_id}", response_model=TransactionOut, tags=["transactions"])
-async def update_transaction(transaction_id: uuid.UUID, data: TransactionIn, ctx: CtxDep) -> TransactionOut:
+@router.put("/transactions/{transaction_id}", response_model=TransactionOut, tags=["transactions"],
+            responses={409: {"description": "The transaction changed since `version`; the latest copy is in `current`."}})
+async def update_transaction(transaction_id: uuid.UUID, data: TransactionUpdateIn, ctx: CtxDep) -> TransactionOut:
     return txn_service.to_out(await txn_service.update_transaction(ctx.db, ctx.user_id, transaction_id, data))
 
 

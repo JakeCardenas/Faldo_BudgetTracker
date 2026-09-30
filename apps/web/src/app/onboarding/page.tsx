@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { api, ApiError } from "@/lib/api"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { FREQUENCY_LABELS, formatMoney, toMinor, todayISO } from "@/lib/format"
 import { useCategories, useMe } from "@/lib/queries"
 import type { AccountType, CaptureResult, Frequency, Me } from "@/lib/types"
@@ -67,6 +68,7 @@ export default function OnboardingPage() {
   const { data: categories = [] } = useCategories()
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
+  const submission = useSubmissionKey()
   const [currency, setCurrency] = useState("PHP")
   const [accountPreset, setAccountPreset] = useState(0)
   const [accountName, setAccountName] = useState("GCash")
@@ -147,11 +149,13 @@ export default function OnboardingPage() {
         toast.error("Include an amount, like “Lunch ₱250 at Jollibee”.")
         return
       }
-      await api.post("/capture/confirm", { transactions: [{
+      const body = { transactions: [{
         type: draft.type, amount_minor: draft.amount_minor, occurred_on: draft.occurred_on, account_id: draft.account_id ?? accountId,
         to_account_id: draft.to_account_id, merchant: draft.merchant, category_id: draft.category_id, subcategory_id: draft.subcategory_id,
         items: draft.items, tags: [],
-      }] })
+      }] }
+      await api.postOnce("/capture/confirm", body, submission.for(body))
+      submission.done()
       setTxSaved(`${draft.merchant ?? draft.category_name ?? "Transaction"} · ${formatMoney(draft.amount_minor)} · ${draft.category_name ?? "Uncategorized"} · ${draft.account_name ?? ""}`)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't add that.")

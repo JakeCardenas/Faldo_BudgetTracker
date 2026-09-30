@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/format"
 import { invalidateFinancialData } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { CaptureDraft, Transaction, TransactionInput } from "@/lib/types"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { cn } from "@/lib/utils"
 
 const QUESTION_START = /^(what|how|why|when|where|who|which|can|could|should|would|will|do|does|did|is|am|are|was|were|show|list|compare|give|tell|help|explain|summari[sz]e|analy[sz]e|forecast|predict|any|have|has)\b/i
@@ -93,11 +94,14 @@ export function ReviewCard({ drafts: initial, onLogged }: { drafts: CaptureDraft
   const qc = useQueryClient()
   const [drafts, setDrafts] = useState(initial)
   const [busy, setBusy] = useState(false)
+  const submission = useSubmissionKey()
   const blocking = drafts.some((d) => d.issues.some((i) => i.blocking) || !d.amount_minor || !d.account_id)
   async function save() {
     setBusy(true)
     try {
-      const created = await api.post<Transaction[]>("/capture/confirm", { transactions: drafts.map(draftToInput) })
+      const body = { transactions: drafts.map(draftToInput) }
+      const created = await api.postOnce<Transaction[]>("/capture/confirm", body, submission.for(body))
+      submission.done()
       await invalidateFinancialData(qc)
       play("success")
       onLogged(created)

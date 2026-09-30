@@ -153,8 +153,16 @@ class TransactionOut(OutModel):
     source: TransactionSource
     recurring_payment_id: uuid.UUID | None
     debt_id: uuid.UUID | None = None
+    version: int
     created_at: datetime
     updated_at: datetime
+
+
+class TransactionUpdateIn(TransactionIn):
+    """A full replacement, made from the copy the client loaded: `version` is that copy's version. If the transaction has
+    changed since, the update is refused (409) rather than overwriting the newer edit."""
+
+    version: int = Field(ge=1)
 
 
 class SplitIn(ApiModel):

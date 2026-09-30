@@ -1,4 +1,5 @@
 import datetime as dt
+import hashlib
 import json
 import uuid
 from collections.abc import AsyncIterator
@@ -14,7 +15,7 @@ from app.ai.assistant.service import list_conversations, message_out, stream_ans
 from app.ai.capture.service import parse_capture
 from app.ai.factory import get_llm
 from app.ai.rag.retriever import search_memory
-from app.api.deps import CtxDep
+from app.api.deps import CtxDep, IdempotencyKeyHeader
 from app.core.config import get_settings
 from app.core.errors import AppError, NotFound
 from app.core.rate_limit import limiter
@@ -34,7 +35,7 @@ from app.models.enums import InsightStatus, TransactionSource
 from app.schemas.common import ApiModel
 from app.schemas.ledger import TransactionIn, TransactionOut
 from app.services import check as check_service
-from app.services import dashboard, forecast, health, insights, pulse, receipts, reports
+from app.services import dashboard, forecast, health, idempotency, insights, pulse, receipts, reports
 from app.services.common import get_owned
 from app.services.transactions import TransactionFilters, create_transaction, list_transactions
 from app.services.transactions import to_out as txn_out
@@ -173,13 +174,17 @@ class CaptureConfirmIn(ApiModel):
 
 
 @router.post("/capture/confirm", response_model=list[TransactionOut], status_code=201, tags=["capture"])
-async def capture_confirm(data: CaptureConfirmIn, ctx: CtxDep) -> list[TransactionOut]:
-    created = []
-    for item in data.transactions:
-        if item.occurred_on > ctx.today:
-            raise AppError("Transactions can't be dated in the future.")
-        created.append(txn_out(await create_transaction(ctx.db, ctx.user_id, item, TransactionSource.natural_language)))
-    return created
+async def capture_confirm(data: CaptureConfirmIn, ctx: CtxDep, idempotency_key: IdempotencyKeyHeader = None) -> Any:
+    """Every draft is saved, or none is; with an Idempotency-Key a double tap or retry saves them once."""
+    async def write() -> list[TransactionOut]:
+        created = []
+        for item in data.transactions:
+            if item.occurred_on > ctx.today:
+                raise AppError("Transactions can't be dated in the future.")
+            created.append(txn_out(await create_transaction(ctx.db, ctx.user_id, item, TransactionSource.natural_language)))
+        return created
+    return await idempotency.run_once(ctx.db, ctx.user_id, "capture.confirm", idempotency_key, data, write,
+                                      status_code=201)
 
 
 def _receipt_out(r: Any) -> dict[str, Any]:
@@ -189,12 +194,16 @@ def _receipt_out(r: Any) -> dict[str, Any]:
 
 
 @router.post("/receipts", status_code=201, tags=["receipts"])
-async def upload_receipt(ctx: CtxDep, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+async def upload_receipt(ctx: CtxDep, file: Annotated[UploadFile, File()], idempotency_key: IdempotencyKeyHeader = None) -> Any:
     cfg = get_settings()
     await limiter.hit(f"receipt:{ctx.user_id}", cfg.receipt_uploads_per_day, 86400)
     data = await file.read(cfg.receipt_max_bytes + 1)
-    receipt = await receipts.upload_receipt(ctx.db, ctx.user_id, data)
-    return _receipt_out(receipt)
+
+    async def write() -> dict[str, Any]:
+        return _receipt_out(await receipts.upload_receipt(ctx.db, ctx.user_id, data))
+    # The same photo sent twice at once would otherwise race past the "already uploaded" check.
+    return await idempotency.run_once(ctx.db, ctx.user_id, "receipts.upload", idempotency_key,
+                                      {"sha256": hashlib.sha256(data).hexdigest()}, write, status_code=201)
 
 
 @router.get("/receipts", tags=["receipts"])
@@ -230,8 +239,13 @@ async def receipt_image(receipt_id: uuid.UUID, ctx: CtxDep) -> Response:
 
 
 @router.post("/receipts/{receipt_id}/confirm", response_model=TransactionOut, tags=["receipts"])
-async def confirm_receipt(receipt_id: uuid.UUID, data: TransactionIn, ctx: CtxDep) -> TransactionOut:
-    return txn_out(await receipts.confirm_receipt(ctx.db, ctx.user_id, receipt_id, data))
+async def confirm_receipt(receipt_id: uuid.UUID, data: TransactionIn, ctx: CtxDep,
+                          idempotency_key: IdempotencyKeyHeader = None) -> Any:
+    """With an Idempotency-Key, a retry after a lost response gets the saved transaction back instead of an error."""
+    async def write() -> TransactionOut:
+        return txn_out(await receipts.confirm_receipt(ctx.db, ctx.user_id, receipt_id, data))
+    return await idempotency.run_once(ctx.db, ctx.user_id, "receipts.confirm", idempotency_key,
+                                      {"receipt_id": receipt_id, "transaction": data}, write, status_code=200)
 
 
 @router.delete("/receipts/{receipt_id}", status_code=204, tags=["receipts"])

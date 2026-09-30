@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Loader2, Pencil, Split, Trash2 } from "lucide-react"
+import { Loader2, Pencil, Split, Trash2, TriangleAlert } from "lucide-react"
 import { toast } from "sonner"
 import { AmountInput } from "@/components/finance/amount-input"
 import { CategoryIcon } from "@/components/finance/category-icon"
@@ -19,7 +19,8 @@ import { formatDate, formatMoney, toMinor, todayISO } from "@/lib/format"
 import { PALETTE } from "@/lib/palette"
 import { invalidateFinancialData, useDeleteTransaction, useSaveTransaction } from "@/lib/queries"
 import { detailView } from "@/lib/query-view"
-import type { Debt, Transaction } from "@/lib/types"
+import { describeChanges, staleCurrent } from "@/lib/transaction-conflict"
+import type { Debt, Transaction, TransactionInput } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -90,10 +91,81 @@ const SOURCE_LABELS: Record<string, string> = {
   recurring: "Recurring payment", seed: "Imported sample data", import: "Imported from a statement",
 }
 
+/**
+ * Shown when saving an edit was refused because the transaction changed elsewhere after the edit began. Nothing is
+ * thrown away until the person chooses: their edits stay in the form below, and this says what the other edit changed.
+ */
+function EditConflict({ base, current, busy, formId, onUseLatest }: {
+  base: Transaction
+  current: Transaction
+  busy: boolean
+  /** The edit form: Keep my changes submits it as it is now, including anything changed after this appeared. */
+  formId: string
+  onUseLatest: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  // The Save button is at the bottom of a long sheet; bring the explanation into view and give it focus.
+  useEffect(() => {
+    ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+    ref.current?.focus({ preventScroll: true })
+  }, [current.version])
+  const changes = describeChanges(base, current, {
+    money: (minor, currency) => formatMoney(minor, currency),
+    date: (iso) => formatDate(iso, "MMM d, yyyy"),
+  })
+  return (
+    <div ref={ref} tabIndex={-1} role="alert" aria-labelledby="edit-conflict-title"
+      className="space-y-3 rounded-2xl bg-warning-soft p-4 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/40">
+      <div className="flex gap-2.5">
+        <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+        <div className="space-y-1">
+          <p id="edit-conflict-title" className="font-semibold">This transaction changed while you were editing</p>
+          <p className="text-muted-foreground">
+            It was saved somewhere else (another device or tab) after you opened it. Your changes are still in the form below
+            and haven&apos;t been saved.
+          </p>
+        </div>
+      </div>
+      {changes.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[0.8125rem] font-medium text-muted-foreground">What the other edit changed</p>
+          <ul className="divide-y rounded-xl border bg-card px-3">
+            {changes.map((c) => (
+              <li key={c.label} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2">
+                <span className="text-muted-foreground">{c.label}</span>
+                <span className="tabular min-w-0 text-right break-words">
+                  <span className="text-muted-foreground line-through decoration-muted-foreground/60">{c.before}</span>
+                  <span aria-hidden> → </span><span className="sr-only"> is now </span>{c.after}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button type="submit" form={formId} className="sm:flex-1" disabled={busy}>
+          {busy && <Loader2 className="animate-spin" />} Keep my changes
+        </Button>
+        <Button variant="outline" className="sm:flex-1" disabled={busy} onClick={onUseLatest}>Use the latest version</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">Keep my changes saves yours over the other edit. Use the latest version discards yours.</p>
+    </div>
+  )
+}
+
 export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOpenChange: (open: boolean) => void }) {
+  const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [splitting, setSplitting] = useState(false)
+  // The copy an edit started from. Saves send its version, so a background refetch can't quietly move the edit onto
+  // a newer copy and overwrite what changed there.
+  const [base, setBase] = useState<Transaction | null>(null)
+  // The newer copy a save was refused against. While it's shown, saving means "keep my changes over it", so the form
+  // saves against its version: a choice the person makes knowingly, never a silent overwrite.
+  const [conflict, setConflict] = useState<Transaction | null>(null)
+  const [formKey, setFormKey] = useState(0)
+  const formId = useId()
   const { data: t, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["transactions", "detail", id],
     queryFn: () => api.get<Transaction>(`/transactions/${id}`),
@@ -102,7 +174,21 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
   const view = detailView({ isError, hasData: !!t })
   const save = useSaveTransaction()
   const remove = useDeleteTransaction()
-  const close = () => { setEditing(false); setSplitting(false); onOpenChange(false) }
+  const stopEditing = () => { setEditing(false); setBase(null); setConflict(null) }
+  const close = () => { stopEditing(); setSplitting(false); onOpenChange(false) }
+  const startEditing = (from: Transaction) => { setBase(from); setConflict(null); setFormKey((k) => k + 1); setEditing(true) }
+  const submitEdit = (from: Transaction, input: TransactionInput, version: number) =>
+    save.mutate({ id: from.id, data: input, version }, {
+      onSuccess: () => { toast.success("Changes saved"); stopEditing() },
+      onError: (e) => {
+        const current = staleCurrent(e)
+        if (!current) return void toast.error(e.message)
+        // Show the newer copy everywhere else too, and keep this person's edit on screen until they choose.
+        qc.setQueryData(["transactions", "detail", current.id], current)
+        void invalidateFinancialData(qc)
+        setConflict(current)
+      },
+    })
   const owed = !!t?.debt_id
   const inflow = t?.type === "income" || t?.type === "debt_in"
 
@@ -118,17 +204,20 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
           </div>
         ) : !t ? (
           <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-40 w-full" /></div>
-        ) : editing ? (
-          <TransactionForm saved
-            initial={{ ...t, items: t.items.map((i) => ({ name: i.name, amount_minor: i.amount_minor })) }}
-            busy={save.isPending}
-            onCancel={() => setEditing(false)}
-            submitLabel="Save changes"
-            onSubmit={(input) => save.mutate({ id: t.id, data: input }, {
-              onSuccess: () => { toast.success("Changes saved"); setEditing(false) },
-              onError: (e) => toast.error(e.message),
-            })}
-          />
+        ) : editing && base ? (
+          <div className="space-y-4">
+            {conflict && (
+              <EditConflict base={base} current={conflict} busy={save.isPending} formId={formId}
+                onUseLatest={() => startEditing(conflict)} />
+            )}
+            <TransactionForm key={formKey} saved formId={formId}
+              initial={{ ...base, items: base.items.map((i) => ({ name: i.name, amount_minor: i.amount_minor })) }}
+              busy={save.isPending}
+              onCancel={stopEditing}
+              submitLabel={conflict ? "Keep my changes" : "Save changes"}
+              onSubmit={(input) => submitEdit(base, input, conflict ? conflict.version : base.version)}
+            />
+          </div>
         ) : (
           <div className="space-y-5">
             <div className="flex items-center gap-3">
@@ -181,7 +270,7 @@ export function TransactionSheet({ id, onOpenChange }: { id: string | null; onOp
             ) : (
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  <Button variant="secondary" size="lg" className="flex-1" onClick={() => setEditing(true)}><Pencil /> Edit</Button>
+                  <Button variant="secondary" size="lg" className="flex-1" onClick={() => startEditing(t)}><Pencil /> Edit</Button>
                   {t.type === "expense" && <Button variant="outline" size="lg" className="flex-1" onClick={() => setSplitting(true)}><Split /> Split</Button>}
                 </div>
                 <Button variant="ghost" className="w-full text-destructive hover:bg-danger-soft hover:text-destructive" onClick={() => setConfirmDelete(true)}>

@@ -16,6 +16,7 @@ import { useAppActions } from "@/components/layout/app-context"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { api, streamPost } from "@/lib/api"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { formatDate, timeAgo } from "@/lib/format"
 import { replyMood, toolNames } from "@/lib/mood"
 import { readPhoto, type Photo } from "@/lib/photo"
@@ -300,6 +301,7 @@ function AssistantView() {
   const [pushOn] = usePushEnabled()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const initialAsked = useRef(false)
+  const submission = useSubmissionKey()
   const dictation = useDictation((text) => setInput((current) => (current ? `${current} ${text}` : text)))
 
   useEffect(() => {
@@ -330,7 +332,10 @@ function AssistantView() {
       return true
     }
     try {
-      const created = await api.post<Transaction[]>("/capture/confirm", { transactions: result.drafts.map(draftToInput) })
+      // Sending the same message again after a lost reply reuses the key, so it isn't logged twice.
+      const body = { transactions: result.drafts.map(draftToInput) }
+      const created = await api.postOnce<Transaction[]>("/capture/confirm", body, submission.for(body))
+      submission.done()
       await invalidateFinancialData(qc)
       play("success")
       setMessages((prev) => [...prev, { ...base, id: `u-${Date.now()}`, role: "user", content: text }, { ...base, id: `l-${Date.now()}`, role: "assistant", content: "", logged: created }])
@@ -339,7 +344,7 @@ function AssistantView() {
       toast.error((error as Error).message || "Couldn't log that.")
       return true
     }
-  }, [qc])
+  }, [qc, submission])
 
   const ask = useCallback(async (question: string, attached: Photo | null = null) => {
     const text = question.trim() || (attached ? "What can you tell me about this?" : "")

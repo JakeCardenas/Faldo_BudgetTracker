@@ -3,7 +3,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Response
 
-from app.api.deps import CtxDep
+from app.api.deps import CtxDep, IdempotencyKeyHeader
 from app.engine.periods import parse_month
 from app.schemas.ledger import TransactionOut
 from app.schemas.planning import (
@@ -28,7 +28,7 @@ from app.schemas.planning import (
     RecurringOut,
     RecurringUpdate,
 )
-from app.services import budgets, challenges, debts, goals, money_plan, planned, recurring
+from app.services import budgets, challenges, debts, goals, idempotency, money_plan, planned, recurring
 from app.services.transactions import to_out as txn_out
 
 router = APIRouter()
@@ -81,10 +81,16 @@ async def delete_goal(goal_id: uuid.UUID, ctx: CtxDep) -> Response:
 
 
 @router.post("/goals/{goal_id}/contributions", response_model=GoalOut, status_code=201, tags=["goals"])
-async def add_contribution(goal_id: uuid.UUID, data: ContributionIn, ctx: CtxDep) -> GoalOut:
+async def add_contribution(goal_id: uuid.UUID, data: ContributionIn, ctx: CtxDep,
+                           idempotency_key: IdempotencyKeyHeader = None) -> Any:
+    """A contribution to a linked goal moves money between accounts; with an Idempotency-Key a retry moves it once."""
     user_id, today = ctx.user_id, ctx.today
-    await goals.add_contribution(ctx.db, user_id, goal_id, data, today)
-    return await goals.get_goal_out(ctx.db, user_id, goal_id, today)
+
+    async def write() -> GoalOut:
+        await goals.add_contribution(ctx.db, user_id, goal_id, data, today)
+        return await goals.get_goal_out(ctx.db, user_id, goal_id, today)
+    return await idempotency.run_once(ctx.db, user_id, "goals.contribute", idempotency_key,
+                                      {"goal_id": goal_id, "contribution": data}, write, status_code=201)
 
 
 @router.get("/recurring", response_model=list[RecurringOut], tags=["recurring"])
@@ -122,8 +128,12 @@ async def delete_recurring(rid: uuid.UUID, ctx: CtxDep) -> Response:
 
 
 @router.post("/recurring/{rid}/pay", response_model=TransactionOut, tags=["recurring"])
-async def mark_paid(rid: uuid.UUID, data: MarkPaidIn, ctx: CtxDep) -> TransactionOut:
-    return txn_out(await recurring.mark_paid(ctx.db, ctx.user_id, rid, data, ctx.today))
+async def mark_paid(rid: uuid.UUID, data: MarkPaidIn, ctx: CtxDep, idempotency_key: IdempotencyKeyHeader = None) -> Any:
+    """Records the bill's transaction; with an Idempotency-Key a retry returns it instead of paying twice."""
+    async def write() -> TransactionOut:
+        return txn_out(await recurring.mark_paid(ctx.db, ctx.user_id, rid, data, ctx.today))
+    return await idempotency.run_once(ctx.db, ctx.user_id, "recurring.pay", idempotency_key,
+                                      {"recurring_id": rid, "payment": data}, write, status_code=200)
 
 
 @router.post("/recurring/{rid}/skip", response_model=RecurringOut, tags=["recurring"])
@@ -154,8 +164,13 @@ async def delete_debt(debt_id: uuid.UUID, ctx: CtxDep) -> Response:
 
 
 @router.post("/debts/{debt_id}/payments", response_model=DebtOut, status_code=201, tags=["debts"])
-async def add_debt_payment(debt_id: uuid.UUID, data: DebtPaymentIn, ctx: CtxDep) -> DebtOut:
-    return await debts.add_payment(ctx.db, ctx.user_id, debt_id, data, ctx.today)
+async def add_debt_payment(debt_id: uuid.UUID, data: DebtPaymentIn, ctx: CtxDep,
+                           idempotency_key: IdempotencyKeyHeader = None) -> Any:
+    """A payment can move an account balance; with an Idempotency-Key a retry or double tap records it once."""
+    async def write() -> DebtOut:
+        return await debts.add_payment(ctx.db, ctx.user_id, debt_id, data, ctx.today)
+    return await idempotency.run_once(ctx.db, ctx.user_id, "debts.pay", idempotency_key,
+                                      {"debt_id": debt_id, "payment": data}, write, status_code=201)
 
 
 async def _planned_out(ctx: CtxDep, pid: uuid.UUID) -> PlannedOut:

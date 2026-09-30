@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { format, parseISO } from "date-fns"
-import { ArrowDownRight, ArrowUpRight, ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, FileUp, LayoutGrid, List, Plus, Wallet } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, FileUp, LayoutGrid, List, Loader2, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { BAND_STYLE, BAND_TINT, BambooDecor } from "@/components/brand/environment"
 import { Panda } from "@/components/brand/panda"
@@ -25,6 +25,7 @@ import { poseFor } from "@/lib/catalog"
 import { formatMoney } from "@/lib/format"
 import { maskAmounts, useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useBalanceHistory, useInsights, useMe } from "@/lib/queries"
+import { listView } from "@/lib/query-view"
 import type { Account, AccountType } from "@/lib/types"
 import { play } from "@/lib/sound"
 import { cn } from "@/lib/utils"
@@ -139,7 +140,7 @@ export default function AccountsPage() {
   const qc = useQueryClient()
   const { data: me } = useMe()
   const { openAddTransaction } = useAppActions()
-  const { data: accounts, isLoading } = useAccounts()
+  const { data: accounts, isLoading, isError, error, refetch, isFetching } = useAccounts()
   const [dialog, setDialog] = useState<{ open: boolean; account?: Account }>({ open: false })
   const [view, setView] = useState<View>("all")
   const [layout, setLayout] = useState<"grid" | "list">(readView)
@@ -149,6 +150,8 @@ export default function AccountsPage() {
   const [order, setOrder] = useState<string[]>([])
 
   const active = useMemo(() => (accounts ?? []).filter((a) => !a.archived), [accounts])
+  // A failed load is an error, never "Add your first account": that would tell someone their accounts are gone.
+  const listed = listView({ isLoading, isError, hasData: accounts !== undefined, count: active.length })
   const ordered = useMemo(() => {
     if (!arranging) return active
     return order.map((id) => active.find((a) => a.id === id)).filter(Boolean) as Account[]
@@ -258,8 +261,15 @@ export default function AccountsPage() {
         )}
       </section>
 
-      {isLoading ? (
+      {listed === "loading" ? (
         <div className="space-y-4"><div className="grid grid-cols-[1.4fr_1fr] gap-3"><Skeleton className="h-32 rounded-2xl" /><Skeleton className="h-32 rounded-2xl" /></div><div className="grid grid-cols-2 gap-2.5">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="aspect-[1.45] rounded-[1.125rem]" />)}</div></div>
+      ) : listed === "error" ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">
+          <span className="flex-1">Couldn&apos;t load your accounts, so balances aren&apos;t shown. {error?.message}</span>
+          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            {isFetching && <Loader2 className="animate-spin" />} Try again
+          </Button>
+        </div>
       ) : active.length === 0 ? (
         <div className="card-surface">
           <EmptyState icon={Wallet} title="Add your first account" description="Start with where your money lives: cash, GCash, Maya or a bank account. Faldo never connects to your bank."

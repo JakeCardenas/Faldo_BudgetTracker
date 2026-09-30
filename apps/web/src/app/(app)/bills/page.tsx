@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { api, ApiError } from "@/lib/api"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { FREQUENCY_LABELS, formatMoney, minorToInput, toMinor, todayISO } from "@/lib/format"
 import { useMaskedAmounts } from "@/lib/privacy"
 import { invalidateFinancialData, useAccounts, useCategories, useRecurring } from "@/lib/queries"
@@ -116,11 +117,15 @@ function PayDialog({ item, onOpenChange }: { item: Recurring; onOpenChange: (ope
   const [date, setDate] = useState(todayISO())
   const [accountId, setAccountId] = useState<string>(item.account_id ?? accounts[0]?.id ?? "")
   const [busy, setBusy] = useState(false)
+  // Paying a bill records a transaction; one key across retries pays it once.
+  const submission = useSubmissionKey()
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true)
     try {
-      await api.post(`/recurring/${item.id}/pay`, { amount_minor: toMinor(amount), paid_on: date, account_id: accountId || null })
+      const body = { amount_minor: toMinor(amount), paid_on: date, account_id: accountId || null }
+      await api.postOnce(`/recurring/${item.id}/pay`, body, submission.for({ bill: item.id, body }))
+      submission.done()
       await invalidateFinancialData(qc)
       toast.success(`${item.name} marked as ${item.kind === "income" ? "received" : "paid"}`)
       onOpenChange(false)

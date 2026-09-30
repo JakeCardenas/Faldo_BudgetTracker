@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Header, Request
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -87,3 +87,8 @@ async def get_ctx(request: Request) -> AsyncIterator[Ctx]:
 
 CtxDep = Annotated[Ctx, Depends(get_ctx, scope="function")]
 AnonDbDep = Annotated[AsyncSession, Depends(get_anon_db, scope="function")]
+# Sent by the client once per logical write and reused on every retry of it (see services/idempotency.py).
+IdempotencyKeyHeader = Annotated[str | None, Header(
+    alias="Idempotency-Key", min_length=8, max_length=255, pattern=r"^[!-~]+$",
+    description="A unique value per logical write, reused unchanged on retries so the write happens once.",
+)]

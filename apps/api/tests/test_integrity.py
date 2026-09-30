@@ -143,7 +143,7 @@ async def test_archived_accounts_refuse_new_money(client):
 
     r = await client.post("/api/v1/transactions", json={**expense, "account_id": old["id"]})
     assert r.status_code == 400 and "archived" in r.json()["detail"]
-    r = await client.put(f"/api/v1/transactions/{txn['id']}", json={**expense, "account_id": old["id"]})
+    r = await client.put(f"/api/v1/transactions/{txn['id']}", json={**expense, "account_id": old["id"], "version": txn["version"]})
     assert r.status_code == 400 and "archived" in r.json()["detail"]
     transfer = {"type": "transfer", "amount_minor": 100 * P, "occurred_on": TODAY.isoformat()}
     r = await client.post("/api/v1/transactions", json={**transfer, "account_id": gcash["id"], "to_account_id": old["id"]})
@@ -152,7 +152,8 @@ async def test_archived_accounts_refuse_new_money(client):
     assert r.status_code == 400 and "archived" in r.json()["detail"]
 
     # Correcting a transaction already on the archived account still works.
-    r = await client.put(f"/api/v1/transactions/{history['id']}", json={**expense, "account_id": old["id"], "notes": "Lunch"})
+    r = await client.put(f"/api/v1/transactions/{history['id']}",
+                         json={**expense, "account_id": old["id"], "notes": "Lunch", "version": history["version"]})
     assert r.status_code == 200, r.text
 
     bill = (await client.post("/api/v1/recurring", json={"name": "Load", "kind": "bill", "amount_minor": 100 * P, "frequency": "monthly",

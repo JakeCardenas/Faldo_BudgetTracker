@@ -24,8 +24,10 @@ import type {
   Transaction,
   TransactionInput,
   TransactionList,
+  TransactionUpdate,
   UpcomingItem,
 } from "@/lib/types"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 
 export const keys = {
   me: ["me"] as const,
@@ -142,12 +144,22 @@ export function useHealth() {
   return useQuery({ queryKey: keys.health, queryFn: () => api.get<Health>("/health") })
 }
 
+/**
+ * Creates or edits a transaction. A new one is sent under one Idempotency-Key per submission, so a retry or double tap
+ * records it once; an edit sends the version it was made from, so it can't silently overwrite a newer edit.
+ */
 export function useSaveTransaction() {
   const qc = useQueryClient()
+  const submission = useSubmissionKey()
   return useMutation({
-    mutationFn: ({ id, data }: { id?: string; data: TransactionInput }) =>
-      id ? api.put<Transaction>(`/transactions/${id}`, data) : api.post<Transaction>("/transactions", data),
-    onSuccess: () => invalidateFinancialData(qc),
+    mutationFn: (save: { id: string; data: TransactionInput; version: number } | { id?: undefined; data: TransactionInput }) =>
+      save.id !== undefined
+        ? api.put<Transaction>(`/transactions/${save.id}`, { ...save.data, version: save.version } satisfies TransactionUpdate)
+        : api.postOnce<Transaction>("/transactions", save.data, submission.for(save.data)),
+    onSuccess: (_, save) => {
+      if (save.id === undefined) submission.done()
+      return invalidateFinancialData(qc)
+    },
   })
 }
 

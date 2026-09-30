@@ -142,7 +142,7 @@ async def test_transactions_balances_and_filters(client):
                                                               "cursor": listing["next_cursor"]})).json()
     assert page2["items"][0]["amount_minor"] == 35_000
 
-    update = {**{k: lunch[k] for k in ("type", "occurred_on", "account_id", "merchant", "category_id", "notes")},
+    update = {**{k: lunch[k] for k in ("type", "occurred_on", "account_id", "merchant", "category_id", "notes", "version")},
               "amount_minor": 42_000, "tags": []}
     r = await client.put(f"/api/v1/transactions/{lunch['id']}", json=update)
     assert r.status_code == 200 and r.json()["amount_minor"] == 42_000 and r.json()["tags"] == []
@@ -290,7 +290,8 @@ async def test_mistyped_dates_are_refused(client):
     assert future.status_code == 400 and "future" in future.json()["detail"]
     ok = await client.post("/api/v1/transactions", json={**base, "occurred_on": TODAY.isoformat()})
     assert ok.status_code == 201
-    later = await client.put(f"/api/v1/transactions/{ok.json()['id']}", json={**base, "occurred_on": "2099-01-01"})
+    later = await client.put(f"/api/v1/transactions/{ok.json()['id']}",
+                             json={**base, "occurred_on": "2099-01-01", "version": ok.json()["version"]})
     assert later.status_code == 400
 
     bill = {"name": "Internet", "kind": "bill", "amount_minor": 1699_00, "frequency": "monthly"}

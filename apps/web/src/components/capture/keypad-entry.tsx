@@ -15,6 +15,7 @@ import { currencySymbol, formatMoney, monthKey, todayISO } from "@/lib/format"
 import { invalidateFinancialData, useAccounts, useBudget, useCategories, useMe, useTransactions } from "@/lib/queries"
 import { play } from "@/lib/sound"
 import type { Account, Category, Transaction, TransactionInput } from "@/lib/types"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { cn } from "@/lib/utils"
 
 export type EntryType = "expense" | "income" | "transfer"
@@ -166,6 +167,8 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
   const [date, setDate] = useState(preset?.occurred_on ?? todayISO())
   const [keypad, setKeypad] = useState(true)
   const [saving, setSaving] = useState(false)
+  // One key for this entry however many times Save is tried, so a retry after a dropped connection can't log it twice.
+  const submission = useSubmissionKey()
   const dateRef = useRef<HTMLInputElement>(null)
 
   const [remembered] = useState(readLastAccount)
@@ -232,7 +235,8 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
       payment_method: preset?.payment_method ?? null,
     }
     try {
-      const transaction = await api.post<Transaction>("/transactions", input)
+      const transaction = await api.postOnce<Transaction>("/transactions", input, submission.for(input))
+      submission.done()
       rememberAccount(fromId)
       await invalidateFinancialData(qc)
       const account = active.find((a) => a.id === fromId)

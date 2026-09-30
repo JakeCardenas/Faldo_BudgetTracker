@@ -94,7 +94,7 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 | `accounts` | manual accounts with opening balance, a user-defined sort order and optional last four digits (`card_last4`, four digits only); balances are computed from transactions |
 | `categories` | expense/income categories with subcategories (`parent_id`) |
 | `merchants` | normalized merchants with learned default category |
-| `transactions`, `transaction_items`, `tags`, `transaction_tags` | ledger with item-level detail; imported rows keep `external_ref` (unique per account) and `import_batch_id` |
+| `transactions`, `transaction_items`, `tags`, `transaction_tags` | ledger with item-level detail; imported rows keep `external_ref` (unique per account) and `import_batch_id`; `version` rises with every edit, and `PUT /transactions/{id}` must send the version it was made from (a stale one gets 409 with the latest copy as `current`) |
 | `import_batches` | one per statement import, for the history and Undo (RLS protected) |
 | `budgets`, `budget_categories` | monthly budgets and category limits |
 | `savings_goals`, `goal_contributions` | goals and contributions (`is_initial` marks the starting amount) |
@@ -112,6 +112,7 @@ Money is stored as `BIGINT` minor units with a `currency CHAR(3)` column. User-o
 | `oauth_identities` | which Google or Apple account signs in as which user (no RLS: read before sign-in, like `users`) |
 | `stored_files` | receipt images when `STORAGE_BACKEND=database` (RLS protected) |
 | `rate_limit_hits` | fixed-window counters when `RATE_LIMIT_BACKEND=database` |
+| `idempotency_keys` | the `Idempotency-Key` each retryable write was sent with (`POST /transactions`, `/capture/confirm`, `/receipts`, `/receipts/{id}/confirm`), its request fingerprint and stored answer, unique per user and operation, kept 7 days: a repeat replays the answer (`Idempotent-Replayed: true`), a different request under the same key gets 409 (RLS protected) |
 
 Transactions have five types: `income`, `expense`, `transfer`, and `debt_in` / `debt_out` for money owed movements. The last two change account balances but never count as income or spending, and a constraint requires them to belong to a money owed record (`transactions.debt_id`). They can only be changed from Money owed.
 

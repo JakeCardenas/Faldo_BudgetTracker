@@ -15,10 +15,12 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { api, ApiError } from "@/lib/api"
 import { formatMoney } from "@/lib/format"
+import { fileFingerprint } from "@/lib/idempotency"
 import { parseQrPh, type QrPh } from "@/lib/qrph"
 import { play } from "@/lib/sound"
 import { invalidateFinancialData, useSaveTransaction } from "@/lib/queries"
 import type { CaptureDraft, CaptureResult, Receipt, Transaction, TransactionInput } from "@/lib/types"
+import { useSubmissionKey } from "@/lib/use-submission-key"
 import { cn } from "@/lib/utils"
 
 export type AddMode = EntryType | "describe" | "manual" | "receipt"
@@ -44,6 +46,8 @@ function draftToInput(draft: CaptureDraft): TransactionInput {
 
 function DescribeTab({ onDone, initialText }: { onDone: () => void; initialText?: string }) {
   const qc = useQueryClient()
+  // One key per confirmation, reused if it's retried, so the drafts are saved once.
+  const submission = useSubmissionKey()
   const [text, setText] = useState(initialText ?? "")
   const [result, setResult] = useState<CaptureResult | null>(null)
   const [drafts, setDrafts] = useState<CaptureDraft[]>([])
@@ -68,7 +72,9 @@ function DescribeTab({ onDone, initialText }: { onDone: () => void; initialText?
   async function save(list: CaptureDraft[]) {
     setBusy(true)
     try {
-      const created = await api.post<Transaction[]>("/capture/confirm", { transactions: list.map(draftToInput) })
+      const body = { transactions: list.map(draftToInput) }
+      const created = await api.postOnce<Transaction[]>("/capture/confirm", body, submission.for(body))
+      submission.done()
       await invalidateFinancialData(qc)
       const total = created.reduce((sum, t) => sum + t.amount_minor, 0)
       showLoggedToast(created, created.length > 1 ? `Logged ${created.length} transactions worth ${formatMoney(total)}.` : `Logged ${formatMoney(total)}.`,
@@ -102,7 +108,9 @@ function DescribeTab({ onDone, initialText }: { onDone: () => void; initialText?
         onSubmit={async (input) => {
           setBusy(true)
           try {
-            await api.post("/capture/confirm", { transactions: [input] })
+            const body = { transactions: [input] }
+            await api.postOnce("/capture/confirm", body, submission.for(body))
+            submission.done()
             const remaining = drafts.filter((_, i) => i !== editing)
             await invalidateFinancialData(qc)
             toast.success("Transaction saved")
@@ -199,6 +207,9 @@ function readSummary(extraction: Receipt["extraction"]) {
 
 function ReceiptTab({ onDone, initialReceipt, onPayment }: { onDone: () => void; initialReceipt?: Receipt | null; onPayment: (qr: QrPh) => void }) {
   const qc = useQueryClient()
+  // Uploading a photo and saving the reviewed receipt each keep one key across retries.
+  const uploadKey = useSubmissionKey()
+  const confirmKey = useSubmissionKey()
   // On phones the scanner opens straight away; on a computer it's a button next to drag and drop.
   const [scanning, setScanning] = useState(() => !initialReceipt && window.matchMedia("(pointer: coarse)").matches)
   const [code, setCode] = useState<string | null>(null)
@@ -226,7 +237,8 @@ function ReceiptTab({ onDone, initialReceipt, onPayment }: { onDone: () => void;
     const form = new FormData()
     form.append("file", file)
     try {
-      setReceipt(await api.upload<Receipt>("/receipts", form))
+      setReceipt(await api.uploadOnce<Receipt>("/receipts", form, uploadKey.for(fileFingerprint(file))))
+      uploadKey.done()
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Upload failed.")
       setPreview(null)
@@ -312,7 +324,8 @@ function ReceiptTab({ onDone, initialReceipt, onPayment }: { onDone: () => void;
           onSubmit={async (input) => {
             setSaving(true)
             try {
-              await api.post(`/receipts/${receipt.id}/confirm`, input)
+              await api.postOnce(`/receipts/${receipt.id}/confirm`, input, confirmKey.for({ receipt: receipt.id, input }))
+              confirmKey.done()
               await invalidateFinancialData(qc)
               void qc.invalidateQueries({ queryKey: ["receipts"] })
               toast.success("Receipt saved as a transaction")
