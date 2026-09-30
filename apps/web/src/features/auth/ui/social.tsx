@@ -58,7 +58,7 @@ export function SocialSignIn({ next }: { next: string }) {
       <OrDivider />
       {available.includes("google") && (
         <a href={href("google")} onClick={() => { markWelcome(); setLeaving("google") }} aria-disabled={leaving !== null}
-          className={cn(PILL, "bg-[#eef1ec] text-foreground hover:bg-[#e5e9e2] aria-disabled:pointer-events-none dark:bg-white/10 dark:hover:bg-white/15")}>
+          className={cn(PILL, "bg-muted text-foreground shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent aria-disabled:pointer-events-none")}>
           {leaving === "google" ? <Loader2 className="size-[1.15rem] animate-spin" /> : <GoogleMark />} Continue with Google
         </a>
       )}

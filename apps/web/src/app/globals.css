@@ -59,6 +59,7 @@
   --color-expense-soft: var(--expense-soft);
   --color-income: var(--income);
   --color-income-soft: var(--income-soft);
+  --color-flame: var(--flame);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -77,12 +78,14 @@
 }
 
 /*
-  Faldo design system
-  Radius: buttons and chips are full pills; inputs 12px (lg); inner tiles 17px (xl); surfaces 22px (2xl); hero cards and sheets 26px (3xl).
-  Surfaces: the page is the canvas. White surfaces group lists; colour is reserved for Safe to Spend and account cards.
-  Glass: only floating controls (tab bar, desktop nav, compact headers). Never on financial information.
-  Type: Geist for text; headline amounts in the rounded brand face (Plus Jakarta Sans, extra bold). Money uses tabular figures.
-  Sentence case, no uppercase labels. Dark mode: charcoal green-black cards on a near-black canvas, darker insets, hairline rims.
+  Faldo design system (after Tarsi's calm light direction; docs/DESIGN_SYSTEM.md)
+  Colour: a near-white canvas, white cards, charcoal text, one deep forest green for actions and the selected
+  state, sage for soft buttons and chips. Colour carries meaning (income, expense, warning), never decoration;
+  the green strip behind Faldo on Home and Wallet is the only large coloured area.
+  Radius: cards 22px (2xl), inner tiles 18px (xl), inputs and buttons 13px (lg); pills only for toggles and chips.
+  Glass: only the floating tab bar. Never on financial information.
+  Type: Geist for text; headline amounts in the rounded brand face (Plus Jakarta Sans, extra bold). Money uses
+  tabular figures. Titles in sentence case; small caps only for the label over a figure (NET WORTH, TOTAL DUE).
 */
 
 :root {
@@ -93,78 +96,81 @@
   */
   --ios-edge: 0px;
   --top-inset: calc(env(safe-area-inset-top) + var(--ios-edge));
-  --background: #eef2ee;
-  --surface: #f5f8f5;
-  --foreground: #131916;
+  --background: #f7f9f8;
+  --surface: #f1f4f2;
+  --foreground: #111827;
   --card: #ffffff;
-  --card-foreground: #131916;
+  --card-foreground: #111827;
   --popover: #ffffff;
-  --popover-foreground: #131916;
-  --primary: #2d7849;
+  --popover-foreground: #111827;
+  --primary: #3b7a49;
   --primary-foreground: #ffffff;
-  --secondary: #e3efe6;
-  --secondary-foreground: #1d5634;
-  --muted: #edf1ee;
-  --muted-foreground: #5a6560;
-  --accent: #e8ede9;
-  --accent-foreground: #131916;
-  --mint: #e1efe4;
-  --mint-foreground: #1d5634;
-  --emerald: #23804c;
-  --leaf: #8fd3a0;
-  --hero: #2a6e46;
-  --hero-deep: #143a25;
+  --secondary: #e9f2eb;
+  --secondary-foreground: #2f6a3b;
+  --muted: #f0f3f1;
+  --muted-foreground: #5c6570;
+  --accent: #eef2ef;
+  --accent-foreground: #111827;
+  --mint: #e6f1e8;
+  --mint-foreground: #2f6a3b;
+  --emerald: #3b7a49;
+  --leaf: #9bcfa5;
+  /* The green strip behind Faldo on Home and Wallet (white text on it passes AA). */
+  --hero: #467f51;
+  --hero-deep: #2f5d39;
   --expense: #c2363d;
-  --expense-soft: #fbeaeb;
-  --income: #1f7a47;
-  --income-soft: #e2f0e6;
+  --expense-soft: #fbecec;
+  --income: #2f7a45;
+  --income-soft: #e6f2e9;
   --warning: #955700;
-  --warning-soft: #fbf0df;
+  --warning-soft: #fbf1e1;
+  /* The streak's flame. */
+  --flame: #e8702a;
   --destructive: #c2363d;
-  --danger-soft: #fbeaeb;
-  --border: #dfe5e0;
-  --input: #d5dcd7;
-  --ring: #3c8d5c;
-  --chart-1: #2f7d4c;
-  --chart-2: #6fae80;
-  --chart-3: #c9e0cf;
-  --chart-4: #e3b63e;
-  --chart-5: #3380be;
-  /* Panda ink: money out and other neutral series beside Faldo's green. */
-  --chart-ink: #39413d;
+  --danger-soft: #fbecec;
+  --border: #e5e9e6;
+  --input: #d9dfdb;
+  --ring: #3b7a49;
+  --chart-1: #3b7a49;
+  --chart-2: #7fb58a;
+  --chart-3: #cfe4d4;
+  --chart-4: #e0b341;
+  --chart-5: #3f82bf;
+  /* Charcoal: money out and other neutral series beside Faldo's green. */
+  --chart-ink: #3a4049;
   /* Money out beside money in, and the quiet track behind bars and rings. */
   --chart-out: #cf4047;
-  --chart-track: #e7ece8;
-  --radius: 0.875rem;
-  --sidebar: #f3f4f1;
-  --sidebar-foreground: #101411;
-  --sidebar-primary: #2c7549;
+  --chart-track: #eaeeeb;
+  --radius: 0.8rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #3b7a49;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e9ece7;
-  --sidebar-accent-foreground: #101411;
-  --sidebar-border: #e3e6e1;
-  --sidebar-ring: #3c8d5c;
-  --elevation-card: 0 1px 2px rgb(19 40 28 / 0.04), 0 10px 26px -16px rgb(19 40 28 / 0.16);
-  --elevation-float: 0 22px 48px -18px rgb(16 36 24 / 0.3), 0 4px 14px -6px rgb(16 36 24 / 0.1);
+  --sidebar-accent: #eef4ef;
+  --sidebar-accent-foreground: #2f6a3b;
+  --sidebar-border: #e8ece9;
+  --sidebar-ring: #3b7a49;
+  --elevation-card: 0 1px 2px rgb(17 24 39 / 0.04), 0 8px 24px -14px rgb(17 24 39 / 0.14);
+  --elevation-float: 0 24px 48px -20px rgb(17 24 39 / 0.28), 0 4px 14px -6px rgb(17 24 39 / 0.08);
   --surface-ring: 0 0 #0000;
-  --glass-bg: rgb(255 255 255 / 0.52);
-  --glass-border: rgb(255 255 255 / 0.8);
-  --glass-edge: rgb(16 36 24 / 0.08);
+  --glass-bg: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.9);
+  --glass-edge: rgb(17 24 39 / 0.07);
   --glass-highlight: rgb(255 255 255 / 0.95);
-  --glass-shadow-sm: 0 6px 16px -8px rgb(16 36 24 / 0.28), 0 1px 2px rgb(16 36 24 / 0.06);
-  --glass-solid: #fbfbfa;
-  --tab-indicator: rgb(16 36 24 / 0.07);
-  /* The phone tab bar: neutral frosted glass with a darker lens under the selected tab. */
-  --nav-glass: rgb(252 252 252 / 0.74);
-  --nav-glass-foot: rgb(255 255 255 / 0.22);
+  --glass-shadow-sm: 0 6px 16px -8px rgb(17 24 39 / 0.22), 0 1px 2px rgb(17 24 39 / 0.05);
+  --glass-solid: #ffffff;
+  --tab-indicator: rgb(59 122 73 / 0.1);
+  /* The phone tab bar: a white capsule; the selected tab sits in a sage lens. */
+  --nav-glass: rgb(255 255 255 / 0.86);
+  --nav-glass-foot: rgb(255 255 255 / 0.3);
   --nav-glass-rim: rgb(255 255 255 / 0.95);
-  --nav-glass-rim-low: rgb(255 255 255 / 0.45);
-  --nav-glass-edge: rgb(0 0 0 / 0.075);
-  --nav-glass-shadow: 0 10px 30px -12px rgb(16 24 20 / 0.32), 0 1px 3px rgb(16 24 20 / 0.08);
-  --nav-glass-solid: #f3f4f3;
-  --nav-lens-top: rgb(0 0 0 / 0.09);
-  --nav-lens-bottom: rgb(0 0 0 / 0.065);
-  --nav-lens-rim: rgb(255 255 255 / 0.55);
+  --nav-glass-rim-low: rgb(255 255 255 / 0.5);
+  --nav-glass-edge: rgb(17 24 39 / 0.07);
+  --nav-glass-shadow: 0 12px 32px -14px rgb(17 24 39 / 0.3), 0 1px 3px rgb(17 24 39 / 0.07);
+  --nav-glass-solid: #ffffff;
+  --nav-lens-top: rgb(59 122 73 / 0.13);
+  --nav-lens-bottom: rgb(59 122 73 / 0.1);
+  --nav-lens-rim: rgb(255 255 255 / 0.6);
 }
 
 html.ios {
@@ -172,76 +178,78 @@ html.ios {
 }
 
 .dark {
-  --background: #0e1311;
-  --surface: #131a17;
-  --foreground: #f1f3f1;
-  --card: #222a27;
-  --card-foreground: #f1f3f1;
-  --popover: #29322e;
-  --popover-foreground: #f1f3f1;
-  --primary: #72c088;
-  --primary-foreground: #06150c;
-  --secondary: #1d3225;
+  --background: #0f1412;
+  --surface: #141a17;
+  --foreground: #eef2ef;
+  --card: #1a211d;
+  --card-foreground: #eef2ef;
+  --popover: #212924;
+  --popover-foreground: #eef2ef;
+  --primary: #7cc08a;
+  --primary-foreground: #0b1a10;
+  --secondary: #1f3326;
   --secondary-foreground: #b9e2c4;
-  --muted: #17211d;
-  --muted-foreground: #a3ada8;
-  --accent: #2b3430;
-  --accent-foreground: #f1f3f1;
-  --mint: #1d3225;
+  --muted: #161d19;
+  --muted-foreground: #a4aea9;
+  --accent: #252d28;
+  --accent-foreground: #eef2ef;
+  --mint: #1f3326;
   --mint-foreground: #b9e2c4;
-  --emerald: #72c088;
+  --emerald: #7cc08a;
   --leaf: #5fa874;
-  --hero: #1f5838;
-  --hero-deep: #0c2517;
+  --hero: #2c5a36;
+  --hero-deep: #183420;
   --expense: #f0676d;
   --expense-soft: #35201f;
-  --income: #72c088;
+  --income: #7cc08a;
   --income-soft: #18291e;
   --warning: #e9ae5b;
   --warning-soft: #322617;
+  --flame: #f5995a;
   --destructive: #f0676d;
   --danger-soft: #35201f;
-  --border: #2c3531;
-  --input: #36403b;
-  --ring: #72c088;
-  --chart-1: #5ea871;
-  --chart-2: #58775f;
-  --chart-3: #2a3a31;
+  --border: #29322d;
+  --input: #343e38;
+  --ring: #7cc08a;
+  --chart-1: #6db27c;
+  --chart-2: #4d7a57;
+  --chart-3: #28392e;
   --chart-4: #e7c15a;
   --chart-5: #5b9bd0;
   --chart-ink: #c9d0cb;
   /* Money out beside money in, and the quiet track behind bars and rings. */
-  --chart-out: #cf3d46;
-  --chart-track: #28302c;
-  --sidebar: #0e1311;
-  --sidebar-foreground: #eceeec;
-  --sidebar-primary: #72c088;
-  --sidebar-primary-foreground: #06150c;
-  --sidebar-accent: #222a27;
-  --sidebar-accent-foreground: #eceeec;
-  --sidebar-border: #2c3531;
-  --sidebar-ring: #72c088;
+  --chart-out: #e0525a;
+  --chart-track: #26302a;
+  --sidebar: #121815;
+  --sidebar-foreground: #eef2ef;
+  --sidebar-primary: #7cc08a;
+  --sidebar-primary-foreground: #0b1a10;
+  --sidebar-accent: #1f3326;
+  --sidebar-accent-foreground: #b9e2c4;
+  --sidebar-border: #232b26;
+  --sidebar-ring: #7cc08a;
   --elevation-card: inset 0 1px 0 rgb(255 255 255 / 0.035);
   --elevation-float: 0 22px 48px -14px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05);
   --surface-ring: inset 0 0 0 1px rgb(255 255 255 / 0.06);
-  --glass-bg: rgb(32 37 34 / 0.55);
-  --glass-border: rgb(255 255 255 / 0.13);
+  --glass-bg: rgb(30 36 32 / 0.6);
+  --glass-border: rgb(255 255 255 / 0.12);
   --glass-edge: rgb(0 0 0 / 0.45);
-  --glass-highlight: rgb(255 255 255 / 0.16);
+  --glass-highlight: rgb(255 255 255 / 0.14);
   --glass-shadow-sm: 0 6px 16px -8px rgb(0 0 0 / 0.7), 0 1px 2px rgb(0 0 0 / 0.35);
-  --glass-solid: #1a1e1b;
-  --tab-indicator: rgb(255 255 255 / 0.1);
-  --nav-glass: rgb(60 60 60 / 0.62);
-  --nav-glass-foot: rgb(255 255 255 / 0.04);
-  --nav-glass-rim: rgb(255 255 255 / 0.2);
-  --nav-glass-rim-low: rgb(255 255 255 / 0.07);
+  --glass-solid: #1a211d;
+  --tab-indicator: rgb(124 192 138 / 0.14);
+  --nav-glass: rgb(30 36 32 / 0.82);
+  --nav-glass-foot: rgb(255 255 255 / 0.03);
+  --nav-glass-rim: rgb(255 255 255 / 0.14);
+  --nav-glass-rim-low: rgb(255 255 255 / 0.06);
   --nav-glass-edge: rgb(255 255 255 / 0.07);
   --nav-glass-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.75), 0 1px 3px rgb(0 0 0 / 0.4);
-  --nav-glass-solid: #2b2b2b;
-  --nav-lens-top: rgb(0 0 0 / 0.46);
-  --nav-lens-bottom: rgb(0 0 0 / 0.34);
+  --nav-glass-solid: #1f2622;
+  --nav-lens-top: rgb(124 192 138 / 0.2);
+  --nav-lens-bottom: rgb(124 192 138 / 0.15);
   --nav-lens-rim: rgb(255 255 255 / 0.06);
 }
+
 
 @layer base {
   * {
@@ -402,33 +410,74 @@ html.ios {
       inset 0 0 0 0.5px var(--nav-glass-edge),
       var(--nav-glass-shadow);
   }
+  /* The bar's glass without its drop shadow: the shadow sits on .nav-shadow, so the glass can be clipped. */
+  .nav-glass-flat {
+    box-shadow:
+      inset 0 1px 0 var(--nav-glass-rim),
+      inset 0 -1px 0 var(--nav-glass-rim-low),
+      inset 0 0 0 0.5px var(--nav-glass-edge);
+  }
+  .nav-shadow {
+    box-shadow: var(--nav-glass-shadow);
+  }
   /*
-    The tab bar's scroll transition (see MobileNav), timed against the Threads reference frame by
-    frame. Scrolling down (.nav-away), the + circle comes out of the bar's right end and rises its last
-    13px into place while the bar sinks below the screen; scrolling up, the bar rises back under the +,
-    which fades and sinks into it. CSS transitions, so the system animates them off the main thread.
+    The tab bar handing over to its + while you read (see MobileNav). Going away: the icons blur out at once, the
+    glass draws in toward its right end until it is exactly the + circle (a clip, so the pill keeps round ends the
+    whole way), the shadow fades with it, and the + takes over on that very spot, its icon springing in. Coming back:
+    the + fades, the glass grows out of it on a spring that runs a touch past full width, and the icons return once
+    there is room for them. All CSS transitions, so they run off the main thread and a quick reversal picks up from
+    wherever it is.
   */
-  .nav-bar {
-    transition: transform 222ms var(--ease-out-exp);
+  .nav-shape {
+    clip-path: inset(0 0 0 0 round 999px);
+    transition: clip-path 460ms var(--ease-spring), opacity 0ms;
+  }
+  .nav-away .nav-shape {
+    clip-path: inset(0 0 0 calc(100% - 3.875rem) round 999px);
+    opacity: 0;
+    transition: clip-path 280ms var(--ease-out-quint), opacity 100ms linear 270ms;
+  }
+  .nav-shadow {
+    transition: opacity 260ms var(--ease-out-quint) 60ms;
+  }
+  .nav-away .nav-shadow {
+    opacity: 0;
+    transition: opacity 160ms ease-out;
+  }
+  .nav-content {
+    transition: opacity 200ms var(--ease-out-quint) 120ms, filter 200ms var(--ease-out-quint) 120ms;
+  }
+  .nav-away .nav-content {
+    opacity: 0;
+    filter: blur(2px);
+    transition: opacity 110ms ease-out, filter 110ms ease-out;
   }
   .nav-away .nav-bar {
-    transform: translate3d(0, calc(100% + max(1.25rem, env(safe-area-inset-bottom) - 0.75rem) + 0.5rem), 0);
     pointer-events: none;
-    transition: transform 223ms var(--ease-sink);
   }
   .nav-plus {
     opacity: 0;
-    transform: translate3d(0, 13px, 0);
     pointer-events: none;
-    transition: opacity 283ms var(--ease-out-exp), transform 283ms var(--ease-out-exp), scale 200ms var(--ease-spring);
+    transition: opacity 90ms ease-out, scale 160ms var(--ease-out-quint);
+  }
+  .nav-plus svg {
+    transform: scale(0.55);
+    transition: transform 120ms ease-out;
   }
   .nav-away .nav-plus {
     opacity: 1;
-    transform: none;
     pointer-events: auto;
-    transition: opacity 104ms var(--ease-out-exp), transform 283ms var(--ease-out-exp), scale 200ms var(--ease-spring);
+    transition: opacity 140ms ease-out 180ms, scale 160ms var(--ease-out-quint);
   }
-  /* The selected tab's lens: a darker pill set into the glass. */
+  .nav-away .nav-plus svg {
+    transform: none;
+    transition: transform 380ms var(--ease-spring) 180ms;
+  }
+  /* With reduced motion the handover is a plain swap: no waiting for the other half. */
+  html[data-motion="reduced"] :is(.nav-shape, .nav-shadow, .nav-content, .nav-plus, .nav-plus svg) {
+    transition-delay: 0ms !important;
+  }
+  /* The selected tab's lens: a sage pill set into the white capsule. */
   .nav-lens {
     background: linear-gradient(180deg, var(--nav-lens-top), var(--nav-lens-bottom));
     box-shadow: inset 0 -0.5px 0 var(--nav-lens-rim);
@@ -457,36 +506,17 @@ html.ios {
     -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent);
     mask-image: linear-gradient(180deg, #000 45%, transparent);
   }
-  /*
-    Phone chrome that steps aside while you scroll down and comes back when you scroll up, with the tab
-    bar (useChromeAway), as in Threads: it fades out drifting up, and comes back sliding down, quicker.
-  */
-  @media (width < 64rem) {
-    .chrome-hide {
-      transition:
-        opacity 140ms cubic-bezier(0.16, 1, 0.3, 1),
-        translate 180ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .chrome-hide[data-away="true"] {
-      opacity: 0;
-      translate: 0 -1.25rem;
-      pointer-events: none;
-      transition-duration: 220ms, 240ms;
-      transition-timing-function: cubic-bezier(0.33, 0, 0.67, 1);
-    }
-  }
   .pressable {
     transition: scale 160ms var(--ease-out-quint), background-color 160ms ease-out, color 160ms ease-out, opacity 160ms ease-out, border-color 160ms ease-out;
     @apply active:scale-[0.97];
   }
   /* Type scale. Weight carries the hierarchy: titles and money are bold, supporting text stays regular. */
-  /* Small all-caps labels that name a figure (NET WORTH, BALANCE, DUE). */
-  /* A card's quiet title ("Total balance"): sentence case, semibold, muted. */
+  /* Small all-caps labels that name a figure (NET WORTH, BALANCE, DUE); the eyebrow is the green one over a page title. */
   .label-caps {
-    @apply text-[0.8125rem] leading-5 font-semibold tracking-[-0.005em] text-muted-foreground;
+    @apply text-[0.6875rem] leading-4 font-semibold tracking-[0.07em] text-muted-foreground uppercase;
   }
   .eyebrow {
-    @apply text-[0.75rem] font-semibold tracking-[0.005em] text-muted-foreground;
+    @apply text-[0.6875rem] leading-4 font-bold tracking-[0.08em] text-primary uppercase;
   }
   .page-title {
     @apply text-[1.625rem] leading-[1.12] font-bold tracking-[-0.032em];

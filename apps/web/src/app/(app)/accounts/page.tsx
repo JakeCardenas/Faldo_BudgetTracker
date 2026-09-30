@@ -7,14 +7,13 @@ import { useQueryClient } from "@tanstack/react-query"
 import { format, parseISO } from "date-fns"
 import { ArrowDownRight, ArrowUpRight, ArrowUpDown, ChevronDown, ChevronRight, ChevronUp, FileUp, LayoutGrid, List, Loader2, Plus, Wallet } from "lucide-react"
 import { toast } from "sonner"
-import { BAND_STYLE, BAND_TINT, BambooDecor } from "@/shared/ui/brand/environment"
 import { Panda } from "@/shared/ui/brand/panda"
-import { StatusBarTint } from "@/shared/ui/brand/status-bar-tint"
 import { AccountDialog } from "@/features/account-edit"
 import { EmptyState } from "@/shared/ui/empty-state"
 import { HideAmountsButton } from "@/features/hide-amounts"
 import { AnimatedMoney } from "@/shared/ui/money/money"
 import { Chip } from "@/shared/ui/ios/segmented"
+import { HeaderButton } from "@/shared/ui/ios/nav-header"
 import { useAppActions } from "@/shared/lib/app-actions"
 import { AccountBadge, AccountTile, ACCOUNT_GROUPS, useAccounts, useBalanceHistory } from "@/entities/account"
 import { Button } from "@/shared/ui/button"
@@ -48,8 +47,6 @@ const VIEWS: { value: View; label: string }[] = [
 ]
 const HISTORY_KEY = { all: "net_minor", assets: "assets_minor", liabilities: "liabilities_minor" } as const
 
-const bandButton = "glass-on-green pressable flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold text-white [&_svg]:size-[1.15rem]"
-
 /** The headline figure for the chosen view, with how it moved over the past month. */
 function NetWorthCard({ view, headline }: { view: View; headline: { label: string; value: number; caption: string } }) {
   const { data: history } = useBalanceHistory(30)
@@ -58,7 +55,7 @@ function NetWorthCard({ view, headline }: { view: View; headline: { label: strin
   const pct = first ? ((change ?? 0) / Math.abs(first)) * 100 : null
   const good = change !== null && (view === "liabilities" ? change <= 0 : change >= 0)
   return (
-    <div className="min-w-0 flex-1 rounded-[1.25rem] bg-card p-4 text-card-foreground shadow-[0_18px_36px_-18px_rgb(0_0_0/0.45)]">
+    <div className="min-w-0 flex-1 rounded-[1.25rem] bg-card p-4 text-card-foreground shadow-[0_14px_30px_-18px_rgb(17_24_39/0.45)]">
       <div className="flex items-center gap-1.5">
         <span className="label-caps">{headline.label}</span>
         {change !== null && change !== 0 && pct !== null && Number.isFinite(pct) && (
@@ -68,7 +65,7 @@ function NetWorthCard({ view, headline }: { view: View; headline: { label: strin
         )}
         <HideAmountsButton className="-my-1 ml-auto size-7" />
       </div>
-      <AnimatedMoney minor={headline.value} className="mt-1 block truncate text-[1.75rem] leading-tight font-extrabold tracking-[-0.02em]" />
+      <AnimatedMoney minor={headline.value} className="mt-1 block truncate font-money text-[1.75rem] leading-tight font-extrabold tracking-[-0.025em]" />
       <p className="truncate text-xs text-muted-foreground">{headline.caption}</p>
     </div>
   )
@@ -213,54 +210,48 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6 pb-2">
-      <section data-band aria-label="Wallet" style={BAND_STYLE}
-        className="relative isolate -mx-5 overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] text-white sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:rounded-[2rem] lg:px-10 lg:pt-8">
-        <StatusBarTint color={BAND_TINT} />
-        <BambooDecor />
-        <div className="flex items-center justify-between gap-2">
-          {arranging ? <span /> : (
-            <button type="button" onClick={() => router.push("/import")} aria-label="Import a statement" className={bandButton}><FileUp /></button>
+      <header className="flex items-start justify-between gap-3 pt-[calc(var(--top-inset)+0.75rem)] lg:pt-10">
+        <div className="min-w-0 pt-1">
+          <h1 className="page-title lg:text-[2rem]">Wallet</h1>
+          <p className="mt-0.5 text-[0.875rem] text-muted-foreground">Cash, e-wallets, banks and cards you track by hand</p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          {arranging ? (
+            <>
+              <HeaderButton onClick={() => setArranging(false)}>Cancel</HeaderButton>
+              <Button onClick={finishArranging} className="h-10 rounded-full px-4">Done</Button>
+            </>
+          ) : (
+            <>
+              <HeaderButton onClick={() => router.push("/import")} aria-label="Import a statement"><FileUp /></HeaderButton>
+              {active.length > 1 && <HeaderButton onClick={startArranging} aria-label="Reorder accounts"><ArrowUpDown /></HeaderButton>}
+              <HeaderButton onClick={() => setDialog({ open: true })} aria-label="Add an account"><Plus /></HeaderButton>
+            </>
           )}
-          <div className="flex gap-2">
-            {arranging ? (
-              <>
-                <button type="button" onClick={() => setArranging(false)} className={bandButton}>Cancel</button>
-                <button type="button" onClick={finishArranging} className="pressable flex h-11 items-center rounded-full bg-white px-4 text-sm font-bold text-[#17462c]">Done</button>
-              </>
-            ) : (
-              <>
-                {active.length > 1 && <button type="button" onClick={startArranging} aria-label="Reorder accounts" className={bandButton}><ArrowUpDown /></button>}
-                <button type="button" onClick={() => setDialog({ open: true })} aria-label="Add an account" className={bandButton}><Plus /></button>
-              </>
-            )}
-          </div>
         </div>
-        <div>
-          <h1 className="mt-4 text-[1.625rem] leading-tight font-extrabold tracking-[-0.03em] lg:text-[2rem]">Wallet</h1>
-          <p className="mt-0.5 text-[0.8125rem] text-white/85">Cash, e-wallets, banks and cards you track by hand</p>
-        </div>
+      </header>
 
-        {isLoading ? <Skeleton className="mt-4 mb-5 ml-28 h-24 rounded-[1.25rem] bg-white/15" /> : active.length > 0 && (
-          <>
-            <div className="mt-3 flex items-end gap-2 lg:max-w-xl">
-              <Panda pose={poseFor(me?.settings.mascot_outfit)} sizes="120px"
-                className="pointer-events-none -mb-3 -ml-2 w-[6.75rem] shrink-0 self-end drop-shadow-[0_12px_18px_rgb(0_0_0/0.22)] min-[390px]:w-[7.5rem]" />
-              <div className="min-w-0 flex-1 pb-4">
-                <NetWorthCard view={view} headline={headline} />
-                <div className="mt-2.5 flex gap-1.5" role="radiogroup" aria-label="Balance view">
-                  {VIEWS.map((v) => (
-                    <button key={v.value} type="button" role="radio" aria-checked={view === v.value} onClick={() => { play("select"); setView(v.value) }}
-                      className={cn("pressable hit h-9 min-w-0 flex-1 rounded-full px-1.5 text-[0.75rem] font-bold transition-colors",
-                        view === v.value ? "bg-white text-[#17462c] shadow-[0_2px_8px_-2px_rgb(0_0_0/0.35)]" : "glass-on-green text-white hover:bg-white/20")}>
-                      <span className="block truncate">{v.label}</span>
-                    </button>
-                  ))}
-                </div>
+      {isLoading ? <Skeleton className="h-36 rounded-[1.5rem]" /> : active.length > 0 && (
+        <section aria-label="Net worth" className="relative -mx-5 overflow-hidden sm:-mx-6 lg:mx-0 lg:rounded-[1.5rem]">
+          <div aria-hidden className="absolute inset-x-0 top-10 bottom-0 bg-hero" />
+          <div className="relative flex items-end gap-2 px-4 pb-4 sm:px-6 lg:max-w-2xl">
+            <Panda pose={poseFor(me?.settings.mascot_outfit)} sizes="120px"
+              className="pointer-events-none -mb-6 -ml-1 w-[6.5rem] shrink-0 drop-shadow-[0_10px_16px_rgb(0_0_0/0.2)] min-[390px]:w-[7.25rem]" />
+            <div className="min-w-0 flex-1">
+              <NetWorthCard view={view} headline={headline} />
+              <div className="mt-2.5 flex gap-1.5" role="radiogroup" aria-label="Balance view">
+                {VIEWS.map((v) => (
+                  <button key={v.value} type="button" role="radio" aria-checked={view === v.value} onClick={() => { play("select"); setView(v.value) }}
+                    className={cn("pressable hit h-9 min-w-0 flex-1 rounded-[0.75rem] px-1.5 text-[0.8125rem] font-semibold transition-colors",
+                      view === v.value ? "bg-card text-primary shadow-[0_2px_8px_-2px_rgb(0_0_0/0.3)]" : "bg-white/15 text-white hover:bg-white/25")}>
+                    <span className="block truncate">{v.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          </>
-        )}
-      </section>
+          </div>
+        </section>
+      )}
 
       {listed === "loading" ? (
         <div className="space-y-4"><div className="grid grid-cols-[1.4fr_1fr] gap-3"><Skeleton className="h-32 rounded-2xl" /><Skeleton className="h-32 rounded-2xl" /></div><div className="grid grid-cols-2 gap-2.5">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="aspect-[1.45] rounded-[1.125rem]" />)}</div></div>

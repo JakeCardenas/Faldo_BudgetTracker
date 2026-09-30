@@ -67,7 +67,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         </>} />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,24rem)_1fr] lg:items-start lg:gap-12">
-        <div className="space-y-6 lg:sticky lg:top-24">
+        <div className="space-y-6 lg:sticky lg:top-8">
           <AccountCard account={account} large />
           <div className="grid grid-cols-3 gap-2">
             {([["expense", "Expense", Minus, PALETTE.coral], ["income", "Income", Plus, PALETTE.green], ["transfer", "Transfer", ArrowLeftRight, PALETTE.blue]] as const).map(([mode, label, Icon, tint]) => (
@@ -87,7 +87,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
             <div className="mt-1 flex justify-center gap-1" role="radiogroup" aria-label="Chart range">
               {ranges.map((r) => (
                 <button key={r.value} type="button" role="radio" aria-checked={days === r.value} onClick={() => { play("select"); setDays(r.value) }}
-                  className={cn("h-8 min-w-11 rounded-full px-3 text-[0.8125rem] font-medium transition-colors", days === r.value ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  className={cn("h-8 min-w-11 rounded-full px-3 text-[0.8125rem] font-semibold transition-colors", days === r.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                   {r.label}
                 </button>
               ))}

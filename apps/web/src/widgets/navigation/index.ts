@@ -1,3 +1,3 @@
 export { MobileNav } from "./ui/mobile-nav"
-export { TopNav } from "./ui/top-nav"
+export { SideNav } from "./ui/side-nav"
 export { Avatar, useLogout } from "./ui/user-menu"

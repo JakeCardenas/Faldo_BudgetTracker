@@ -77,7 +77,7 @@ function Appearance({ me }: { me: Me }) {
         <ListRow icon={Wind} title="Reduce motion" detail="Follows your device's setting until you change it here" toggle
           trailing={<Switch checked={reduced} onCheckedChange={setMotionReduced} aria-label="Reduce motion" />} />
         <ListRow className="lg:hidden" title="Faldo bubble" detail="A floating Faldo you can drag anywhere" toggle
-          leading={<span className="size-6 shrink-0 overflow-hidden rounded-full bg-[linear-gradient(160deg,#6cbf86_0%,#3c8d5c_55%,#2c6a45_100%)]"><Image src="/brand/panda/chat-head.png" alt="" width={210} height={210} sizes="24px" quality={90} className="size-full" /></span>}
+          leading={<span className="size-9 shrink-0 overflow-hidden rounded-[0.75rem] bg-secondary"><Image src="/brand/panda/chat-head.png" alt="" width={210} height={210} sizes="36px" quality={90} className="size-full" /></span>}
           trailing={<Switch checked={bubble} onCheckedChange={setBubbleShown} aria-label="Faldo bubble" />} />
         <ListRow icon={Bell} title="Daily check-ins" toggle
           trailing={<Switch checked={Boolean(checkins)} disabled={switching} onCheckedChange={toggleCheckins} aria-label="Daily check-ins" />} />

@@ -1,12 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useId, useLayoutEffect, useRef } from "react"
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { useAppActions } from "@/shared/lib/app-actions"
 import { TAB_ITEMS, activeTabIndex, type TabItem } from "@/shared/config/nav"
-import { setChromeAway, useChromeAway } from "@/shared/lib/chrome"
 import { motionReduced } from "@/shared/lib/motion"
 import { play } from "@/shared/lib/sound"
 import { Spring, aim, clamp, type SpringConfig } from "@/shared/lib/spring"
@@ -30,6 +29,9 @@ const HIDE_AFTER = 72
 const SHOW_AFTER = 28
 /** Near the top of a page the bar always shows. */
 const TOP_ZONE = 48
+/** How far the lens stretches along its path at speed (a share of its width), and how much it grows when pressed. */
+const STRETCH = 0.3
+const LIFT_GROW = 0.07
 
 const slotOf = (tab: number) => (tab < 0 ? -1 : tab < ADD_SLOT ? tab : tab + 1)
 const tabOf = (slot: number) => (slot < ADD_SLOT ? slot : slot === ADD_SLOT ? -1 : slot - 1)
@@ -38,6 +40,8 @@ const tabOf = (slot: number) => (slot < ADD_SLOT ? slot : slot === ADD_SLOT ? -1
 const GLIDE: SpringConfig = { stiffness: 300, damping: 28 }
 /** Following a finger: tight enough to stay under it, soft enough never to jitter. */
 const FOLLOW: SpringConfig = { stiffness: 1200, damping: 69 }
+/** The lens swelling under a finger and settling back: quick, with a hint of give. */
+const LIFT: SpringConfig = { stiffness: 620, damping: 36 }
 
 /** A tab's icon drawn solid, with its inner details cut out so they show the lens through them. */
 function FilledIcon({ item }: { item: TabItem }) {
@@ -56,12 +60,13 @@ function FilledIcon({ item }: { item: TabItem }) {
 
 /**
  * The icon row, laid out so each icon sits at the centre of the lens when the lens rests on it, each with its name
- * under it: Wallet, Plan and History aren't obvious from a wallet, a calendar and a clock alone. Both copies of the
- * row set the names in the same weight, so a name half under the moving lens still lines up.
+ * under it: Wallet, Plan and History aren't obvious from a wallet, a calendar and a clock alone. The copy under the
+ * lens is filled and in Faldo's green; both copies set the names in the same weight, so a name half under the moving
+ * lens still lines up.
  */
 function IconRow({ filled }: { filled?: boolean }) {
   return (
-    <div className={cn("absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5", filled ? "text-foreground" : "text-foreground/70")}>
+    <div className={cn("absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5", filled ? "text-primary" : "text-foreground/70")}>
       {Array.from({ length: SLOTS }, (_, slot) => {
         const item = TAB_ITEMS[tabOf(slot)]
         const Icon = item?.icon
@@ -79,17 +84,19 @@ function IconRow({ filled }: { filled?: boolean }) {
 }
 
 /**
- * Floating navigation for phones and tablets, after the Threads tab bar: one liquid-glass capsule with
- * the four tabs and the + (record money) in the middle, each named under its icon.
+ * Floating navigation for phones and tablets: one frosted capsule with the four tabs and the + (record money) in
+ * the middle, each named under its icon.
  *
- * The selected tab sits in a darker lens set into the glass, and whatever the lens covers is drawn
- * filled: slide a finger along the bar and the lens follows it, filling each icon as it passes (half
- * an icon when it is half over one); let go and it settles on that tab and opens it. Scroll down a page
- * and the bar sinks below the screen as a glass + comes out of its right end and stays in the corner;
- * scroll back up and the bar rises under the +, which fades back into it. The page header steps aside
- * and back with it (see lib/chrome). That transition is CSS (.nav-away in globals.css), so the system
- * runs it off the main thread; the lens moves on springs, frame by frame, writing styles directly so it
- * stays smooth while the next page renders. With reduced motion the lens goes straight to its place.
+ * The selected tab sits in a sage lens set into the glass, and whatever the lens covers is drawn filled in green.
+ * The lens is a little liquid: it stretches along its path while it moves (more the faster it goes) and settles
+ * back to its shape as it lands, and it swells slightly the moment a finger touches the bar. Slide a finger along
+ * the bar and the lens follows it, filling each icon as it passes; let go and it settles on that tab and opens it.
+ *
+ * Scroll down a page and the capsule draws in toward its right end until it is exactly the round + that takes its
+ * place in the corner; scroll back up and it grows out of that + again, a touch past its size before settling. That
+ * handover is CSS (.nav-away in globals.css), so the system runs it off the main thread and a quick reversal picks
+ * up from wherever it is. The lens moves on springs, frame by frame, writing styles directly so it stays smooth while
+ * the next page renders. With reduced motion the lens goes straight to its place and the handover is a plain swap.
  */
 export function MobileNav() {
   const pathname = usePathname()
@@ -98,13 +105,16 @@ export function MobileNav() {
   const active = activeTabIndex(pathname)
   const activeSlot = slotOf(active)
   const hidden = pathname.startsWith("/assistant")
-  const away = useChromeAway()
+  // Away belongs to the page it happened on, so a new page always starts with the bar in view.
+  const [awayOn, setAwayOn] = useState<string | null>(null)
+  const away = awayOn === pathname
 
   const bar = useRef<HTMLDivElement>(null)
   const lens = useRef<HTMLSpanElement>(null)
   const outline = useRef<HTMLDivElement>(null)
   const fill = useRef<HTMLDivElement>(null)
   const x = useRef(new Spring(PAD, GLIDE))
+  const lift = useRef(new Spring(0, LIFT))
   const geo = useRef({ width: 0, lens: LENS_MAX, step: 0 })
   const box = useRef<DOMRect | null>(null)
   const press = useRef<{ startX: number; dragging: boolean } | null>(null)
@@ -115,11 +125,17 @@ export function MobileNav() {
 
   const paint = useCallback(() => {
     const { width, lens: size } = geo.current
-    const left = x.current.value
-    const right = left + size
-    if (lens.current) lens.current.style.transform = `translate3d(${left}px,0,0)`
+    // Speed stretches the lens along its path and thins it a touch, like a drop of water; a finger swells it.
+    const stretch = clamp(Math.abs(x.current.velocity) / 2600, 0, 1) * STRETCH
+    const grow = 1 + LIFT_GROW * Math.max(0, lift.current.value)
+    const sx = (1 + stretch) * grow
+    const sy = (1 - stretch * 0.22) * grow
+    const centre = x.current.value + size / 2
+    const left = clamp(centre - (size * sx) / 2, 0, width)
+    const right = clamp(centre + (size * sx) / 2, 0, width)
+    if (lens.current) lens.current.style.transform = `translate3d(${x.current.value}px,0,0) scale(${sx},${sy})`
     // The filled icons show only inside the lens, the outlined ones only outside it.
-    if (fill.current) fill.current.style.clipPath = `inset(0 ${Math.max(0, width - right)}px 0 ${Math.max(0, left)}px)`
+    if (fill.current) fill.current.style.clipPath = `inset(0 ${width - right}px 0 ${left}px)`
     if (outline.current) {
       const mask = lit.current ? `linear-gradient(90deg,#000 ${left}px,transparent ${left}px,transparent ${right}px,#000 ${right}px)` : "none"
       outline.current.style.setProperty("mask-image", mask)
@@ -138,9 +154,13 @@ export function MobileNav() {
       lastTick.current = performance.now()
       const dt = last < 0 ? 1 / 60 : Math.min(0.034, Math.max(0, now - last) / 1000)
       last = now
-      for (let i = 0; i < 4; i++) x.current.step(dt / 4)
-      if (x.current.resting(0.1) && !press.current?.dragging) {
+      for (let i = 0; i < 4; i++) {
+        x.current.step(dt / 4)
+        lift.current.step(dt / 4)
+      }
+      if (x.current.resting(0.1) && lift.current.resting(0.002) && !press.current?.dragging) {
         x.current.snap()
+        lift.current.snap()
         paint()
         frame.current = 0
         return
@@ -161,6 +181,13 @@ export function MobileNav() {
     frame.current = 0
     paint()
   }, [paint, run])
+
+  /** A finger on the bar swells the lens; lifting it lets the lens settle. Reduced motion skips it. */
+  const swell = useCallback((on: boolean) => {
+    if (motionReduced()) return
+    lift.current.target = on ? 1 : 0
+    run()
+  }, [run])
 
   /** Show or hide the lens (and the filled icons with it), fading. */
   const light = useCallback((on: boolean) => {
@@ -209,22 +236,20 @@ export function MobileNav() {
     glideTo(activeSlot)
   }, [activeSlot, glideTo])
 
-  // A new page starts with the bar and header in view.
-  useEffect(() => { setChromeAway(false) }, [pathname])
-
   // Scrolling down sends the bar away; scrolling up, or reaching the top, brings it back.
   useEffect(() => {
     if (hidden) return
     let last = window.scrollY
     let down = 0
     let up = 0
+    const setAway = (on: boolean) => setAwayOn(on ? pathname : null)
     const onScroll = () => {
       const y = window.scrollY
       const dy = y - last
       last = y
       if (y < TOP_ZONE) {
         down = up = 0
-        setChromeAway(false)
+        setAway(false)
         return
       }
       // The bounce past the end of a page is not the reader scrolling back up.
@@ -232,16 +257,16 @@ export function MobileNav() {
       if (dy > 0) {
         down += dy
         up = 0
-        if (down > HIDE_AFTER) setChromeAway(true)
+        if (down > HIDE_AFTER) setAway(true)
       } else if (dy < 0) {
         up -= dy
         down = 0
-        if (up > SHOW_AFTER) setChromeAway(false)
+        if (up > SHOW_AFTER) setAway(false)
       }
     }
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
-  }, [hidden])
+  }, [hidden, pathname])
 
   useEffect(() => () => {
     cancelAnimationFrame(frame.current)
@@ -265,6 +290,8 @@ export function MobileNav() {
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* moves still arrive while over the bar */ }
     box.current = e.currentTarget.getBoundingClientRect()
     press.current = { startX: e.clientX, dragging: false }
+    // Answer the touch at once, before anything is decided: the lens swells under the finger.
+    swell(true)
   }
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const p = press.current
@@ -282,6 +309,7 @@ export function MobileNav() {
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
     if (!press.current) return
     press.current = null
+    swell(false)
     const slot = slotAt(e.clientX)
     play("tap")
     if (slot === ADD_SLOT) {
@@ -296,6 +324,7 @@ export function MobileNav() {
   function onPointerCancel() {
     if (!press.current) return
     press.current = null
+    swell(false)
     glideTo(activeRef.current)
   }
 
@@ -304,41 +333,45 @@ export function MobileNav() {
       className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden", away && "nav-away")}>
       <div className="relative mx-auto max-w-[30rem]">
         <div ref={bar} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
-          onFocus={() => setChromeAway(false)}
-          className="nav-bar pointer-events-auto relative h-[3.8125rem] touch-none select-none will-change-transform [-webkit-touch-callout:none]">
-          <span aria-hidden className="nav-glass absolute inset-0 rounded-full" />
-          <span ref={lens} aria-hidden className="nav-lens pointer-events-none absolute inset-y-1 left-0 w-(--lens) rounded-full transition-opacity duration-200 will-change-transform" />
-          <div ref={outline} aria-hidden className="pointer-events-none absolute inset-0"><IconRow /></div>
-          <div ref={fill} aria-hidden className="pointer-events-none absolute inset-0 transition-opacity duration-200"><IconRow filled /></div>
+          onFocus={() => setAwayOn(null)}
+          className="nav-bar pointer-events-auto relative h-[3.875rem] touch-none select-none [-webkit-touch-callout:none]">
+          {/* The shadow on its own layer, so the glass can draw in to a circle without clipping it. */}
+          <span aria-hidden className="nav-shadow absolute inset-0 rounded-full" />
+          <span aria-hidden className="nav-glass nav-glass-flat nav-shape absolute inset-0 rounded-full" />
+          <div className="nav-content absolute inset-0">
+            <span ref={lens} aria-hidden className="nav-lens pointer-events-none absolute inset-y-1 left-0 w-(--lens) origin-center rounded-full transition-opacity duration-200 will-change-transform" />
+            <div ref={outline} aria-hidden className="pointer-events-none absolute inset-0"><IconRow /></div>
+            <div ref={fill} aria-hidden className="pointer-events-none absolute inset-0 transition-opacity duration-200"><IconRow filled /></div>
 
-          {/* Touch and mouse are handled by the bar above (so a finger can slide between tabs); these keep
-              keyboard and screen reader navigation working. */}
-          <div className="absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5">
-            {Array.from({ length: SLOTS }, (_, slot) => {
-              const tab = tabOf(slot)
-              const ring = "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset"
-              if (tab < 0) {
+            {/* Touch and mouse are handled by the bar above (so a finger can slide between tabs); these keep
+                keyboard and screen reader navigation working. */}
+            <div className="absolute inset-y-0 left-[calc(4px+var(--lens)/2-var(--step)/2)] grid w-[calc(var(--step)*5)] grid-cols-5">
+              {Array.from({ length: SLOTS }, (_, slot) => {
+                const tab = tabOf(slot)
+                const ring = "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset"
+                if (tab < 0) {
+                  return (
+                    <button key="add" type="button" aria-label="Add money in or out" aria-haspopup="dialog" className={ring}
+                      onClick={(e) => { if (e.detail === 0) openAddMenu() }} />
+                  )
+                }
+                const item = TAB_ITEMS[tab]
                 return (
-                  <button key="add" type="button" aria-label="Add money in or out" aria-haspopup="dialog" className={ring}
-                    onClick={(e) => { if (e.detail === 0) openAddMenu() }} />
+                  <Link key={item.href} href={item.href} aria-label={item.label} aria-current={tab === active ? "page" : undefined} draggable={false}
+                    onClick={(e) => {
+                      if (e.detail > 0) { e.preventDefault(); return }
+                      play("tap")
+                    }}
+                    className={ring} />
                 )
-              }
-              const item = TAB_ITEMS[tab]
-              return (
-                <Link key={item.href} href={item.href} aria-label={item.label} aria-current={tab === active ? "page" : undefined} draggable={false}
-                  onClick={(e) => {
-                    if (e.detail > 0) { e.preventDefault(); return }
-                    play("tap")
-                  }}
-                  className={ring} />
-              )
-            })}
+              })}
+            </div>
           </div>
         </div>
 
         {/* The + that stands in for the bar while it is away (.nav-plus in globals.css). */}
         <button type="button" onClick={openAddMenu} aria-label="Add money in or out" aria-haspopup="dialog" aria-hidden={!away} tabIndex={away ? 0 : -1}
-          className="nav-glass nav-plus absolute right-0 bottom-0 flex size-[3.875rem] items-center justify-center rounded-full text-foreground will-change-[transform,opacity] active:scale-[0.9]">
+          className="nav-glass nav-plus absolute right-0 bottom-0 flex size-[3.875rem] items-center justify-center rounded-full text-foreground will-change-[opacity,scale] active:scale-[0.9]">
           <Plus className="size-7" strokeWidth={2} />
         </button>
       </div>

@@ -1,6 +1,6 @@
 # Faldo design system
 
-Faldo should feel like a calm consumer finance app, not a dashboard. Simple on the surface, powerful underneath.
+Faldo should feel like a calm consumer finance app, not a dashboard. Simple on the surface, powerful underneath. The look follows Tarsi's calm light direction (a near-white canvas, white cards, one deep forest green, sage accents and charcoal text) and its screen placements, carried by Faldo's own panda, voice and features.
 
 ## Information architecture
 
@@ -11,7 +11,7 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 | Plan | What's ahead? | `/plan`, `/plan/money`, `/bills`, `/budgets`, `/goals`, `/debts`, `/forecast` |
 | History | What happened? | `/transactions`, `/reports`, `/insights` |
 
-**Profile** (`/you`, with `/settings`, `/learn`, `/streaks`, `/tools`, `/assistant`) is not a tab. It opens from the avatar on Home (phones) and the avatar menu (desktop); its pages select no tab. Its menu is six rows (Talk to Faldo, Streaks and rewards, Insights, Learn, Tools, Settings) and Sign out; Import and Statistics are not repeated there because Wallet and History carry them.
+**Profile** (`/you`, with `/settings`, `/learn`, `/streaks`, `/tools`, `/assistant`) is not a tab. It opens from the Profile button on Home (phones) and the account menu at the foot of the sidebar (desktop); its pages select no tab. Its menu is six rows (Talk to Faldo, Streaks and rewards, Insights, Learn, Tools, Settings) and Sign out; Import and Statistics are not repeated there because Wallet and History carry them.
 
 **Settings** is a short list, each row its own screen (`/settings/[section]`): Appearance (theme, hide amounts, sounds, Faldo bubble), Preferences (name, pay frequency, monthly income, safety buffer, default account, timezone), Categories, Faldo's memory, Password and devices, and Your data (download, delete account).
 
@@ -19,18 +19,17 @@ The **+** (the middle of the tab bar on phones, and a glass circle in the corner
 
 ## Navigation
 
-Phones: modelled on the Threads tab bar. One floating glass capsule: Home, Wallet, **+**, Plan, History, each named under its icon (11px semibold, the + as "Add"), because a wallet, a calendar and a clock alone don't say Wallet, Plan and History. It sits on the page's 20px margins about 21px above the bottom edge (61px tall, the icons 22px with a 2px stroke). The filled and outlined copies of the row set the names in the same weight, so a name half under the moving lens still lines up. The selected tab sits in a darker lens (83 x 53px) set 4px into the glass, and whatever the lens covers is drawn **filled** (a solid icon with its details cut out: the wallet's clasp, the calendar's lines, the clock's hands); everything outside it stays outlined. The fill follows the lens exactly, so an icon half under a moving lens is half filled.
+Phones and tablets: one frosted capsule, Home, Wallet, **+**, Plan, History, each named under its icon (11px semibold, icons 22px with a 2px stroke; the + is named "Add"), because a wallet, a calendar and a clock alone don't say Wallet, Plan and History. It sits on the page's 20px margins about 21px above the bottom edge (62px tall). The selected tab sits in a sage lens (83 x 53px) set 4px into the glass, and whatever the lens covers is drawn **filled** in Faldo's green (a solid icon with its details cut out: the wallet's clasp, the calendar's lines, the clock's hands); everything outside it stays outlined in grey. The fill follows the lens exactly, so an icon half under a moving lens is half filled.
 
 - **Tap** a tab: the lens glides to it and the page opens. Tap **+**: the Add menu opens and the lens stays put.
-- **Drag** along the bar: the lens follows the finger (after 6px of travel), filling each icon it passes; let go and it settles on the nearest tab and opens it (on **+**, it glides back and the Add menu opens).
-- **Scroll down** 72px: the bar turns into the **+**. A glass + circle (62px) comes out of the bar's right end the moment the bar starts to sink, rising the last 13px into place in the bottom-right corner, while the bar sinks off the bottom of the screen. **Scroll up** 28px, reach the top of the page, change page or tab onto the bar with the keyboard: the bar rises back up under the +, which fades and sinks into its right end. The bounce past the end of a page does not count as scrolling up.
-- The **page header** steps aside with the bar, as in Threads: the sticky header row (back, title, actions) and History's search and filters fade out drifting up 20px (about 0.24s) while the bar sinks, and come back sliding down, quicker (about 0.18s), when the bar rises. A soft strip stays under the status bar the whole time, so nothing reads crisp under the clock. Focusing anything in the header brings it back.
+- **Touch** the bar: the lens swells about 7% the instant a finger lands, before anything is decided, and settles back when it lifts.
+- **Drag** along the bar: the lens follows the finger (after 6px of travel), filling each icon it passes; let go and it settles on the nearest tab and opens it.
+- **Scroll down** 72px: the capsule hands over to a round + in the corner. Its icons blur out at once while the glass draws in toward its right end until it is exactly that circle (a clip, so the pill keeps round ends the whole way, 280ms), its shadow fades, and the + takes over on the same spot at 180ms, its icon springing in from 55%. **Scroll up** 28px or reach the top: the + fades, the glass grows back out of it on a spring that runs a touch past full width (460ms), and the icons return from 120ms once there is room for them. A quick reversal picks up from wherever it is. The page header stays put.
 - On pages that belong to no tab (Profile and its pages) the lens fades out and every icon is outlined.
 
-The lens moves on physics, not keyframes: damped springs stepped every frame, writing styles directly so it stays smooth while the next page renders and keeps its speed when retargeted (glide: 90% in 175ms, about 1% overshoot; follow: critically damped). The scroll transition is CSS, so the system runs it off the main thread, on curves fitted to the reference frame by frame: the bar sinks on a critically damped curve (about 90% gone in 100ms, 223ms in all) and rises on a pure exponential with no bounce (222ms); the + shows within about 30ms and settles its 13px rise in 283ms, and fades out over 283ms as the bar comes back. The bar, its lens and the page header keep this motion with Reduce Motion on (they carry `data-motion="always"`), by the owner's choice; everything else follows the setting. The links stay in the bar for keyboard and screen readers.
+The lens is a little liquid: it moves on damped springs stepped every frame (glide: 90% in 175ms, about 1% overshoot; follow: critically damped) and stretches along its path in proportion to its speed, up to 30% longer and a touch thinner, settling back to its shape as it lands, so a long jump reads as a swoop and a neighbouring tab as a nudge. It writes styles directly, so it stays smooth while the next page renders. The handover is CSS transitions, so the system runs it off the main thread. With Reduce Motion the lens goes straight to its place without stretching or swelling, and the handover is a plain swap. The links stay in the bar for keyboard and screen readers.
 
-Desktop: the same four tabs in the top bar, with search, notifications, Add and the avatar menu.
-
+Desktop (from 1024px): a white sidebar that stays put (`SideNav`, 256px): the logo, a green Add button and search (⌘K), the four destinations, then Money (Import, Statistics) and Faldo (Talk to Faldo, Insights, Learn, Streaks and rewards, Tools) as labelled rows, and at the foot the account menu (name and email) with notifications. The selected row is a sage pill with green text. Pages sit beside it, up to 1160px wide.
 
 ### Faldo bubble
 
@@ -45,10 +44,11 @@ On phones and tablets, an optional floating chat head like Messenger's, off unti
 
 ## Page layouts
 
-- **Home:** Faldo's green band at the top (see The green band): the streak button and a glass pill (search, notifications, Profile) under the status bar, the date in small caps, the greeting with the name in bold, and Faldo standing on the band's edge beside his note in a speech bubble. The note is the one thing worth knowing now (a budget alert, otherwise his read of the month) and never the shortfall, which the Safe to Spend card right under the band already states with its numbers; on phones narrower than 360px Faldo stands a size smaller so the note can finish its sentence. On phones Safe to Spend comes first, straight under the band, as a calm status card. Then the hero: the total balance (42px, counting up) with its balance line and a light range picker (never wider than 24rem), then the quick actions as its action row: four round buttons on soft washes of the palette (Check, Budgets, Goals, Ask Faldo) in one row at every width, no heading. Bills are already on Home as payments due; money owed and the forecast are one tap away on Plan, importing on Wallet. After that, "This month" (a ring of spending by category with the total spent in the middle and the top three categories named beside it) and money in and out (Day, Week, Month, each amount labelled "Money in" or "Money out", never colour alone), stacked on phones and side by side from tablets up; payments due as three compact rows with the total due in the header, account cards and recent activity. On desktop the band is 224px tall (Faldo stands in the grove on the right with his note to his left) and the right column carries Safe to Spend, payments due and recent activity, so the columns end together. Pickers inside cards are light (the chosen option on a soft grey pill, no track). Add to Home only by removing something.
-- **Wallet:** the same band with the title, Faldo beside a white net worth card, and All, Assets and Liabilities pills. Then an insight and the last seven days of balance as bars with the week's change written above them, type filters, and accounts grouped by type (collapsible, with totals) as two-column tiles or a list. On desktop the groups sit side by side as columns, so a type with one account never leaves a row empty.
+- **Home** (Tarsi's order): on the canvas, the streak (a white disc with the flame) and a white pill with search, notifications, Profile and Settings; the date in small caps; the greeting with the name in bold. Then Faldo's panel: a green strip across the screen with Faldo standing on it beside his note, a white speech card with the one thing worth knowing now (a budget alert, otherwise his read of the month, never the shortfall, which Safe to Spend already states with its numbers) and always a way to ask him. Then the Quick actions card: Add (solid green), Check, Budgets, Goals and More, a sheet with every other place. Then Safe to Spend and money in and out side by side from 375px, stacked below so nothing shrinks: the number, one line on why with its own icon, and this week's share; money in and money out stacked with their labels over a Day, Week, Month switch (Month by default). A slim total balance row links to Wallet. Then Payments due (how many are due in the next three weeks, the total with TOTAL DUE, dated rows with DUE under each amount, Mark paid on overdue ones) and recent activity. Below them the balance line, spending this month and account tiles; from 1280px the balance line and spending sit in a 22rem side column. The order is the same at every width. Add to Home only by removing something.
+- **Wallet:** the title and a one-line description on the canvas with round actions (import, reorder, add), then Faldo on the green strip beside the white net worth card (with its 30-day change and the eye) and All, Assets and Liabilities. Then an insight and the last seven days of balance as bars with the week's change above them, type chips (the chosen one green), and accounts grouped by type (collapsible, with totals) as calm tiles or a list. On desktop the groups sit side by side as columns, so a type with one account never leaves a row empty.
+- **Add transaction:** amount first, keypad forward. The close button and the Expense, Income, Transfer switch (the chosen one filled: red for an expense, green otherwise) at the top, the amount large and centred, the note, recent entries, then categories with their budget rings. The keypad fills the lower part (digits on grey, operators on sage, delete and clear on soft red, = solid green); under it the account and the date (Today, Yesterday or Pick a date), then a full-width Save. On desktop the same order sits in a roomy two-column dialog: what it is on the left; keypad, account, date and Save on the right.
 - **Plan:** one row per planning tool (budgets, goals, money plan, bills, money owed, planned purchases, installments, forecast, what if), each with a tinted icon and a live summary, then "Can I afford it?" and quick links.
-- **History:** a soft search pill with plain sort and filter icons, Threads-style underline tabs (All, Expenses, Income, Transfers) whose underline glides on a spring, a one-line summary with a chart icon to Statistics, then each day as a quiet header ("Yesterday Sep 21", money in green, money out muted) over flat rows.
+- **History:** a soft search pill with plain sort and filter icons, underline tabs (All, Expenses, Income, Transfers) whose green underline glides on a spring, a one-line summary with a chart icon to Statistics, then each day as a quiet header ("Yesterday Sep 21", money in green, money out muted) over flat rows.
 
 ## Faldo, the panda
 
@@ -94,13 +94,11 @@ An empty chat opens at the top, on Faldo's greeting, with his check-ins (up to t
 
 Rewards are Faldo's poses only (no badges, no Home themes): each backend outfit id is a pose (`OUTFIT_INFO` in `lib/catalog.ts`), unlocked by a streak (3, 7, 14 or 30 days, the best one counts) or by asking Faldo a question, creating a savings goal or finishing 3 lessons (`OUTFITS` in the API). The Streaks page shows the next one with its progress, and the chosen pose stands in the Home band.
 
-## The green band
+## The green strip
 
-The Home hero, its loading state, the empty Home and Wallet sit on one look: a clean diagonal green (`#17462c` to `#2f7a4c`, a little depth at the lower left; `BAND_STYLE` in `components/brand/environment.tsx`) with a quiet bamboo grove at the right edge (`BambooDecor`). The bamboo is one faint white silhouette: jointed culms (a slight ridge at each joint with a thin line above it, a soft highlight down each stem), thin twigs and slender pointed leaves hanging in sprays toward the middle. It is anchored to the band's bottom at a fixed size, so it looks the same on every band and runs off the top of short ones; the culms stay at the edge and only leaf tips reach into open space, never over the numbers.
+Home and Wallet put Faldo on a plain green strip (`--hero`, #467f51 in light mode; white text on it passes AA) that runs edge to edge on phones and becomes a rounded panel from desktop up. Faldo stands at its left, cropped at its lower edge, with a white card beside him: his note on Home, net worth on Wallet. It is the only large coloured area in the app. The empty Home puts Faldo waving above the same strip with a white card holding the first steps. Page tops are the canvas, so the strip under the iPhone clock always matches the page.
 
-Nothing moves. `BAND_TINT` (the green at the band's top) goes to `StatusBarTint`, so the strip under the iPhone clock matches, and the strip keeps it until the band's lower edge has scrolled up past the strip: neither the band's colour nor the page's ever sits over the other as a line.
-
-Sign-in uses the light mint version (`LIGHT_ENVIRONMENT` with the `faldo-env` class), with the bamboo motif in faint green.
+The earlier full-height band (`BAND_STYLE`, `BambooDecor` and `StatusBarTint` in `shared/ui/brand`) is no longer on any screen; the files are kept as they are.
 
 ## Hide amounts
 
@@ -108,7 +106,7 @@ The eye button (`HideAmountsButton`) and the Settings switch set a per-device pr
 
 ## Account cards and provider logos
 
-Account cards use the real ID-1 card proportion (1.586:1) and scale their type with the card (container units). `lib/providers.ts` lists Philippine banks and e-wallets. Providers with a `card` entry get a face that echoes their real card (GCash's royal blue with the large G symbol, Maya's black with the mint wordmark, BPI's red ribbons, BDO's blue, GoTyme's navy-to-aqua lines, and so on), with a chip and contactless mark but never a cardholder name, card number or network logo. Other accounts use their colour with rings (e-wallets, cash) or engraved arcs (cards); savings keep a light striped face.
+Account cards use the real ID-1 card proportion (1.586:1) and scale their type with the card (container units). `lib/providers.ts` lists Philippine banks and e-wallets. Providers with a `card` entry get a face that echoes their real card (GCash's royal blue with the large G symbol, Maya's black with the mint wordmark, BPI's red ribbons, BDO's blue, GoTyme's navy-to-aqua lines, and so on), with a chip and contactless mark but never a cardholder name, card number or network logo. Other accounts use their colour with rings (e-wallets, cash) or engraved arcs (cards); savings keep a light striped face. That full card face is kept for where one account is the subject (its own page and the add-account preview). In grids and rails (Wallet, Home) accounts are calm tiles (`AccountTile`): a 7% wash of the account's colour with a thin rim of it, the provider's logo on white or the type's icon on the account colour, charcoal text, BALANCE in small caps and, for a credit card, the used share as a bar in the account's colour.
 
 Logos are official files in `public/brand/providers/` (GCash, Maya, BDO, BPI, GoTyme, UnionBank, SeaBank, Landbank, PNB, EastWest and CIMB, from Wikimedia Commons), with sources and licences in `SOURCES.md` there. The files are never edited, only framed: `LOGOS` in `lib/providers.ts` records the measured visible area, the symbol (used in round badges and for GCash's large face mark) and, where a symbol has white detail, the wordmark used in white. On dark faces the reversed (white) version is shown, as on the physical cards; Maya keeps its mint wordmark on black. Without a file (MariBank, Metrobank and others), the provider's name is shown as text. Never draw or generate a logo. Cards show only `•••• 1234` when the person adds the last four digits; credit cards show used, available and the limit.
 
@@ -116,23 +114,22 @@ Logos are official files in `public/brand/providers/` (GCash, Maya, BDO, BPI, Go
 
 All colours are CSS variables in `apps/web/src/app/globals.css`, with light and dark values.
 
-- **Canvas:** `--background` (a cool near-white). Content groups sit on white `card-surface` / `ios-group` surfaces.
-- **Accent:** one green (`--primary`). Use it for primary actions, active navigation, positive money and Safe to Spend.
+- **Canvas:** `--background` (#f7f9f8, a near-white with a faint green lean, after Tarsi's #f8faf9). Content groups sit on white `card-surface` / `ios-group` surfaces with a soft shadow.
+- **Accent:** one deep forest green (`--primary`, #3b7a49, 5.2:1 with white text; Tarsi's lighter #508a59 fails AA for text). Use it for primary actions, the selected state, positive money and icons in controls. Sage (`--secondary`, #e9f2eb with #2f6a3b) is for soft buttons, icon tiles and chips.
 - **Semantics:** green for income and good states, `--expense` red for problems and overspending, `--warning` amber for attention. Expenses in lists use the normal text colour, not red.
-- **Neutrals:** one family with a faint bamboo tint: the canvas (`#f4f7f4`), muted fills, borders and the dark greys all lean the same way; no cool blue-greys beside warm ones.
+- **Neutrals:** charcoal text (#111827) and grey secondary text (#5c6570, at least 4.5:1 on the canvas and on cards), with muted fills and hairlines (#e5e9e6) in between. Dark mode mirrors it: canvas #0f1412, cards #1a211d, primary #7cc08a.
 - **Category and chart palette** (`lib/palette.ts`): d3's Spectral scheme, deepened where it runs pale so every colour holds on white and on dark: coral, apricot, gold, lime, green, teal, lagoon, blue, indigo, violet, berry, raspberry, rose, slate and stone. Neighbouring colours blend, so a ring or a list of categories reads as one set, never a rainbow. The API gives each default category one (`services/categories.py`; migration 0011 moved existing categories over, leaving any colour someone chose alone), and anything the app colours itself (the quick actions) picks from the same names. Faldo's green stays the brand; the palette never replaces it on controls.
-- **Charts:** `--chart-1` is Faldo's green, `--chart-2` a lighter leaf green for projections and ranges, `--chart-3` mist for background series, and `--chart-ink` panda ink (light grey in dark mode) for money out and other neutral series beside the green.
-- **Signature surfaces:** only the sky band (Home, Wallet) and account cards (the provider's or account's own colour) carry strong colour. Safe to Spend is a calm light surface: green when healthy, amber when this week's share is used, red only when money is genuinely short.
+- **Charts:** `--chart-1` is Faldo's green, `--chart-2` a lighter sage for projections and ranges, `--chart-3` mist for background series, and `--chart-ink` charcoal (light grey in dark mode) for money out and other neutral series beside the green.
+- **Signature surfaces:** only the green strip (Home, Wallet) and a single account's card face carry strong colour. Safe to Spend is a calm light surface: green when healthy, amber when this week's share is used, red only when money is genuinely short.
 
 ## Shape
 
-- Text buttons are rounded rectangles: 12px (default), 14px (large), 10px (small).
-- Icon-only buttons, header controls, the + and the tab bar are circles or capsules.
-- Chips and segmented controls stay pills.
-- Inputs are 12px (`rounded-lg`).
-- Inner tiles are 17px (`rounded-xl`).
-- Surfaces are 22px (`rounded-2xl`).
-- Hero cards and sheets are 26px (`rounded-3xl`, sheets 28px on phones).
+Rounded, but not everything is a pill.
+
+- Buttons, inputs, keypad keys and list icon tiles are rounded rectangles: 13 to 14px (`rounded-lg`, `rounded-[0.875rem]`), icon tiles 12px.
+- Round icon buttons, header controls, Add, the tab bar and its lens are circles or capsules; segmented switches and filter chips stay pills.
+- Quick action tiles and inner tiles are 14 to 18px.
+- Cards are 22px (`rounded-2xl`); sheets are 28px on phones.
 
 ## Type
 
@@ -154,25 +151,25 @@ Sentence case for titles, buttons and copy. The one exception is `label-caps`: s
 
 ## Icons
 
-One family, lucide, drawn at the tab bar's 2px stroke everywhere (card faces keep their own finer marks). Glyphs are the simplest shape that says the thing: a bowl for Food & Dining, a cart for Groceries, a bus for Transportation, a ticket for Entertainment, a book for Education, and two people for Money owed (`MoneyOwedIcon`, since it is always money between you and someone). A category shows as its glyph on a 15% wash of its colour, the glyph deepened in light mode and lightened in dark so pale colours like gold and lime still read (`CategoryIcon`); transfers and money owed use slate. Plan, Profile and Settings rows keep plain outline icons with no wash, like Threads.
+One family, lucide, drawn at the tab bar's 2px stroke everywhere (card faces keep their own finer marks). Glyphs are the simplest shape that says the thing: a bowl for Food & Dining, a cart for Groceries, a bus for Transportation, a ticket for Entertainment, a book for Education, and two people for Money owed (`MoneyOwedIcon`, since it is always money between you and someone). A category shows as its glyph on a 15% wash of its colour, the glyph deepened in light mode and lightened in dark so pale colours like gold and lime still read (`CategoryIcon`); transfers and money owed use slate. Every other icon in a control or a list row is Faldo's green, on a sage tile in lists (`RowIcon`) and quick actions.
 
 ## Glass
 
-Content is solid; controls float. `nav-glass` (the tab bar and its corner +) is a neutral frosted capsule (white in light mode, smoky grey in dark) that picks up the colour of what scrolls beneath it, lit along its top edge; `nav-lens` is the darker pill under the selected tab. `glass-control` (small header buttons) is a clearer glass with strong colour pickup, a bright thin rim and a soft specular sheen, and `glass-on-green` is the same idea on the Home environment. All of it is a web approximation of liquid glass, not Apple's native material. Never on cards, lists, charts or money. Page tops use `scroll-edge`, a soft fade and blur where content passes under the floating header, instead of a hard bar. `prefers-reduced-transparency` falls back to solid surfaces.
+Content is solid; only the phone tab bar and its corner + float. `nav-glass` is a white frosted capsule (smoky in dark mode), lit along its top edge; `nav-lens` is the sage pill under the selected tab. Header buttons are solid white circles with a soft shadow (`HeaderButton`). Never glass on cards, lists, charts or money. Page tops use `scroll-edge`, a soft fade where content passes under the slim header bar. `prefers-reduced-transparency` falls back to solid surfaces.
 
 ## Spacing and alignment
 
 Fields and default buttons are 44px tall (Input, Select, AmountInput and Button), so a field and its button line up. Every tappable control gets at least a 44pt tap area. Controls drawn smaller (the eye, header icons, chips, the range picker, sheet close buttons) add `.hit`, an invisible 44pt target around them.
 
-Pages that are one list or one form (History, Insights, Bills, Money owed, Goals, Learn, Tools, Settings, Money plan, Planned purchases, Import) keep a reading width of 52rem, centred, on desktop; pages with two columns (Home, Wallet, Plan, Statistics, Forecast, Budgets, Profile) use the full 1240px.
+Pages that are one list or one form (History, Insights, Bills, Money owed, Goals, Learn, Tools, Settings, Money plan, Planned purchases, Import) keep a reading width of 52rem, centred, on desktop; pages with two columns (Home, Wallet, Plan, Statistics, Forecast, Budgets, Profile) use up to 1160px beside the sidebar.
 
-Phones use 20px page margins; tablets 24px; desktop 32px. The scale is 4, 8, 12, 16, 20, 24, 32, 40, 48. Section titles sit 12px above their content, sections are 24 to 32px apart, and cards pad 16 to 20px. Page titles, section titles, cards, the tab bar and the + share the same left and right edges; nothing is inset by a few pixels.
+Phones use 20px page margins; tablets 24px; desktop 40px. The scale is 4, 8, 12, 16, 20, 24, 32, 40, 48. Section titles sit 12px above their content, sections are 24 to 32px apart, and cards pad 16 to 20px. Page titles, section titles, cards, the tab bar and the + share the same left and right edges; nothing is inset by a few pixels.
 
-## Headers and menu rows (Threads style)
+## Headers and list rows
 
-On phones, a page reached from somewhere else has a Threads bar: a plain back chevron (no label), its title centred in bold, and its actions as icon circles on the right (Add, New goal, Edit and Refresh show their words on desktop only). Top-level pages keep a large title that the bar picks up on scroll. Descriptions under titles show on desktop only.
+On phones, a page reached from somewhere else has a slim bar: a round white back button with a green chevron, its title centred in bold, and its actions as round white buttons on the right (Add, New goal, Edit and Export show their words on desktop only). Top-level pages show a large title with a one-line description under it; the bar picks the title up on scroll.
 
-Menus (Profile, Settings, Plan, Tools) are `ListRow`s straight on the canvas: a 24px outline icon and a short label, 52px tall. No descriptions, chevrons, icon tiles or card around them, except on Plan, where each row adds one quiet line saying where things stand (`detail`: "₱1,462 left of ₱9,000", "Internet is overdue, ₱1,699"); groups are separated by a hairline, and a destructive action (Sign out, Delete account) is red text on its own. A row with a switch is its label, so tapping anywhere flips it.
+Lists (Profile, Settings, Plan, Tools, More) are `ListRow`s in one white card split by hairlines: a green icon on a sage tile, a label and, where it helps, one quiet line saying where things stand (`detail`: "₱1,462 left of ₱9,000", "Internet is overdue, ₱1,699"). Rows that open something end in a chevron; a row with a switch is its label, so tapping anywhere flips it. Groups may carry a small caps label above; a destructive action (Sign out, Delete account) is red text in its own card.
 
 ## Lists before cards
 
@@ -182,7 +179,7 @@ Transactions (Recent activity, History, an account's page) are flat rows straigh
 
 Every chart answers one question, written as its section title.
 
-- **Balance line** (`BalanceLine`): one green line over a quiet dashed grid, a compact scale on the right (hidden while amounts are hidden), first, middle and last dates below, and a dot for today. Drag across it with a finger or mouse, or use the arrow keys, to read any day; on Home it is white on green and that day's balance replaces the headline. Range chips run 1W to 1Y. There is no 1D range because balances are tracked per day.
+- **Balance line** (`BalanceLine`): one green line over a quiet dashed grid, a compact scale on the right (hidden while amounts are hidden), first, middle and last dates below, and a dot for today. Drag across it with a finger or mouse, or use the arrow keys, to read any day; and on Home that day's balance replaces the headline. Range chips run 1W to 1Y. There is no 1D range because balances are tracked per day.
 - **Where it went:** a ranked list with bars sized to the largest category, not a pie.
 - **Money in and out:** restrained 12-month bars, money in in Faldo's green and money out in panda ink.
 - **Where it went and This month:** each category in its palette colour; the ring's middle shows the total spent, and the legend names every colour it uses.
@@ -192,12 +189,12 @@ Every chart answers one question, written as its section title.
 
 Fast and ordered, using transforms and opacity only.
 
-- **Tabs:** the lens glides to the new tab on a spring, filling the icons it passes over (see Navigation).
+- **Tabs:** the lens glides to the new tab on a spring, stretching with its speed and filling the icons it passes over (see Navigation).
 - **Pages:** the first visit plays `page-enter`: the header settles in 160ms, then each group below follows at 30ms steps (220ms each: fade, a 6px rise, 3px blur to sharp), and anything marked `.cascade` (Plan rows, History days, Wallet groups, quick actions, Home cards) flows in one after another at 30ms steps, capped at 160ms. A page is in place within about a third of a second, because tabs are switched all day. Coming back to a page plays a quick 180ms fade (`page-return`).
 - **Sheets:** on phones every dialog is a bottom sheet (`IosSheet`, `SHEET_CLASSES`) that rises the full height in 400ms and leaves in 250ms on the iOS drawer curve, `cubic-bezier(0.32, 0.72, 0, 1)`, without fading. Pull it down by the grabber or header (`useSheetDrag`) and it follows the finger while the dim lifts; past 120px, or flicked, it closes from where you let go, otherwise it springs back. Pulled up, it resists.
-- **Scroll:** on scroll down the tab bar sinks away and turns into a glass + in the corner and the page header fades up out of the way; on scroll up both come back, the bar rising under the +, which fades into it.
+- **Scroll:** on scroll down the tab bar draws in to the + in the corner; on scroll up it grows back out of it (see Navigation). The page header stays put. Pull down at the top of a page to refresh it in place.
 - **Theme:** light and dark crossfade in 240ms with view transitions where supported (`useSmoothTheme`).
-- **Everything else:** money counts up, buttons press to 97%, progress bars fill with a transform (never `width`), and transitions name their properties (never `transition-all`). A dismissed insight folds away in 200ms before it leaves the list, and switching Day, Week or Month on money in and out fades the new amounts in over 150ms. The green band and its bamboo never move.
+- **Everything else:** money counts up, buttons press to 97%, progress bars fill with a transform (never `width`), and transitions name their properties (never `transition-all`). A dismissed insight folds away in 200ms before it leaves the list, and switching Day, Week or Month on money in and out fades the new amounts in over 150ms. The green strip never moves.
 
 Headline money (balance, net worth, Safe to Spend) counts up from zero when it appears. Faldo animates fully by default, whatever the device's own Reduce Motion setting says (the owner's choice); "Reduce motion" in Settings > Appearance turns every animation into an instant change (`html[data-motion="reduced"]`, set before first paint). The sky bands (`data-band`) never fade in, so switching pages never flashes white at the top.
 

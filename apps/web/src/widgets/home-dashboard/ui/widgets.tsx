@@ -3,10 +3,9 @@
 import Link from "next/link"
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, Flag, MessageCircle, PieChart, Scale, type LucideIcon } from "lucide-react"
-import { TINTED } from "@/shared/ui/category-icon"
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, Ellipsis, Flag, PieChart, Plus, Scale, type LucideIcon } from "lucide-react"
 import { Money } from "@/shared/ui/money/money"
-import { Section } from "@/shared/ui/ios/panel"
+import { Segmented } from "@/shared/ui/ios/segmented"
 import { useAppActions } from "@/shared/lib/app-actions"
 import { Skeleton } from "@/shared/ui/skeleton"
 import { formatMoney } from "@/shared/lib/format"
@@ -15,50 +14,60 @@ import { useDashboard } from "@/entities/dashboard"
 import { play } from "@/shared/lib/sound"
 import type { CategoryRow, Dashboard } from "@/shared/api/types"
 import { cn } from "@/shared/lib/utils"
+import { MoreSheet } from "./more-sheet"
 
-type QuickAction = { label: string; icon: LucideIcon; tint: string } & ({ href: string } | { action: "check" })
+type QuickAction = { label: string; icon: LucideIcon } & ({ href: string } | { action: "add" | "check" | "more" })
 
 /**
- * Four, not a second tab bar: deciding on a purchase, the two plans people check most, and Faldo himself. Bills
- * are on Home already (Payments due); money owed and the forecast are one tap away on Plan, importing on Wallet.
+ * Five, not a second tab bar: record money first, then deciding on a purchase, the two plans people check most, and
+ * More for everything else. Bills are on Home already (Payments due); Faldo is his note above.
  */
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: "Check", icon: Scale, tint: PALETTE.green, action: "check" },
-  { label: "Budgets", icon: PieChart, tint: PALETTE.gold, href: "/budgets" },
-  { label: "Goals", icon: Flag, tint: PALETTE.teal, href: "/goals" },
-  { label: "Ask Faldo", icon: MessageCircle, tint: "var(--primary)", href: "/assistant" },
+  { label: "Add", icon: Plus, action: "add" },
+  { label: "Check", icon: Scale, action: "check" },
+  { label: "Budgets", icon: PieChart, href: "/budgets" },
+  { label: "Goals", icon: Flag, href: "/goals" },
+  { label: "More", icon: Ellipsis, action: "more" },
 ]
 
-/** A round button on a soft wash of its colour, drawn like the category icons; it dips when pressed. */
-const tile = cn("flex size-14 items-center justify-center rounded-full transition-[scale,background-color] duration-200 ease-(--ease-out-quint) group-active:scale-[0.94] [&_svg]:size-[1.375rem] group-hover:bg-[color-mix(in_oklab,var(--cat)_22%,transparent)]", TINTED)
-
-/** Shortcuts to the places people open most: one row of round buttons right under the balance, so no heading. */
+/** Quick actions: square sage tiles with Faldo's green icons, named underneath. Add, the everyday one, is solid. */
 export function QuickActions({ className }: { className?: string }) {
-  const { openCheck } = useAppActions()
+  const { openAddTransaction, openCheck } = useAppActions()
+  const [more, setMore] = useState(false)
+  const run = (action: "add" | "check" | "more") => {
+    play("tap")
+    if (action === "add") openAddTransaction({ mode: "expense" })
+    else if (action === "check") openCheck()
+    else setMore(true)
+  }
   return (
-    <Section className={className}>
-      <ul aria-label="Quick actions" className="cascade grid grid-cols-4 gap-x-2">
+    <section aria-labelledby="quick-title" className={cn("card-surface px-2.5 pt-4 pb-3", className)}>
+      <h2 id="quick-title" className="section-title px-1.5">Quick actions</h2>
+      <ul className="cascade mt-3 grid grid-cols-5 gap-1">
         {QUICK_ACTIONS.map((q) => {
           const Icon = q.icon
+          const lead = "action" in q && q.action === "add"
           const body = (
             <>
-              <span className={tile} style={{ "--cat": q.tint } as React.CSSProperties}><Icon strokeWidth={2} /></span>
-              <span className="mt-1.5 block w-full truncate text-center text-[0.75rem] font-medium text-foreground/70">{q.label}</span>
+              <span className={cn("flex size-12 items-center justify-center rounded-[0.875rem] transition-[scale,background-color] duration-200 ease-(--ease-out-quint) group-active:scale-[0.94] [&_svg]:size-[1.3rem]",
+                lead ? "bg-primary text-primary-foreground" : "bg-secondary text-primary group-hover:bg-mint")}>
+                <Icon strokeWidth={2} />
+              </span>
+              <span className="mt-1.5 block w-full truncate text-center text-[0.75rem] font-medium text-muted-foreground">{q.label}</span>
             </>
           )
-          const classes = "group flex flex-col items-center rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          const classes = "group flex w-full flex-col items-center rounded-[0.875rem] py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           return (
             <li key={q.label} className="min-w-0">
-              {"href" in q ? (
-                <Link href={q.href} onClick={() => play("tap")} className={classes}>{body}</Link>
-              ) : (
-                <button type="button" onClick={() => { play("tap"); openCheck() }} className={cn(classes, "w-full")}>{body}</button>
-              )}
+              {"href" in q
+                ? <Link href={q.href} onClick={() => play("tap")} className={classes}>{body}</Link>
+                : <button type="button" onClick={() => run(q.action)} aria-haspopup="dialog" className={classes}>{body}</button>}
             </li>
           )
         })}
       </ul>
-    </Section>
+      <MoreSheet open={more} onOpenChange={setMore} />
+    </section>
   )
 }
 
@@ -192,39 +201,48 @@ const PERIODS = [
   { id: "this_month", label: "Month", title: "This month" },
 ] as const
 
-/** Money in and out for today, this week or this month, each named, not only coloured. */
+type PeriodId = (typeof PERIODS)[number]["id"]
+
+/** Long amounts step down a size so they always fit a half-width card. */
+export function fitSize(text: string, sizes: [string, string, string]) {
+  return text.length <= 8 ? sizes[0] : text.length <= 11 ? sizes[1] : sizes[2]
+}
+
+/**
+ * Money in and out for today, this week or this month: the two amounts stacked, each named, not only coloured,
+ * and the period switch at the foot. Sized to sit beside Safe to Spend.
+ */
 export function MoneyInOut({ className }: { className?: string }) {
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>(PERIODS[0])
+  const [periodId, setPeriodId] = useState<PeriodId>("this_month")
+  const period = PERIODS.find((p) => p.id === periodId)!
   const { data, isLoading } = useDashboard(period.id)
   const overview = data?.period.name === period.id ? data.overview : undefined
+  const rows = [
+    { label: "Money in", value: overview?.income_minor, Icon: ArrowDownLeft, tone: "text-income" },
+    { label: "Money out", value: overview?.expense_minor, Icon: ArrowUpRight, tone: "text-expense" },
+  ] as const
   return (
-    <section aria-label="Money in and out" className={cn("card-surface flex min-w-0 flex-col rounded-[1.5rem] p-5", className)}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[1.0625rem] font-bold tracking-[-0.02em]">{period.title}</h2>
-        <div className="flex rounded-full bg-muted p-0.5" role="radiogroup" aria-label="Period">
-          {PERIODS.map((p) => (
-            <button key={p.id} type="button" role="radio" aria-checked={p.id === period.id}
-              onClick={() => { play("select"); setPeriod(p) }}
-              className={cn("hit h-7 rounded-full px-2.5 text-[0.75rem] font-semibold transition-[background-color,color,box-shadow] duration-200",
-                p.id === period.id ? "bg-card text-foreground shadow-[0_1px_2px_rgb(16_36_24/0.1)] dark:bg-accent" : "text-muted-foreground hover:text-foreground")}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <dl className="mt-auto grid grid-cols-2 gap-3 pt-4">
-        {([["Money in", overview?.income_minor, ArrowDownLeft, "text-income"], ["Money out", overview?.expense_minor, ArrowUpRight, "text-foreground"]] as const).map(([label, value, Icon, tone]) => (
+    <section aria-labelledby="flow-title" className={cn("card-surface flex min-w-0 flex-col p-4", className)}>
+      <h2 id="flow-title" className="section-title">{period.title}</h2>
+      <dl className="mt-2.5 space-y-2.5">
+        {rows.map(({ label, value, Icon, tone }) => (
           <div key={label} className="min-w-0">
             <dt className="flex items-center gap-1 text-[0.75rem] text-muted-foreground">
-              <Icon className={cn("size-3.5", label === "Money in" ? "text-income" : "text-muted-foreground")} strokeWidth={2.2} aria-hidden />{label}
+              <Icon className={cn("size-3.5", tone)} strokeWidth={2.2} aria-hidden />{label}
             </dt>
-            <dd className="mt-1">
-              {isLoading && !overview ? <Skeleton className="h-6 w-20" />
-                : <Money key={period.id} minor={value ?? 0} className={cn("block truncate font-money text-[1.375rem] leading-tight font-extrabold tracking-[-0.02em] animate-in fade-in-0 duration-150", (value ?? 0) > 0 && tone)} />}
+            <dd>
+              {isLoading && !overview ? <Skeleton className="mt-1 h-5 w-20" />
+                : <Money key={period.id} minor={value ?? 0}
+                  className={cn("block font-money leading-tight font-extrabold tracking-[-0.02em] animate-in fade-in-0 duration-150",
+                    fitSize(formatMoney(value ?? 0), ["text-[1.25rem]", "text-[1.0625rem]", "text-[0.9375rem]"]), (value ?? 0) > 0 && tone)} />}
             </dd>
           </div>
         ))}
       </dl>
+      <div className="mt-auto pt-3.5">
+        <Segmented size="xs" label="Period" value={periodId} onChange={setPeriodId} className="flex w-full"
+          options={PERIODS.map((p) => ({ value: p.id, label: p.label }))} />
+      </div>
     </section>
   )
 }

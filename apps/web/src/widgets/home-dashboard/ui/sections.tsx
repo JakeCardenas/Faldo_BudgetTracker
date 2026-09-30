@@ -11,7 +11,7 @@ import { Money } from "@/shared/ui/money/money"
 import { TransactionRow, TransactionRows } from "@/entities/transaction"
 import { Section } from "@/shared/ui/ios/panel"
 import { useAppActions } from "@/shared/lib/app-actions"
-import { AccountCard } from "@/entities/account"
+import { AccountTile } from "@/entities/account"
 import { api, ApiError } from "@/shared/api/client"
 import { formatDate, formatMoney } from "@/shared/lib/format"
 import { usePulse } from "@/entities/insight"
@@ -24,13 +24,13 @@ export function AccountsRail({ data }: { data: Dashboard }) {
   const accounts = data.accounts.filter((a) => !a.archived)
   return (
     <Section title="Accounts" href="/accounts" linkLabel={accounts.length > 3 ? `All ${accounts.length}` : "See all"}>
-      <div className="rail -mb-3 overflow-y-hidden pb-4 lg:mx-0 lg:mb-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 lg:pb-0">
+      <div className="rail -mb-3 overflow-y-hidden pb-4 lg:mx-0 lg:mb-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 lg:pb-0">
         {accounts.map((account, i) => (
-          <AccountCard key={account.id} account={account} index={i} size="md" fluid className={cn(i >= 3 && "lg:hidden")} />
+          <AccountTile key={account.id} account={account} index={i} className={cn("w-[10.5rem] shrink-0 lg:w-auto", i >= 4 && "lg:hidden")} />
         ))}
         <button type="button" onClick={() => setAdding(true)}
-          className={cn("pressable flex min-h-[9rem] w-[9.5rem] shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-foreground/15 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground",
-            accounts.length >= 3 && "lg:hidden")}>
+          className={cn("pressable flex aspect-[1.45] w-[10.5rem] shrink-0 flex-col items-center justify-center gap-2 rounded-[1.125rem] border border-dashed border-foreground/15 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground lg:w-auto",
+            accounts.length >= 4 && "lg:hidden")}>
           <span className="flex size-9 items-center justify-center rounded-full bg-muted"><Plus className="size-4.5" /></span>
           Add account
         </button>
@@ -172,11 +172,21 @@ export function PaymentsDue({ data, limit = 3 }: { data: Dashboard; limit?: numb
   const today = parseISO(formatDate(new Date().toISOString(), "yyyy-MM-dd"))
   return (
     <section aria-labelledby="payments-title" className="min-w-0">
-      <Link href="/bills" className="group hit mb-3 flex items-center justify-between gap-3">
-        <h2 id="payments-title" className="section-title">Payments due</h2>
-        <span className="flex items-center gap-1 text-[0.875rem] font-medium text-primary">
-          {count > 0 ? <><Money minor={total} className="font-bold" /> in 3 weeks</> : "Nothing due"}
-          <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.2} />
+      <Link href="/bills" className="group mb-3 flex items-end justify-between gap-3 rounded-lg px-0.5">
+        <span className="min-w-0">
+          <h2 id="payments-title" className="section-title">Payments due</h2>
+          <span className="block text-[0.8125rem] text-muted-foreground">
+            {count > 0 ? `${count} ${count === 1 ? "payment" : "payments"} in the next 3 weeks` : "Nothing due in the next 3 weeks"}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {count > 0 && (
+            <span className="text-right">
+              <Money minor={total} className="block text-[1.0625rem] font-extrabold tracking-[-0.015em]" />
+              <span className="label-caps block">Total due</span>
+            </span>
+          )}
+          <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" strokeWidth={2.2} aria-hidden />
         </span>
       </Link>
       {rows.length > 0 && (
@@ -191,7 +201,10 @@ export function PaymentsDue({ data, limit = 3 }: { data: Dashboard; limit?: numb
                     <span className="block truncate text-[0.96875rem] font-semibold tracking-[-0.01em]">{row.title}</span>
                     <span className={cn("block truncate text-[0.8125rem] font-medium", STATUS_TEXT[status.tone])}>{status.text}</span>
                   </Link>
-                  <Money minor={row.amount} signed={row.income} className={cn("text-[0.96875rem] font-bold tracking-[-0.01em]", row.income && "text-income")} />
+                  <span className="shrink-0 text-right">
+                    <Money minor={row.amount} signed={row.income} className={cn("block text-[0.96875rem] font-bold tracking-[-0.01em]", row.income && "text-income")} />
+                    <span className="label-caps block">{row.income ? "Expected" : "Due"}</span>
+                  </span>
                 </div>
                 {row.attention && <div className="pl-15"><RecurringActions item={row.attention} /></div>}
               </li>

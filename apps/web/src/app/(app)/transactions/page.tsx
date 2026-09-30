@@ -20,7 +20,6 @@ import { Label } from "@/shared/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
 import { Skeleton } from "@/shared/ui/skeleton"
 import { api, ApiError } from "@/shared/api/client"
-import { setChromeAway, useChromeAway } from "@/shared/lib/chrome"
 import { formatDate } from "@/shared/lib/format"
 import { useMaskedAmounts } from "@/shared/lib/privacy"
 import { useAccounts } from "@/entities/account"
@@ -60,7 +59,6 @@ function HistoryView() {
   const params = useSearchParams()
   const { openAddTransaction, openTransaction } = useAppActions()
   const [q, setQ] = useState(params.get("q") ?? "")
-  const away = useChromeAway()
   const [kind, setKind] = useState<Kind>("all")
   const [accountId, setAccountId] = useState(ALL)
   const [categoryId, setCategoryId] = useState(params.get("category") ?? ALL)
@@ -109,7 +107,7 @@ function HistoryView() {
         actions={<>
           {confirmDialog}
           {/* Downloading everything needs a recent sign-in on this device; the dialog asks when the server does. */}
-          <button type="button" onClick={exportData} className="glass-control pressable hidden h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold lg:flex"><Download className="size-[1.05rem] text-foreground/75" /> Export</button>
+          <HeaderButton onClick={exportData} className="hidden lg:inline-flex"><Download /> Export</HeaderButton>
           <HeaderButton onClick={() => openAddTransaction({ mode: "expense" })} aria-label="Add"><Plus /><span className="max-lg:sr-only">Add</span></HeaderButton>
         </>} />
 
@@ -127,7 +125,7 @@ function HistoryView() {
       )}
 
       {/* Search and filters step aside with the header while you scroll down (phones only). */}
-      <div data-away={away} onFocus={() => setChromeAway(false)} className="glass chrome-hide sticky top-[calc(2.75rem+var(--top-inset))] z-20 -mx-5 space-y-2.5 px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-16 lg:-mx-2 lg:px-2 lg:pt-3">
+      <div className="sticky top-[calc(3.5rem+var(--top-inset))] z-20 -mx-5 space-y-2.5 bg-background px-5 pt-1 pb-3 sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-2 lg:px-2 lg:pt-3">
         <div className="flex gap-2">
           <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-muted px-4 transition-shadow focus-within:ring-2 focus-within:ring-ring/40">
             <Search className="size-4 shrink-0 text-muted-foreground" />

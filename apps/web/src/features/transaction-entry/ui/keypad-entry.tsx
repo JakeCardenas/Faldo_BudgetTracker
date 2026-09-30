@@ -5,10 +5,11 @@ import { useQueryClient } from "@tanstack/react-query"
 import { format, subDays } from "date-fns"
 import { ArrowRight, CalendarDays, Check, ChevronDown, Delete, Grid3x3, NotebookPen, Plus, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
-import { BalanceNote, useAccounts } from "@/entities/account"
+import { AccountBadge, BalanceNote, useAccounts } from "@/entities/account"
 import { CategoryIcon } from "@/shared/ui/category-icon"
 import { Chip } from "@/shared/ui/ios/segmented"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu"
 import { api, ApiError } from "@/shared/api/client"
 import { evaluate, formatExpression, hasOperation, pressKey } from "@/shared/lib/calculator"
 import { currencySymbol, formatMoney, monthKey, todayISO } from "@/shared/lib/format"
@@ -62,6 +63,35 @@ function BudgetRing({ pct, color }: { pct: number; color: string }) {
   )
 }
 
+/** When it happened: Today by default, Yesterday one tap away, any earlier day from the system date picker. */
+function DatePicker({ date, onChange }: { date: string; onChange: (date: string) => void }) {
+  const input = useRef<HTMLInputElement>(null)
+  const today = todayISO()
+  const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
+  const label = date === today ? "Today" : date === yesterday ? "Yesterday" : format(new Date(`${date}T00:00:00`), "MMM d")
+  return (
+    <DropdownMenu>
+      <div className="relative shrink-0">
+        <DropdownMenuTrigger aria-label={`Date, ${label}`}
+          className="pressable flex h-12 items-center gap-2 rounded-[0.875rem] bg-card px-3 text-left shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/60 aria-expanded:bg-accent/60">
+          <CalendarDays className="size-4 text-primary" />
+          <span>
+            <span className="label-caps block leading-tight">Date</span>
+            <span className="block text-sm leading-tight font-medium whitespace-nowrap">{label}</span>
+          </span>
+        </DropdownMenuTrigger>
+        <input ref={input} type="date" value={date} max={today} onChange={(e) => e.target.value && onChange(e.target.value)}
+          className="pointer-events-none absolute inset-0 opacity-0" tabIndex={-1} aria-label="Transaction date" />
+      </div>
+      <DropdownMenuContent align="end" side="top" className="w-44">
+        <DropdownMenuItem onSelect={() => onChange(today)}>{date === today && <Check />} Today</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onChange(yesterday)}>{date === yesterday && <Check />} Yesterday</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => input.current?.showPicker?.()}><CalendarDays /> Pick a date…</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 function AccountPicker({ label, accounts, value, onChange, exclude }: {
   label: string
   accounts: Account[]
@@ -73,13 +103,12 @@ function AccountPicker({ label, accounts, value, onChange, exclude }: {
   const selected = accounts.find((a) => a.id === value)
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="pressable flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-lg border bg-card px-2.5 text-left hover:bg-accent/60 aria-expanded:bg-accent/60">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md text-[0.6875rem] font-semibold text-white"
-          style={{ backgroundColor: selected?.color ?? "var(--primary)" }}>
-          {(selected?.name ?? "?").slice(0, 2).toUpperCase()}
-        </span>
+      <PopoverTrigger className="pressable flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-[0.875rem] bg-card px-2.5 text-left shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/60 aria-expanded:bg-accent/60">
+        {selected ? <AccountBadge account={selected} index={accounts.indexOf(selected)} className="size-8" /> : (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-[0.6875rem] font-semibold text-primary">?</span>
+        )}
         <span className="min-w-0 flex-1">
-          <span className="block text-[0.6875rem] leading-tight text-muted-foreground">{label}</span>
+          <span className="label-caps block leading-tight">{label}</span>
           <span className="block truncate text-sm leading-tight font-medium">{selected?.name ?? "Choose account"}</span>
         </span>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
@@ -89,8 +118,7 @@ function AccountPicker({ label, accounts, value, onChange, exclude }: {
           {accounts.filter((a) => a.id !== exclude).map((account) => (
             <button key={account.id} type="button" onClick={() => { onChange(account.id); setOpen(false) }}
               className={cn("flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-accent", account.id === value && "bg-accent")}>
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md text-[0.6875rem] font-semibold text-white"
-                style={{ backgroundColor: account.color ?? "var(--primary)" }}>{account.name.slice(0, 2).toUpperCase()}</span>
+              <AccountBadge account={account} index={accounts.indexOf(account)} className="size-8" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{account.name}</span>
                 <span className="tabular block text-xs text-muted-foreground">{formatMoney(account.balance_minor, account.currency)}</span>
@@ -162,7 +190,6 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
   const [saving, setSaving] = useState(false)
   // One key for this entry however many times Save is tried, so a retry after a dropped connection can't log it twice.
   const submission = useSubmissionKey()
-  const dateRef = useRef<HTMLInputElement>(null)
 
   const [remembered] = useState(readLastAccount)
   const defaultAccountId = useMemo(() => {
@@ -275,23 +302,24 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
     return () => window.removeEventListener("keydown", onKey)
   })
 
-  const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
   const symbol = currencySymbol(me?.settings.currency)
   const typeLabel = type === "expense" ? "Expense" : type === "income" ? "Income" : "Transfer"
 
+  // Phones: one column, the keypad and Save at the foot. Desktop: the same order in two columns, what it is on the
+  // left and the keypad with account, date and Save on the right.
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-4 sm:px-5">
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      <div className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-4 sm:px-5 lg:px-6 lg:pb-6">
         <div className="flex min-h-24 flex-col items-center justify-center pt-3 pb-2" aria-live="polite">
           {hasOperation(expr) && <p className="tabular mb-1 text-sm text-muted-foreground">{formatExpression(expr)}</p>}
-          <p className={cn("tabular flex items-start font-semibold tracking-[-0.035em]", amountMinor >= 1_000_000_00 ? "text-[2.5rem] leading-none" : "text-[3.25rem] leading-none")}>
+          <p className={cn("tabular flex items-start font-money font-extrabold tracking-[-0.035em]", amountMinor >= 1_000_000_00 ? "text-[2.5rem] leading-none" : "text-[3.25rem] leading-none")}>
             <span className="mt-[0.18em] mr-1 text-[0.5em] font-medium tracking-normal text-muted-foreground">{symbol}</span>
             {hasOperation(expr) ? (value !== null ? formatExpression(String(value)) : "0") : expr ? formatExpression(expr) : <span className="text-muted-foreground/35">0</span>}
           </p>
         </div>
 
-        <label className="flex h-11 items-center gap-2.5 rounded-lg bg-muted px-3 focus-within:ring-3 focus-within:ring-ring/25">
-          <NotebookPen className="size-4 shrink-0 text-muted-foreground" />
+        <label className="flex h-12 items-center gap-2.5 rounded-[0.875rem] bg-muted px-3.5 focus-within:ring-3 focus-within:ring-ring/25">
+          <NotebookPen className="size-4 shrink-0 text-primary" />
           <span className="sr-only">Note</span>
           <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={120} data-entry-note=""
             onFocus={() => setKeypad(false)}
@@ -309,7 +337,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
 
         {templates.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[0.8125rem] font-medium text-muted-foreground">Recent {type === "income" ? "income" : type === "transfer" ? "transfers" : "expenses"}</p>
+            <p className="label-caps">Recent {type === "income" ? "income" : type === "transfer" ? "transfers" : "expenses"}</p>
             {/* Bleeds to the sheet's edges: exactly its padding, or the whole sheet would scroll sideways. */}
             <div className="-mx-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 scrollbar-none sm:-mx-5 sm:px-5">
               {templates.map((t) => (
@@ -321,7 +349,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
                   setSubcategoryId(t.subcategory_id ?? "")
                   setAccountId(t.account_id)
                   if (t.to_account_id) setToAccountId(t.to_account_id)
-                }} className="pressable w-32 shrink-0 rounded-lg border bg-card px-3 py-2 text-left hover:bg-accent/60">
+                }} className="pressable w-32 shrink-0 rounded-[0.875rem] bg-card px-3 py-2 text-left shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/60">
                   <span className="tabular block text-sm font-semibold">{formatMoney(t.amount_minor, t.currency)}</span>
                   <span className="block truncate text-xs">{t.merchant ?? t.notes ?? t.category_name ?? typeLabel}</span>
                   <span className="block truncate text-[0.6875rem] text-muted-foreground">{t.account_name}</span>
@@ -333,7 +361,7 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
 
         {type !== "transfer" && (
           <div className="space-y-2">
-            <p className="text-[0.8125rem] font-medium text-muted-foreground">Category <span className="font-normal text-muted-foreground/80">(optional)</span></p>
+            <p className="label-caps">Category <span className="font-medium tracking-normal normal-case">(optional)</span></p>
             <div className="flex flex-wrap gap-2">
               {topCategories.map((category) => {
                 const line = budgetByCategory.get(category.id)
@@ -341,8 +369,8 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
                 return (
                   <button key={category.id} type="button" aria-pressed={selected}
                     onClick={() => { play("select"); setCategoryId(selected ? "" : category.id); setSubcategoryId("") }}
-                    className={cn("pressable flex h-10 items-center gap-2 rounded-lg border bg-card pr-3 pl-1 text-left hover:bg-accent/60",
-                      selected && "border-primary/45 bg-secondary hover:bg-secondary")}>
+                    className={cn("pressable flex h-11 items-center gap-2 rounded-[0.875rem] bg-card pr-3 pl-1 text-left shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/60",
+                      selected && "bg-secondary shadow-[inset_0_0_0_1.5px_var(--primary)] hover:bg-secondary")}>
                     <span className="relative flex size-8 items-center justify-center">
                       {line && <BudgetRing pct={line.pct_used} color={category.color ?? "var(--primary)"} />}
                       <CategoryIcon icon={category.icon} color={category.color} size="sm" />
@@ -366,34 +394,26 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip active={date === todayISO()} onClick={() => setDate(todayISO())}>Today</Chip>
-          <Chip active={date === yesterday} onClick={() => setDate(yesterday)}>Yesterday</Chip>
-          <Chip active={date !== todayISO() && date !== yesterday} onClick={() => dateRef.current?.showPicker?.()} className="relative gap-1.5">
-            <CalendarDays className="mr-1.5 inline size-3.5" />
-            {date !== todayISO() && date !== yesterday ? format(new Date(`${date}T00:00:00`), "MMM d, yyyy") : "Pick date"}
-            <input ref={dateRef} type="date" value={date} max={todayISO()} onChange={(e) => e.target.value && setDate(e.target.value)}
-              className="pointer-events-none absolute inset-0 opacity-0" tabIndex={-1} aria-label="Transaction date" />
-          </Chip>
+        <div className="flex justify-end">
           <button type="button" onClick={() => onMoreDetails({
             type, amount_minor: amountMinor || undefined, occurred_on: date, account_id: fromId || undefined,
             to_account_id: toId || null, category_id: categoryId || null, subcategory_id: subcategoryId || null, notes: note || null,
-          })} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[0.8125rem] font-medium text-primary hover:opacity-80">
+          })} className="hit inline-flex h-8 items-center gap-1.5 rounded-md px-1 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
             <SlidersHorizontal className="size-3.5" /> More details
           </button>
         </div>
       </div>
 
-      <div className="border-t bg-popover px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      <div className="border-t bg-popover px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:flex lg:w-[22rem] lg:shrink-0 lg:flex-col lg:justify-end lg:border-t-0 lg:border-l lg:px-4 lg:pt-4 lg:pb-4">
         {keypad && (
           <div className="grid grid-cols-4 gap-1.5 pb-2.5 select-none-touch">
             {KEYS.map(({ key, label, tone }) => (
               <button key={key} type="button" onClick={() => press(key)} aria-label={key === "⌫" ? "Delete" : key === "AC" ? "Clear" : key}
-                className={cn("pressable flex h-12 items-center justify-center rounded-lg text-[1.375rem] transition-colors sm:h-11",
-                  tone === "digit" && "bg-muted/80 text-foreground hover:bg-muted",
-                  tone === "op" && "bg-muted/80 text-primary hover:bg-muted",
-                  tone === "danger" && "bg-muted/80 text-base font-medium text-muted-foreground hover:bg-muted",
-                  tone === "primary" && "bg-secondary text-secondary-foreground hover:bg-secondary/80")}>
+                className={cn("pressable flex h-12 items-center justify-center rounded-[0.875rem] text-[1.375rem] transition-colors sm:h-11",
+                  tone === "digit" && "bg-muted text-foreground hover:bg-accent",
+                  tone === "op" && "bg-secondary text-primary hover:bg-mint",
+                  tone === "danger" && "bg-danger-soft text-base font-semibold text-expense hover:bg-danger-soft/70",
+                  tone === "primary" && "bg-primary text-primary-foreground hover:bg-primary/90")}>
                 {label ?? key}
               </button>
             ))}
@@ -401,14 +421,17 @@ export function KeypadEntry({ type, preset, onSaved, onMoreDetails }: {
         )}
         {type !== "income" && <BalanceNote account={active.find((a) => a.id === fromId)} amountMinor={amountMinor} className="px-1 pb-2.5" />}
         <div className="flex items-center gap-2">
+          {type !== "transfer" && <AccountPicker label="Account" accounts={active} value={fromId} onChange={setAccountId} />}
+          <DatePicker date={date} onChange={setDate} />
+        </div>
+        <div className="mt-2 flex items-center gap-2">
           <button type="button" onClick={() => setKeypad((k) => !k)} aria-label={keypad ? "Hide keypad" : "Show keypad"} aria-pressed={keypad}
-            className="pressable flex size-12 shrink-0 items-center justify-center rounded-lg border bg-card text-muted-foreground hover:bg-accent/60 aria-pressed:text-foreground">
+            className="pressable flex size-12 shrink-0 items-center justify-center rounded-[0.875rem] bg-card text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)] hover:bg-accent/60 aria-pressed:text-primary">
             <Grid3x3 className="size-5" strokeWidth={2} />
           </button>
-          {type !== "transfer" && <AccountPicker label="Account" accounts={active} value={fromId} onChange={setAccountId} />}
           <button type="button" onClick={save} disabled={!canSave || saving}
-            className={cn("pressable h-12 shrink-0 rounded-lg bg-primary px-5 text-[0.9375rem] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40", type === "transfer" && "flex-1")}>
-            {saving ? "Saving…" : `Save ${typeLabel}`}
+            className="pressable h-12 flex-1 rounded-[0.875rem] bg-primary px-5 text-[0.9375rem] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40">
+            {saving ? "Saving…" : `Save ${typeLabel.toLowerCase()}`}
           </button>
         </div>
       </div>

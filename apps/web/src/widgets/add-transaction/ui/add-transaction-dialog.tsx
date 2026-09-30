@@ -444,13 +444,13 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
       <DialogContent ref={ref} showCloseButton={false} aria-describedby={undefined}
         onOpenAutoFocus={(e) => { if (keypad) { e.preventDefault(); (e.currentTarget as HTMLElement).focus() } }}
         className={cn("flex flex-col gap-0 overflow-hidden bg-popover p-0 max-sm:h-[94dvh]", SHEET_CLASSES,
-          keypad ? "sm:h-[min(52rem,94dvh)] sm:max-w-[27rem]" : "sm:max-h-[92dvh] sm:max-w-2xl")}>
+          keypad ? "sm:h-[min(52rem,94dvh)] sm:max-w-[27rem] lg:h-[min(40rem,90dvh)] lg:max-w-[54rem]" : "sm:max-h-[92dvh] sm:max-w-2xl")}>
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <div {...handle}>
         <SheetGrabber />
         <div className="flex items-center gap-2 px-3 pb-2 sm:px-4 sm:pt-4">
           {keypad ? (
-            <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
+            <button type="button" onClick={() => { play("close"); close() }} aria-label="Close" className="pressable hit flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground hover:bg-accent">
               <X className="size-5" strokeWidth={2} />
             </button>
           ) : (
@@ -467,9 +467,9 @@ export function AddTransactionDialog({ open, onOpenChange, mode, onModeChange, r
           {keypad ? (
             <div className="flex shrink-0 gap-1.5">
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("describe") }} aria-label="Type it out"
-                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><MessageCircle className="size-[1.15rem]" strokeWidth={2} /></button>
+                className="pressable hit flex size-9 items-center justify-center rounded-full bg-muted text-primary hover:bg-accent"><MessageCircle className="size-[1.15rem]" strokeWidth={2} /></button>
               <button type="button" onClick={() => { play("tap"); setLastEntry(entryType); onModeChange("receipt") }} aria-label="Scan a receipt or QR"
-                className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><ScanLine className="size-[1.15rem]" strokeWidth={2} /></button>
+                className="pressable hit flex size-9 items-center justify-center rounded-full bg-muted text-primary hover:bg-accent"><ScanLine className="size-[1.15rem]" strokeWidth={2} /></button>
             </div>
           ) : <span className="w-[4.5rem]" />}
         </div>

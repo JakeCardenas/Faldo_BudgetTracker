@@ -25,11 +25,11 @@ export function Notifications({ tone = "default" }: { tone?: "default" | "light"
       <PopoverTrigger
         className={tone === "light"
           ? "hit relative flex size-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15 focus-visible:ring-3 focus-visible:ring-white/40 focus-visible:outline-none aria-expanded:bg-white/15"
-          : "hit relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none aria-expanded:bg-accent aria-expanded:text-foreground"}
+          : "hit relative flex size-9 items-center justify-center rounded-full text-primary transition-colors hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none aria-expanded:bg-secondary"}
         aria-label={count ? `Notifications, ${count} new` : "Notifications"}
       >
         <Bell className="size-[1.1rem]" strokeWidth={2} />
-        {count > 0 && <span className={tone === "light" ? "absolute top-1.5 right-1.5 size-2 rounded-full bg-[#9be2ad] ring-2 ring-[#1f5436]" : "absolute top-2 right-2.5 size-1.5 rounded-full bg-primary ring-2 ring-background"} />}
+        {count > 0 && <span className={tone === "light" ? "absolute top-1.5 right-1.5 size-2 rounded-full bg-[#9be2ad] ring-2 ring-[#1f5436]" : "absolute top-1.5 right-2 size-2 rounded-full bg-expense ring-2 ring-card"} />}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(22rem,calc(100vw-1.5rem))] gap-0 overflow-hidden rounded-2xl p-0">
         <div className="border-b px-4 py-3">

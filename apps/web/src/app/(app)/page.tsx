@@ -2,55 +2,60 @@
 
 import { useState } from "react"
 import { Plus, Wallet } from "lucide-react"
-import { BAND_STYLE, BAND_TINT, BambooDecor } from "@/shared/ui/brand/environment"
 import { Panda } from "@/shared/ui/brand/panda"
-import { StatusBarTint } from "@/shared/ui/brand/status-bar-tint"
 import { AccountDialog } from "@/features/account-edit"
-import { BalanceCard, HomeBand, SafeToSpendCard, AccountsRail, PaymentsDue, RecentActivity, MoneyInOut, QuickActions, SpendingCard } from "@/widgets/home-dashboard"
+import { BalanceCard, BalanceRow, FaldoPanel, HomeHeader, SafeToSpendCard, AccountsRail, PaymentsDue, RecentActivity, MoneyInOut, QuickActions, SpendingCard } from "@/widgets/home-dashboard"
 import { useAppActions } from "@/shared/lib/app-actions"
 import { Button } from "@/shared/ui/button"
 import { Skeleton } from "@/shared/ui/skeleton"
-import { greeting } from "@/shared/lib/format"
+import { formatDate, greeting } from "@/shared/lib/format"
 import { useMaskedAmounts } from "@/shared/lib/privacy"
 import { useDashboard } from "@/entities/dashboard"
 import { useMe } from "@/entities/session"
 
 function HomeSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading your home screen">
-      <div style={BAND_STYLE} className="relative isolate -mx-5 h-[20rem] overflow-hidden px-5 pt-[calc(var(--top-inset)+0.625rem)] sm:-mx-6 sm:px-7 lg:mx-0 lg:mt-7 lg:h-56 lg:rounded-[2rem] lg:px-10 lg:pt-8">
-        <BambooDecor />
-        <div className="flex justify-between lg:hidden"><Skeleton className="size-11 rounded-full bg-white/12" /><Skeleton className="h-11 w-32 rounded-full bg-white/12" /></div>
-        <Skeleton className="mt-5 h-3 w-40 bg-white/15 lg:mt-0" /><Skeleton className="mt-2 h-7 w-56 bg-white/15" />
-        <Skeleton className="mt-6 ml-36 h-24 rounded-[1.25rem] bg-white/15 lg:ml-0 lg:w-96" />
-      </div>
-      <div className="mt-5 space-y-5 lg:mt-8">
-        <Skeleton className="h-80 rounded-[1.5rem]" />
-        <div className="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-8">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="mx-auto size-14 rounded-full" />)}</div>
-        <Skeleton className="h-96 rounded-[1.5rem] sm:h-72" />
+    <div aria-busy="true" aria-label="Loading your home screen" className="pt-[calc(var(--top-inset)+0.75rem)] lg:pt-10">
+      <div className="flex justify-between lg:hidden"><Skeleton className="size-11 rounded-full" /><Skeleton className="h-11 w-40 rounded-full" /></div>
+      <Skeleton className="mt-5 h-3 w-36 lg:mt-0" /><Skeleton className="mt-2 h-7 w-56" />
+      <div className="mt-4 grid grid-cols-1 gap-6 lg:mt-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
+        <div className="space-y-6">
+          <Skeleton className="h-36 rounded-[1.5rem]" />
+          <Skeleton className="h-32 rounded-[1.375rem]" />
+          <div className="grid grid-cols-1 gap-3 min-[375px]:grid-cols-2"><Skeleton className="h-48 rounded-[1.375rem]" /><Skeleton className="h-48 rounded-[1.375rem]" /></div>
+          <Skeleton className="h-60 rounded-[1.375rem]" />
+        </div>
+        <div className="hidden space-y-6 xl:block"><Skeleton className="h-80 rounded-[1.375rem]" /><Skeleton className="h-72 rounded-[1.375rem]" /></div>
       </div>
     </div>
   )
 }
 
+/** A first visit with nothing recorded: Faldo waves from his strip and offers the two first steps. */
 function Welcome() {
   const { data: me } = useMe()
   const { openAddTransaction } = useAppActions()
   const [adding, setAdding] = useState(false)
   const name = me?.display_name?.split(" ")[0]
   return (
-    <section data-band style={BAND_STYLE}
-      className="relative isolate -mx-5 flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center overflow-hidden px-6 pt-[calc(var(--top-inset)+2rem)] pb-28 text-center text-white sm:-mx-6 lg:mx-0 lg:mt-7 lg:min-h-0 lg:rounded-[2rem] lg:py-16">
-      <StatusBarTint color={BAND_TINT} />
-      <BambooDecor />
-      <Panda pose="wave" priority sizes="192px" className="w-44 drop-shadow-[0_18px_28px_rgb(0_0_0/0.28)] sm:w-48" />
-      <h1 className="mt-6 text-[1.75rem] leading-tight font-semibold tracking-[-0.03em]">{greeting()}{name ? `, ${name}` : ""}</h1>
-      <p className="mt-2 max-w-sm text-[0.9375rem] leading-relaxed text-white/85">
-        Your money story starts here. Add where your money lives and log what you spend. Faldo works out what&apos;s safe to spend.
-      </p>
-      <div className="mt-7 flex w-full max-w-xs flex-col gap-2.5 sm:max-w-none sm:flex-row sm:justify-center">
-        <Button size="lg" className="bg-white text-[#17462c] hover:bg-white/90" onClick={() => setAdding(true)}><Wallet /> Add an account</Button>
-        <Button size="lg" variant="glass" onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Log an expense</Button>
+    <section className="pt-[calc(var(--top-inset)+1.5rem)] lg:pt-12">
+      <p className="label-caps">{formatDate(new Date().toISOString(), "EEEE, MMMM d")}</p>
+      <h1 className="mt-1 text-[1.75rem] leading-tight tracking-[-0.03em] lg:text-[2rem]">{greeting()}{name ? <>, <span className="font-extrabold">{name}</span>!</> : ""}</h1>
+      <div className="relative -mx-5 mt-6 overflow-hidden sm:-mx-6 lg:mx-0 lg:rounded-[1.75rem]">
+        <div aria-hidden className="absolute inset-x-0 top-24 bottom-0 bg-hero" />
+        <div className="relative flex flex-col items-center px-5 pb-8 text-center sm:px-6">
+          <Panda pose="wave" priority sizes="176px" className="w-40 drop-shadow-[0_14px_22px_rgb(0_0_0/0.22)] sm:w-44" />
+          <div className="card-surface mt-3 w-full max-w-md p-5 text-left sm:p-6">
+            <p className="text-[1.0625rem] font-bold tracking-[-0.015em]">Your money story starts here</p>
+            <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-muted-foreground">
+              Add where your money lives and log what you spend. Faldo works out what&apos;s safe to spend.
+            </p>
+            <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+              <Button size="lg" className="flex-1" onClick={() => setAdding(true)}><Wallet /> Add an account</Button>
+              <Button size="lg" variant="secondary" className="flex-1" onClick={() => openAddTransaction({ mode: "expense" })}><Plus /> Log an expense</Button>
+            </div>
+          </div>
+        </div>
       </div>
       {adding && <AccountDialog open={adding} onOpenChange={setAdding} />}
     </section>
@@ -58,9 +63,9 @@ function Welcome() {
 }
 
 /**
- * Home, in order of what matters: Faldo's green band with the greeting and his note, then the balance
- * and how it moved (the hero), the quick actions under it, what's safe to spend, spending and money in
- * and out, payments due, accounts and recent activity.
+ * Home, in Tarsi's order: the greeting, Faldo's note on his green strip, quick actions, Safe to Spend beside money in
+ * and out, the total balance, what's due and the latest activity. On wide screens the balance line and spending sit
+ * in a side column; accounts close the page. The same order on every width, so nothing jumps between breakpoints.
  */
 export default function HomePage() {
   useMaskedAmounts()
@@ -79,24 +84,25 @@ export default function HomePage() {
 
   return (
     <div className="pb-4">
-      <HomeBand data={data} />
-      <div className="mt-5 grid grid-cols-1 gap-7 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-x-10 lg:gap-y-8">
-        <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
-          <BalanceCard data={data} className="order-2 lg:order-none" />
-          <QuickActions className="order-3 lg:order-none" />
-          <SpendingCard data={data} className="order-4 lg:order-none" />
-          <div className="order-7 lg:order-none"><AccountsRail data={data} /></div>
+      <HomeHeader />
+      <div className="mt-1 grid grid-cols-1 gap-6 lg:mt-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-8">
+        <div className="cascade flex min-w-0 flex-col gap-6">
+          <FaldoPanel data={data} />
+          <QuickActions />
+          <div className="grid grid-cols-1 gap-3 min-[375px]:grid-cols-2">
+            <SafeToSpendCard sts={data.safe_to_spend} />
+            <MoneyInOut />
+          </div>
+          <BalanceRow data={data} className="xl:hidden" />
+          <PaymentsDue data={data} />
+          <RecentActivity data={data} />
         </div>
-        {/* On desktop the right column carries what needs doing (Safe to Spend, money in and out, then what's due)
-            above the latest activity, so the two columns balance. On phones Safe to Spend, the answer to "am I okay
-            right now?", comes first, straight under the greeting (docs/FALDO_PRODUCT_SPEC.md, section 6). */}
-        <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
-          <SafeToSpendCard sts={data.safe_to_spend} className="order-1 lg:order-none" />
-          <MoneyInOut className="order-5 lg:order-none" />
-          <div className="order-6 lg:order-none"><PaymentsDue data={data} /></div>
-          <div className="order-8 lg:order-none"><RecentActivity data={data} /></div>
+        <div className="cascade flex min-w-0 flex-col gap-6">
+          <BalanceCard data={data} />
+          <SpendingCard data={data} />
         </div>
       </div>
+      <div className="mt-6 lg:mt-8"><AccountsRail data={data} /></div>
     </div>
   )
 }

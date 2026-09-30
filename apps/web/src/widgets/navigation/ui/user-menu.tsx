@@ -31,16 +31,26 @@ export function useLogout() {
   })
 }
 
-export function UserMenu() {
+/** The account menu. In the sidebar (`showName`) the trigger names who is signed in. */
+export function UserMenu({ showName = false }: { showName?: boolean }) {
   const { data: me } = useMe()
   const logout = useLogout()
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="rounded-full p-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/40" aria-label="Account menu">
-        <Avatar name={me?.display_name} />
+      <DropdownMenuTrigger aria-label="Account menu"
+        className={showName
+          ? "flex min-w-0 flex-1 items-center gap-2.5 rounded-[0.75rem] p-1.5 text-left outline-none hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/40"
+          : "rounded-full p-0.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/40"}>
+        <Avatar name={me?.display_name} className={showName ? "size-9 text-xs" : undefined} />
+        {showName && (
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">{me?.display_name}</span>
+            <span className="block truncate text-xs text-muted-foreground">{me?.email}</span>
+          </span>
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
+      <DropdownMenuContent align={showName ? "start" : "end"} side={showName ? "top" : "bottom"} className="w-60">
         <DropdownMenuLabel className="font-normal">
           <p className="text-sm font-medium">{me?.display_name}</p>
           <p className="truncate text-xs text-muted-foreground">{me?.email}</p>

@@ -14,7 +14,7 @@ import { AppActionsContext, type AddModeOption, type CheckPreset, type EntryPres
 import { AddMenu } from "@/widgets/add-menu"
 import { CommandSearch } from "@/widgets/command-search"
 import { FaldoBubble } from "@/widgets/faldo-bubble"
-import { MobileNav, TopNav } from "@/widgets/navigation"
+import { MobileNav, SideNav } from "@/widgets/navigation"
 import { Button } from "@/shared/ui/button"
 import { PullToRefresh } from "@/shared/ui/pull-to-refresh"
 import { useBubbleShown } from "@/shared/lib/bubble"
@@ -179,16 +179,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
           {/* The app paints its own canvas, so the body's colour only shows under the status bar and above a pull.
               The chat scrolls on its own and pulls down through its history, so it has no pull to refresh. */}
-          <PullToRefresh onRefresh={refresh} disabled={fullBleed} className="flex min-h-dvh flex-col bg-background">
-            {!fullBleed && <TopNav />}
-            <PageMain key={pathname} pathname={pathname} className={fullBleed
-              ? "w-full flex-1"
-              // With the Faldo bubble docked above the tab bar, the page scrolls far enough for its last row to clear it.
-              : cn("mx-auto w-full max-w-[1240px] flex-1 px-5 sm:px-6 lg:px-8 lg:pb-20", isNarrow(pathname) && "lg:max-w-[52rem]",
-                bubble ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(6.5rem+env(safe-area-inset-bottom))]")}>
-              {children}
-            </PageMain>
-          </PullToRefresh>
+          {/* Desktop: the sidebar beside the page. Phones and tablets: the page alone, with the tab bar over its foot. */}
+          <div className="flex min-h-dvh bg-background">
+            <SideNav />
+            <PullToRefresh onRefresh={refresh} disabled={fullBleed} className="flex min-h-dvh min-w-0 flex-1 flex-col bg-background">
+              <PageMain key={pathname} pathname={pathname} className={fullBleed
+                ? "w-full flex-1"
+                // The page scrolls far enough for its last row to clear the tab bar (and the Faldo bubble when it's on).
+                : cn("mx-auto w-full max-w-[1160px] flex-1 px-5 sm:px-6 lg:px-10 lg:pb-20", isNarrow(pathname) && "lg:max-w-[52rem]",
+                  bubble ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(7rem+env(safe-area-inset-bottom))]")}>
+                {children}
+              </PageMain>
+            </PullToRefresh>
+          </div>
           <MobileNav />
           <FaldoBubble />
           <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} mode={addMode} onModeChange={setAddMode} receipt={receipt} preset={preset} text={text} />

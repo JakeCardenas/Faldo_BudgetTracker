@@ -439,18 +439,18 @@ function AssistantView() {
         <Conversations activeId={conversationId} onSelect={loadConversation} onNew={newConversation} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="glass z-10 flex items-center gap-2 border-b border-border/70 px-3 pt-safe sm:px-6">
+        <div className="z-10 flex items-center gap-2 border-b border-border/70 bg-background px-3 pt-safe sm:px-6">
           <div className="flex h-14 w-full items-center gap-2">
-            <Link href="/" aria-label="Back to home" className="pressable hit -ml-1 flex size-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-accent lg:hidden">
+            <Link href="/" aria-label="Back to home" className="pressable flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-primary shadow-(--shadow-card) lg:hidden">
               <ChevronLeft className="size-5" />
             </Link>
             <div className="min-w-0 flex-1">
-              <h1 className="text-[0.9375rem] font-semibold">Chat with Faldo</h1>
+              <h1 className="text-[1rem] font-bold tracking-[-0.015em]">Chat with Faldo</h1>
               <p className="truncate text-xs text-muted-foreground">Ask questions or log money in plain language</p>
             </div>
             {devProvider && <span className="hidden rounded-md bg-warning-soft px-2 py-1 text-[0.6875rem] font-medium text-warning sm:inline">Dev AI</span>}
-            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"><History className="size-[1.1rem]" strokeWidth={2} /></button>
-            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable hit flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><PenSquare className="size-[1.1rem]" strokeWidth={2} /></button>
+            <button type="button" onClick={() => setHistoryOpen(true)} aria-label="Conversations" className="pressable hit flex size-10 items-center justify-center rounded-full bg-card text-primary shadow-(--shadow-card) xl:hidden"><History className="size-[1.1rem]" strokeWidth={2} /></button>
+            <button type="button" onClick={newConversation} aria-label="New chat" className="pressable hit flex size-10 items-center justify-center rounded-full bg-card text-primary shadow-(--shadow-card)"><PenSquare className="size-[1.1rem]" strokeWidth={2} /></button>
           </div>
         </div>
 
@@ -517,9 +517,9 @@ function AssistantView() {
                     // eslint-disable-next-line @next/next/no-img-element -- the photo the user just sent
                     <img src={m.photo} alt="Photo you sent" className="max-h-56 w-auto max-w-[70%] rounded-2xl rounded-br-md border object-cover" />
                   )}
-                  <p className="rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-foreground">
+                  <p className="rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-primary-foreground">
                     {m.content.endsWith(PHOTO_MARK) ? m.content.slice(0, -PHOTO_MARK.length) : m.content}
-                    {!m.photo && m.content.endsWith(PHOTO_MARK) && <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><ImagePlus className="size-3" /> With a photo</span>}
+                    {!m.photo && m.content.endsWith(PHOTO_MARK) && <span className="mt-1 flex items-center gap-1 text-xs text-primary-foreground/80"><ImagePlus className="size-3" /> With a photo</span>}
                   </p>
                 </div>
               ) : (
