@@ -52,7 +52,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "same-origin" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+          // Camera for the receipt scanner, microphone for dictation in chat; both only for Faldo itself, never embedded pages.
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" },
           { key: "Content-Security-Policy-Report-Only", value: CSP },
           { key: "Reporting-Endpoints", value: 'csp="/api/v1/security/csp-report"' },
         ],

@@ -19,6 +19,7 @@ import { MobileNav } from "@/components/layout/mobile-nav"
 import { TopNav } from "@/components/layout/top-nav"
 import { Button } from "@/components/ui/button"
 import { useBubbleShown } from "@/lib/bubble"
+import { setDisplayCurrency } from "@/lib/currency"
 import { useAmountsHidden } from "@/lib/privacy"
 import { useSmoothTheme } from "@/lib/theme"
 import { useMe } from "@/lib/queries"
@@ -82,6 +83,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [checkOpen, setCheckOpen] = useState(false)
   const [checkPreset, setCheckPreset] = useState<CheckPreset | undefined>()
   const theme = me?.settings.theme
+  // Every amount on every screen shows in this person's currency (lib/currency), set before any page draws.
+  if (me && typeof window !== "undefined") setDisplayCurrency(me.settings.currency)
 
   useEffect(() => {
     if (me && !me.settings.onboarding_completed_at) router.replace("/onboarding")

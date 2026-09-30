@@ -84,15 +84,16 @@ export default function HomePage() {
       <HomeBand data={data} />
       <div className="mt-5 grid grid-cols-1 gap-7 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-x-10 lg:gap-y-8">
         <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
-          <BalanceCard data={data} className="order-1 lg:order-none" />
-          <QuickActions className="order-2 lg:order-none" />
+          <BalanceCard data={data} className="order-2 lg:order-none" />
+          <QuickActions className="order-3 lg:order-none" />
           <SpendingCard data={data} className="order-4 lg:order-none" />
           <div className="order-7 lg:order-none"><AccountsRail data={data} /></div>
         </div>
         {/* On desktop the right column carries what needs doing (Safe to Spend, money in and out, then what's due)
-            above the latest activity, so the two columns balance. Phones keep one column in the order above. */}
+            above the latest activity, so the two columns balance. On phones Safe to Spend, the answer to "am I okay
+            right now?", comes first, straight under the greeting (docs/FALDO_PRODUCT_SPEC.md, section 6). */}
         <div className="cascade contents lg:flex lg:flex-col lg:gap-8">
-          <SafeToSpendCard sts={data.safe_to_spend} className="order-3 lg:order-none" />
+          <SafeToSpendCard sts={data.safe_to_spend} className="order-1 lg:order-none" />
           <MoneyInOut className="order-5 lg:order-none" />
           <div className="order-6 lg:order-none"><PaymentsDue data={data} /></div>
           <div className="order-8 lg:order-none"><RecentActivity data={data} /></div>

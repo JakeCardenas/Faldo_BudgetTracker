@@ -45,9 +45,12 @@ export function useAmountsHidden() {
   return useSyncExternalStore(subscribe, read, () => false)
 }
 
-/** Masks peso amounts inside text written elsewhere (for example Faldo's notes). */
+const SIGNS = "S\\$|₱|\\$|€|£|¥"
+const AMOUNT = new RegExp(`[−-]?(${SIGNS})\\s?\\d(?:[\\d,]*\\d)?(?:\\.\\d+)?[KkMm]?`, "g")
+
+/** Masks amounts inside text written elsewhere (for example Faldo's notes), in any currency Faldo shows. */
 export function maskAmounts(text: string) {
-  return hidden ? text.replace(/[−-]?₱\s?[\d,]+(?:\.\d+)?[KkMm]?/g, "₱••••") : text
+  return hidden ? text.replace(AMOUNT, (_, sign: string) => `${sign}••••`) : text
 }
 
 /**

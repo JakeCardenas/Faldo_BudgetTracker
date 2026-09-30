@@ -38,7 +38,7 @@ export function DraftCard({ draft, onChange, onEdit }: { draft: CaptureDraft; on
           <p className="truncate text-base font-semibold">{title}</p>
         </div>
         <p className={cn("tabular text-2xl font-semibold tracking-[-0.02em]", draft.type === "income" && "text-income", !draft.amount_minor && "text-muted-foreground")}>
-          {draft.amount_minor ? formatMoney(draft.type === "expense" ? -draft.amount_minor : draft.amount_minor, "PHP", { signed: draft.type === "income" }) : "₱0"}
+          {draft.amount_minor ? formatMoney(draft.type === "expense" ? -draft.amount_minor : draft.amount_minor, undefined, { signed: draft.type === "income" }) : formatMoney(0)}
         </p>
       </div>
 

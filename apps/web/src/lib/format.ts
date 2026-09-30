@@ -1,12 +1,12 @@
 import { format, formatDistanceToNowStrict, isToday, isYesterday, parseISO } from "date-fns"
-import { currencySymbol, formatCurrency } from "@/lib/currency"
+import { CURRENCY_SIGNS, currencySymbol, displayCurrency, formatCurrency } from "@/lib/currency"
 import { amountsHidden } from "@/lib/privacy"
 
 export { currencySymbol }
 
 export function formatMoney(
   minor: number,
-  currency = "PHP",
+  currency: string = displayCurrency(),
   options: { signed?: boolean; cents?: boolean; compact?: boolean; reveal?: boolean } = {},
 ) {
   if (amountsHidden() && !options.reveal) return `${currencySymbol(currency)}••••`
@@ -14,7 +14,7 @@ export function formatMoney(
 }
 
 export function toMinor(input: string): number | null {
-  const cleaned = input.replace(/[₱,\s]/g, "").trim()
+  const cleaned = CURRENCY_SIGNS.reduce((text, sign) => text.split(sign).join(""), input).replace(/[,\s]/g, "").trim()
   if (!/^\d+(\.\d{0,2})?$/.test(cleaned)) return null
   const [whole, fraction = ""] = cleaned.split(".")
   return Number(whole) * 100 + Number((fraction + "00").slice(0, 2))

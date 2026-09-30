@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { api, ApiError } from "@/lib/api"
+import { setDisplayCurrency } from "@/lib/currency"
 import { useSubmissionKey } from "@/lib/use-submission-key"
 import { FREQUENCY_LABELS, formatMoney, toMinor, todayISO } from "@/lib/format"
 import { useCategories, useMe } from "@/lib/queries"
@@ -102,6 +103,7 @@ export default function OnboardingPage() {
 
   const saveCurrency = () => run(async () => {
     const updated = await api.patch<Me>("/me/settings", { currency })
+    setDisplayCurrency(updated.settings.currency)
     qc.setQueryData(["me"], updated)
   })
 

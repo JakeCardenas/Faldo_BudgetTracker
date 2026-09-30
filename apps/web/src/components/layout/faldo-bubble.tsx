@@ -161,13 +161,13 @@ export function FaldoBubble() {
     const sitsOnControl = (px: number, py: number) => {
       const spot = { left: px + 6, right: px + SIZE - 6, top: py + 6, bottom: py + SIZE - 6 }
       // Measured rather than hit-tested, so a disabled button (which ignores the pointer) still counts.
-      // Amounts are .tabular (see Money).
-      return [...document.querySelectorAll("main button, main a, main input, main select, main textarea, main [role=button], main .tabular")].some((el) => {
-        const box = el.getBoundingClientRect()
-        // Whole rows are links too; only something small enough to be hidden by the bubble counts.
-        return box.width > 0 && box.width < 200 && box.height < 80
-          && box.left < spot.right && box.right > spot.left && box.top < spot.bottom && box.bottom > spot.top
-      })
+      // Amounts are .tabular (see Money). Fields and buttons count at any width (a full-width "Check" or amount field
+      // under the bubble is still something to tap); links and amounts only when small, since whole rows are links too.
+      const overlaps = (box: DOMRect) => box.left < spot.right && box.right > spot.left && box.top < spot.bottom && box.bottom > spot.top
+      const controls = [...document.querySelectorAll("main button, main input, main select, main textarea, main [role=button]")]
+      const small = [...document.querySelectorAll("main a, main .tabular")]
+      return controls.some((el) => { const box = el.getBoundingClientRect(); return box.width > 0 && box.height < 80 && overlaps(box) })
+        || small.some((el) => { const box = el.getBoundingClientRect(); return box.width > 0 && box.width < 200 && box.height < 80 && overlaps(box) })
     }
     const slide = (to: number, config: SpringConfig) => {
       if (motionReduced()) {
@@ -204,10 +204,14 @@ export function FaldoBubble() {
     // Each page gets the same check once it has drawn, and again once its data has had time to arrive.
     untuck.current = window.setTimeout(comeOut, RETURN_AFTER)
     const settled = window.setTimeout(comeOut, 2000)
+    // Typing into a field the bubble sits on (or near, once the keyboard moves things) puts it away too.
+    const onFocus = () => { if (!tucked.current) comeOut() }
     // Capturing on the document hears every scroller, not only the page's own.
     document.addEventListener("scroll", onScroll, { capture: true, passive: true })
+    document.addEventListener("focusin", onFocus)
     return () => {
       document.removeEventListener("scroll", onScroll, { capture: true })
+      document.removeEventListener("focusin", onFocus)
       window.clearTimeout(untuck.current)
       window.clearTimeout(settled)
     }

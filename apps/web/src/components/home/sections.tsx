@@ -91,7 +91,7 @@ function RecurringActions({ item }: { item: AttentionItem }) {
       setBusy(null)
     }
   }
-  const pill = "pressable inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] font-medium disabled:opacity-50"
+  const pill = "pressable hit inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] font-medium disabled:opacity-50"
   return (
     <div className="mt-2 flex flex-wrap gap-2">
       {item.account_id ? (
@@ -171,7 +171,7 @@ export function PaymentsDue({ data, limit = 3 }: { data: Dashboard; limit?: numb
   const today = parseISO(formatDate(new Date().toISOString(), "yyyy-MM-dd"))
   return (
     <section aria-labelledby="payments-title" className="min-w-0">
-      <Link href="/bills" className="group mb-3 flex items-center justify-between gap-3">
+      <Link href="/bills" className="group hit mb-3 flex items-center justify-between gap-3">
         <h2 id="payments-title" className="section-title">Payments due</h2>
         <span className="flex items-center gap-1 text-[0.875rem] font-medium text-primary">
           {count > 0 ? <><Money minor={total} className="font-bold" /> in 3 weeks</> : "Nothing due"}

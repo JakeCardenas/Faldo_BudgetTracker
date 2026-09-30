@@ -14,6 +14,9 @@ import { maskAmounts, useMaskedAmounts } from "@/lib/privacy"
 import { useInsights, usePulse } from "@/lib/queries"
 import type { Insight } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { LoadError } from "@/components/ios/load-error"
+import { listView } from "@/lib/query-view"
+import { toast } from "sonner"
 
 const QUESTIONS: Record<string, (i: Insight) => string> = {
   budget_exceeded: (i) => `Why is my ${i.facts.category} budget over this month?`,
@@ -28,7 +31,8 @@ const QUESTIONS: Record<string, (i: Insight) => string> = {
 export default function InsightsPage() {
   useMaskedAmounts()
   const qc = useQueryClient()
-  const { data: insights, isLoading, isFetching, refetch } = useInsights()
+  const { data: insights, isLoading, isError, isFetching, refetch } = useInsights()
+  const view = listView({ isLoading, isError, hasData: insights !== undefined, count: insights?.length ?? 0 })
   const { data: pulse } = usePulse()
 
   // A dismissed insight folds away (200ms) before it leaves the list, so the rows below don't jump.
@@ -36,7 +40,14 @@ export default function InsightsPage() {
   async function dismiss(id: string) {
     setLeaving((s) => new Set(s).add(id))
     window.setTimeout(() => qc.setQueryData<Insight[]>(["insights"], (old) => old?.filter((i) => i.id !== id)), 200)
-    await api.post(`/insights/${id}/dismiss`)
+    try {
+      await api.post(`/insights/${id}/dismiss`)
+    } catch {
+      // Not dismissed after all: bring it back rather than pretend.
+      setLeaving((s) => { const next = new Set(s); next.delete(id); return next })
+      await qc.invalidateQueries({ queryKey: ["insights"] })
+      toast.error("Couldn't dismiss that insight. Try again.")
+    }
   }
 
   const groups = [
@@ -55,7 +66,9 @@ export default function InsightsPage() {
           <p className="mt-2 text-[0.9375rem] leading-relaxed">{maskAmounts(pulse.text)}</p>
         </div>
       )}
-      {isLoading ? <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div> : !insights?.length ? (
+      {view === "loading" ? <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+        : view === "error" ? <LoadError what="your insights" onRetry={() => void refetch()} retrying={isFetching} />
+        : view === "empty" ? (
         <div className="card-surface"><EmptyState icon={Lightbulb} title="No insights right now" description="Insights appear when Faldo spots budget risks, unusual purchases, upcoming bills or progress worth celebrating." /></div>
       ) : (
         groups.filter((g) => g.items.length).map((group) => (

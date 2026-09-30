@@ -12,15 +12,16 @@ function runScript({ stored = null, deviceReduced = false, storageThrows = false
   return documentElement.dataset.motion === "reduced"
 }
 
-test("Faldo animates by default, even when the device asks for reduced motion", () => {
-  assert.equal(resolveMotionReduced(null), false)
-  assert.equal(runScript({ deviceReduced: true }), false)
+test("Faldo follows the device's Reduce Motion setting by default", () => {
+  assert.equal(resolveMotionReduced(null, true), true)
+  assert.equal(resolveMotionReduced(null, false), false)
+  assert.equal(runScript({ deviceReduced: true }), true)
   assert.equal(runScript({ deviceReduced: false }), false)
 })
 
-test("Faldo's own Reduce motion setting stills it, and turning it off brings motion back", () => {
-  assert.equal(resolveMotionReduced("reduced"), true)
-  assert.equal(resolveMotionReduced("full"), false)
+test("Faldo's own setting wins either way", () => {
+  assert.equal(resolveMotionReduced("reduced", false), true)
+  assert.equal(resolveMotionReduced("full", true), false)
   assert.equal(runScript({ stored: "reduced" }), true)
   assert.equal(runScript({ stored: "full", deviceReduced: true }), false)
 })
@@ -28,10 +29,11 @@ test("Faldo's own Reduce motion setting stills it, and turning it off brings mot
 test("the pre-paint script matches the rule for every case, and survives blocked storage", () => {
   for (const stored of [null, "reduced", "full"]) {
     for (const deviceReduced of [false, true]) {
-      assert.equal(runScript({ stored, deviceReduced }), resolveMotionReduced(stored), `${stored}/${deviceReduced}`)
+      assert.equal(runScript({ stored, deviceReduced }), resolveMotionReduced(stored, deviceReduced), `${stored}/${deviceReduced}`)
     }
   }
   assert.doesNotThrow(() => runScript({ storageThrows: true }))
+  assert.equal(runScript({ storageThrows: true, deviceReduced: true }), true, "blocked storage still follows the device")
 })
 
 test("with reduced motion the tab lens lands on its tab at once, with no frames to run", () => {

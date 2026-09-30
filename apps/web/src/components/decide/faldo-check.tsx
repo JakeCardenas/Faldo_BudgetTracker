@@ -115,8 +115,8 @@ export function CheckResultView({ result }: { result: CheckResult }) {
             <Money minor={result.commitments_minor} className="text-[0.8125rem] text-muted-foreground" />
           </div>
           <ul className="mt-1.5 space-y-1">
-            {result.commitments.slice(0, 4).map((c) => (
-              <li key={`${c.ref_id}-${c.date}`} className="flex items-center justify-between gap-3 text-[0.8125rem]">
+            {result.commitments.slice(0, 4).map((c, index) => (
+              <li key={`${c.ref_id}-${c.date}-${index}`} className="flex items-center justify-between gap-3 text-[0.8125rem]">
                 <span className="min-w-0 truncate text-muted-foreground">{c.label}, {c.is_overdue ? "overdue" : formatDate(c.date, "MMM d")}</span>
                 <Money minor={c.amount_minor} className="text-muted-foreground" />
               </li>

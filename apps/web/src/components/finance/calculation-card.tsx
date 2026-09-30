@@ -30,8 +30,9 @@ export function CalculationCard({ title, lines, resultLabel, resultMinor, note, 
             {line.hint && <p className="mt-0.5 text-xs text-muted-foreground/80">{line.hint}</p>}
             {line.items && line.items.length > 0 && (
               <ul className="mt-1 space-y-0.5 border-l pl-3">
-                {line.items.map((item) => (
-                  <li key={`${item.ref_id}-${item.date}-${item.label}`} className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                {/* A goal can have two savings on one date (this month's remainder and next month's, at a month's end). */}
+                {line.items.map((item, index) => (
+                  <li key={`${item.ref_id}-${item.date}-${index}`} className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                     <span className="min-w-0 truncate">{item.label} · <span className={cn(item.is_overdue && "font-medium text-expense")}>{item.is_overdue ? "overdue" : formatDate(item.date, "MMM d")}</span></span>
                     <span className="tabular shrink-0 whitespace-nowrap">{formatMoney(item.amount_minor)}</span>
                   </li>

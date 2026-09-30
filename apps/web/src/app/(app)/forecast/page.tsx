@@ -25,6 +25,8 @@ import { useMaskedAmounts } from "@/lib/privacy"
 import { useCategories, useForecast } from "@/lib/queries"
 import type { ScenarioResult } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { LoadError } from "@/components/ios/load-error"
+import { detailView } from "@/lib/query-view"
 
 type AdjustmentKind = "one_time_expense" | "one_time_income" | "extra_savings" | "reduce_savings" | "income_decrease"
 type Repeat = "once" | "daily" | "weekly" | "monthly"
@@ -213,7 +215,8 @@ function Timeline({ data }: { data: NonNullable<ReturnType<typeof useForecast>["
 export default function ForecastPage() {
   useMaskedAmounts()
   const [horizon, setHorizon] = useState("end_of_month")
-  const { data, isLoading } = useForecast(horizon)
+  const { data, isError, isFetching, refetch } = useForecast(horizon)
+  const view = detailView({ isError, hasData: Boolean(data) })
   const belowBuffer = data ? data.lowest_point.p50_minor < data.buffer_minor : false
 
   return (
@@ -221,7 +224,9 @@ export default function ForecastPage() {
       <PageHeader title="Forecast" description="Where your spendable balance is likely heading. Every figure here is an estimate." />
       <Segmented label="Look ahead" size="sm" className="w-full sm:w-auto" value={horizon} onChange={setHorizon}
         options={[{ value: "end_of_month", label: "Month end" }, { value: "30_days", label: "30 days" }, { value: "60_days", label: "60 days" }, { value: "90_days", label: "90 days" }]} />
-      {isLoading || !data ? <Skeleton className="h-96 rounded-2xl" /> : data.sufficiency === "insufficient" ? (
+      {view === "error" ? (
+        <LoadError what="your forecast" detail="No estimate is shown rather than one built on missing data." onRetry={() => void refetch()} retrying={isFetching} />
+      ) : view === "loading" || !data ? <Skeleton className="h-96 rounded-2xl" /> : data.sufficiency === "insufficient" ? (
         <div className="card-surface"><EmptyState icon={LineChart} title="Forecast unlocks soon" description={`Faldo needs at least a week of transactions to project your balance. You have ${data.history_days} day${data.history_days === 1 ? "" : "s"} so far.`} /></div>
       ) : (
         <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">

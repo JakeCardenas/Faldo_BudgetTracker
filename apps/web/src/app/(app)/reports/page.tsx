@@ -19,6 +19,8 @@ import { maskAmounts, useMaskedAmounts } from "@/lib/privacy"
 import { useReport } from "@/lib/queries"
 import type { Health, MonthlyReport } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { LoadError } from "@/components/ios/load-error"
+import { detailView } from "@/lib/query-view"
 
 /** "Where did my money go?" Ranked categories; the bar length is relative to the biggest one. */
 function WhereItWent({ report }: { report: MonthlyReport }) {
@@ -179,7 +181,8 @@ function HealthDetails({ health }: { health: Health }) {
 export default function ReportsPage() {
   useMaskedAmounts()
   const [month, setMonth] = useState(monthKey())
-  const { data: report, isLoading } = useReport(month)
+  const { data: report, isError, isFetching, refetch } = useReport(month)
+  const view = detailView({ isError, hasData: Boolean(report) })
   const summary = useQuery({ queryKey: ["report", "summary", month], queryFn: () => api.get<{ text: string; generated_by: string }>("/reports/summary", { month }) })
   const monthDate = parse(month, "yyyy-MM", new Date())
   const s = report?.summary
@@ -198,7 +201,9 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <LargeTitle title="Statistics" back={{ href: "/transactions", label: "History" }} actions={switcher} mobileActions="below" />
 
-      {isLoading || !report || !s ? (
+      {view === "error" ? (
+        <LoadError what={`statistics for ${format(monthDate, "MMMM yyyy")}`} detail="No totals are shown rather than zeros." onRetry={() => void refetch()} retrying={isFetching} />
+      ) : view === "loading" || !report || !s ? (
         <div className="space-y-6"><div className="space-y-3"><Skeleton className="h-4 w-32" /><Skeleton className="h-11 w-52" /><Skeleton className="h-4 w-64" /></div><Skeleton className="h-72 rounded-2xl" /></div>
       ) : s.transaction_count === 0 ? (
         <div className="card-surface"><EmptyState icon={BarChart3} title={`No activity in ${report.label}`} description="Statistics fill in as you record transactions." /></div>
@@ -214,7 +219,9 @@ export default function ReportsPage() {
                 )}
                 <span className="tabular">{formatMoney(s.income_minor)}</span> came in.
               </p>
-              {summary.data ? <p className="mt-4 max-w-[62ch] text-[0.9375rem] leading-relaxed text-foreground/85">{maskAmounts(summary.data.text)}</p> : <div className="mt-4 space-y-2"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-3/4" /></div>}
+              {summary.data ? <p className="mt-4 max-w-[62ch] text-[0.9375rem] leading-relaxed text-foreground/85">{maskAmounts(summary.data.text)}</p>
+                : summary.isError ? <p className="mt-4 text-sm text-muted-foreground">The written summary couldn&apos;t load; the figures below are complete.</p>
+                : <div className="mt-4 space-y-2"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-3/4" /></div>}
             </section>
             <WhereItWent report={report} />
             <Section title="Money in and out" description="Last 12 months">

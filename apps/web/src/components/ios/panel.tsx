@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 export function PanelLink({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
   return (
-    <Link href={href} className={cn("-mr-1 inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[0.875rem] font-medium text-primary transition-opacity hover:opacity-75", className)}>
+    <Link href={href} className={cn("hit -mr-1 inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[0.875rem] font-medium text-primary transition-opacity hover:opacity-75", className)}>
       {children}<ChevronRight className="size-3.5" strokeWidth={2.2} />
     </Link>
   )

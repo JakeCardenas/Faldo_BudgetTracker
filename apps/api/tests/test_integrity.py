@@ -9,6 +9,7 @@ from app.core.db import scoped_session
 from app.engine.periods import today_in
 from app.models import Account, RecurringPayment
 from app.services.accounts import account_balances
+from tests.conftest import MONTH_END_AND_MIDDLE
 
 P = 100
 TODAY = today_in("Asia/Manila")
@@ -34,7 +35,9 @@ async def _archive(client, account_id: str) -> None:  # type: ignore[no-untyped-
     assert r.status_code == 200, r.text
 
 
-async def test_linked_goal_contribution_counts_once_in_forecast_and_safe_to_spend(client):
+@MONTH_END_AND_MIDDLE
+async def test_linked_goal_contribution_counts_once_in_forecast_and_safe_to_spend(client, frozen_today, day):
+    today = frozen_today(day)
     gcash = await _account(client, opening=100_000 * P)
     savings = await _account(client, "Savings", "savings", 0)
     await client.patch("/api/v1/me/settings", json={"safe_to_spend_buffer_minor": 0})
@@ -42,7 +45,7 @@ async def test_linked_goal_contribution_counts_once_in_forecast_and_safe_to_spen
                                                      "monthly_contribution_minor": 6_000 * P,
                                                      "linked_account_id": savings["id"]})).json()
     r = await client.post(f"/api/v1/goals/{goal['id']}/contributions",
-                          json={"amount_minor": 2_000 * P, "occurred_on": TODAY.isoformat(), "from_account_id": gcash["id"]})
+                          json={"amount_minor": 2_000 * P, "occurred_on": today.isoformat(), "from_account_id": gcash["id"]})
     assert r.status_code == 201, r.text
 
     fc = (await client.get("/api/v1/forecast", params={"horizon": "30_days"})).json()
@@ -51,8 +54,11 @@ async def test_linked_goal_contribution_counts_once_in_forecast_and_safe_to_spen
 
     sts = (await client.get("/api/v1/dashboard")).json()["safe_to_spend"]
     line = next(line for line in sts["lines"] if line["key"] == "savings")
-    this_month = [i for i in line["items"] if i["date"] <= (TODAY + timedelta(days=1)).isoformat()]
-    assert sum(i["amount_minor"] for i in this_month) == 4_000 * P
+    # This month's plan less what's already saved, once; any later month in the window is a full month. (At a month's
+    # end both fall on the next day, so they're told apart by amount, not date.)
+    amounts = [i["amount_minor"] for i in line["items"]]
+    assert amounts.count(4_000 * P) == 1 and set(amounts) <= {4_000 * P, 6_000 * P}, amounts
+    assert min(date.fromisoformat(i["date"]) for i in line["items"]) == today + timedelta(days=1)
 
 
 async def test_accounts_must_use_the_users_currency(client):

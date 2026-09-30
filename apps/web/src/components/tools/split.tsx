@@ -92,7 +92,7 @@ export function SplitBill() {
           {includeMe && <li className="flex justify-between py-2 text-sm"><span className="font-semibold">You</span><span className={cn("tabular font-medium", myShare < 0 && "text-expense")}>{formatMoney(myShare)}</span></li>}
           {people.map((p, i) => <li key={p.id} className="flex justify-between py-2 text-sm"><span>{p.name || "Friend"}</span><span className="tabular font-medium text-income">{formatMoney(shares[i])}</span></li>)}
         </ul>
-        {!includeMe && myShare > 0 && mode === "equal" && <p className="text-xs text-muted-foreground">₱{(myShare / 100).toFixed(2)} left over from rounding stays with you.</p>}
+        {!includeMe && myShare > 0 && mode === "equal" && <p className="text-xs text-muted-foreground">{formatMoney(myShare, undefined, { cents: true })} left over from rounding stays with you.</p>}
         {myShare < 0 && <p className="text-xs font-semibold text-expense">The shares add up to more than the bill.</p>}
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <button type="button" onClick={() => openAddTransaction({ mode: "expense", preset: { amount_minor: totalMinor, note: what } })}

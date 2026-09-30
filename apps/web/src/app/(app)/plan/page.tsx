@@ -45,15 +45,24 @@ function AffordCheck() {
   )
 }
 
-/** One plain line per tool saying where things stand, from data the app already loads. Blank while loading. */
+const FAILED = "Couldn't load right now"
+
+/**
+ * One plain line per tool saying where things stand, from data the app already loads. Blank while loading, and a
+ * plain "couldn't load" when that request failed, so a failure never reads as "nothing set up" or a zero.
+ */
 function usePlanStatus(): Record<string, string | null> {
-  const budget = useBudget(monthKey()).data
-  const goals = useGoals().data
-  const plan = useMoneyPlan().data
-  const upcoming = useUpcoming(30).data
-  const debts = useDebts().data
-  const planned = usePlanned().data
-  const forecast = useForecast("end_of_month").data
+  const queries = {
+    "/budgets": useBudget(monthKey()), "/goals": useGoals(), "/plan/money": useMoneyPlan(), "/bills": useUpcoming(30),
+    "/debts": useDebts(), "/plan/purchases": usePlanned(), "/forecast": useForecast("end_of_month"),
+  }
+  const budget = queries["/budgets"].data
+  const goals = queries["/goals"].data
+  const plan = queries["/plan/money"].data
+  const upcoming = queries["/bills"].data
+  const debts = queries["/debts"].data
+  const planned = queries["/plan/purchases"].data
+  const forecast = queries["/forecast"].data
 
   const budgetLine = () => {
     if (!budget) return null
@@ -99,10 +108,14 @@ function usePlanStatus(): Record<string, string | null> {
   }
   const forecastLine = () => forecast ? `About ${formatMoney(forecast.end_balance.p50)} by month end` : null
 
-  return {
+  const lines: Record<string, string | null> = {
     "/budgets": budgetLine(), "/goals": goalLine(), "/plan/money": planLine(), "/bills": billLine(),
     "/debts": debtLine(), "/plan/purchases": plannedLine(), "/forecast": forecastLine(),
   }
+  for (const [href, query] of Object.entries(queries)) {
+    if (query.isError && query.data === undefined) lines[href] = FAILED
+  }
+  return lines
 }
 
 /** Every planning tool, one tap away, in the order people reach for them. What-ifs live in Forecast. */

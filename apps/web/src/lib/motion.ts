@@ -4,9 +4,9 @@ import { useSyncExternalStore } from "react"
 import { MOTION_KEY, resolveMotionReduced } from "@/lib/motion-pref"
 
 /**
- * Faldo's motion setting, per device. Faldo animates fully by default, whatever the phone's own Reduce
- * Motion says (the owner's choice); "Reduce motion" in Settings > Appearance stills it. The choice
- * lives on <html data-motion="reduced"> so CSS applies it before the first paint (see app/layout).
+ * Faldo's motion setting, per device. It follows the phone's own Reduce Motion setting unless "Reduce motion" in
+ * Settings > Appearance says otherwise (see lib/motion-pref). The result lives on <html data-motion="reduced"> so CSS
+ * applies it before the first paint (see app/layout).
  */
 const EVENT = "faldo:motion"
 
@@ -22,8 +22,14 @@ function stored() {
   }
 }
 
+const DEVICE_QUERY = "(prefers-reduced-motion: reduce)"
+
+function deviceReduced() {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(DEVICE_QUERY).matches
+}
+
 function apply() {
-  const reduced = resolveMotionReduced(stored())
+  const reduced = resolveMotionReduced(stored(), deviceReduced())
   if (reduced) document.documentElement.dataset.motion = "reduced"
   else delete document.documentElement.dataset.motion
   window.dispatchEvent(new Event(EVENT))
@@ -38,7 +44,13 @@ export function setMotionReduced(reduced: boolean) {
 
 function subscribe(callback: () => void) {
   window.addEventListener(EVENT, callback)
-  return () => window.removeEventListener(EVENT, callback)
+  // Changing Reduce Motion on the device while Faldo is open takes effect at once (unless Faldo has its own choice).
+  const media = typeof window.matchMedia === "function" ? window.matchMedia(DEVICE_QUERY) : null
+  media?.addEventListener("change", apply)
+  return () => {
+    window.removeEventListener(EVENT, callback)
+    media?.removeEventListener("change", apply)
+  }
 }
 
 export function useMotionReduced() {

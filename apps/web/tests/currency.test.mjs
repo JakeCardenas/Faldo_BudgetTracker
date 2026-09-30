@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { SUPPORTED_CURRENCIES, currencySymbol, formatCurrency } from "../src/lib/currency.ts"
+import { SUPPORTED_CURRENCIES, currencySymbol, formatCurrency, setDisplayCurrency } from "../src/lib/currency.ts"
 
 const EXPECTED = { PHP: "₱", USD: "$", SGD: "S$", EUR: "€" }
 
@@ -27,4 +27,16 @@ test("an unknown currency falls back to its code", () => {
 test("an amount field with no account or user currency yet falls back to pesos", () => {
   assert.equal(currencySymbol(undefined), "₱")
   assert.equal(currencySymbol("USD"), "$")
+})
+
+test("amounts shown without a currency use the signed-in person's, not pesos", () => {
+  setDisplayCurrency("USD")
+  try {
+    assert.equal(formatCurrency(123_456), "$1,234.56")
+    assert.equal(currencySymbol(), "$")
+    assert.equal(formatCurrency(-5_000, undefined, { signed: true }), "−$50")
+  } finally {
+    setDisplayCurrency(null)
+  }
+  assert.equal(formatCurrency(100), "₱1", "signed out, pesos again")
 })

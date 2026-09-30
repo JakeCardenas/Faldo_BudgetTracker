@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from app.engine.periods import today_in
 from app.engine.planning import monthly_equivalent, occurrences_between
+from tests.conftest import MONTH_END_AND_MIDDLE
 
 P = 100
 TODAY = today_in("Asia/Manila")
@@ -18,7 +19,9 @@ async def _account(client, opening=10_000 * P):  # type: ignore[no-untyped-def]
     return (await client.post("/api/v1/accounts", json={"name": "BPI", "type": "bank", "opening_balance_minor": opening})).json()
 
 
-async def test_goal_starting_amount_is_not_this_months_saving(client):
+@MONTH_END_AND_MIDDLE
+async def test_goal_starting_amount_is_not_this_months_saving(client, frozen_today, day):
+    today = frozen_today(day)
     await _account(client)
     await client.patch("/api/v1/me/settings", json={"safe_to_spend_buffer_minor": 0})
     goal = (await client.post("/api/v1/goals", json={"name": "Laptop", "target_minor": 60_000 * P, "monthly_contribution_minor": 3_000 * P,
@@ -30,11 +33,11 @@ async def test_goal_starting_amount_is_not_this_months_saving(client):
     savings = next(line for line in sts["lines"] if line["key"] == "savings")
     assert savings["amount_minor"] >= 3_000 * P  # this month's planned saving is still set aside
 
-    await client.post(f"/api/v1/goals/{goal['id']}/contributions", json={"amount_minor": 1_000 * P, "occurred_on": TODAY.isoformat()})
+    await client.post(f"/api/v1/goals/{goal['id']}/contributions", json={"amount_minor": 1_000 * P, "occurred_on": today.isoformat()})
     sts = (await client.get("/api/v1/dashboard")).json()["safe_to_spend"]
     savings = next(line for line in sts["lines"] if line["key"] == "savings")
-    this_month = [i for i in savings["items"] if i["date"] <= (TODAY + timedelta(days=1)).isoformat()]
-    assert sum(i["amount_minor"] for i in this_month) == 2_000 * P
+    amounts = [i["amount_minor"] for i in savings["items"]]
+    assert amounts.count(2_000 * P) == 1 and set(amounts) <= {2_000 * P, 3_000 * P}, amounts
 
 
 async def test_one_time_expected_income_is_never_spendable_or_the_window(client):

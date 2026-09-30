@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import date
 
 os.environ["ENVIRONMENT"] = "test"
 os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "postgresql+asyncpg://faldo_app:faldo_app@localhost:5432/faldo_test")
@@ -27,6 +28,22 @@ async def engine_setup():
     db_module._sessionmaker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
     yield
     await engine.dispose()
+
+
+@pytest.fixture
+def frozen_today(monkeypatch):
+    """Pin the API's today (Ctx.today) so a date-sensitive test gives the same answer on any day, month ends included."""
+    from app.api import deps
+
+    def freeze(day: date) -> date:
+        monkeypatch.setattr(deps, "today_in", lambda timezone: day)
+        return day
+
+    return freeze
+
+
+# A last day of a month and a middle one: "this month" must mean the same thing on both.
+MONTH_END_AND_MIDDLE = pytest.mark.parametrize("day", [date(2026, 8, 31), date(2026, 8, 14)], ids=["month-end", "mid-month"])
 
 
 @pytest.fixture(autouse=True)
