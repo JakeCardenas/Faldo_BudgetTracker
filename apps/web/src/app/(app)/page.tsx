@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Plus, Wallet } from "lucide-react"
 import { Panda } from "@/shared/ui/brand/panda"
 import { AccountDialog } from "@/features/account-edit"
-import { BalanceCard, BalanceRow, FaldoPanel, HomeHeader, SafeToSpendCard, AccountsRail, PaymentsDue, RecentActivity, MoneyInOut, QuickActions, SpendingCard } from "@/widgets/home-dashboard"
+import { BalanceCard, FaldoPanel, HomeHeader, SafeToSpendCard, AccountsRail, PaymentsDue, RecentActivity, MoneyInOut, QuickActions, SpendingCard } from "@/widgets/home-dashboard"
 import { useAppActions } from "@/shared/lib/app-actions"
 import { Button } from "@/shared/ui/button"
 import { Skeleton } from "@/shared/ui/skeleton"
@@ -21,9 +21,9 @@ function HomeSkeleton() {
       <div className="mt-4 grid grid-cols-1 gap-6 lg:mt-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
         <div className="space-y-6">
           <Skeleton className="h-36 rounded-[1.5rem]" />
+          <Skeleton className="h-72 rounded-[1.375rem] xl:hidden" />
           <Skeleton className="h-32 rounded-[1.375rem]" />
           <div className="grid grid-cols-1 gap-3 min-[375px]:grid-cols-2"><Skeleton className="h-48 rounded-[1.375rem]" /><Skeleton className="h-48 rounded-[1.375rem]" /></div>
-          <Skeleton className="h-60 rounded-[1.375rem]" />
         </div>
         <div className="hidden space-y-6 xl:block"><Skeleton className="h-80 rounded-[1.375rem]" /><Skeleton className="h-72 rounded-[1.375rem]" /></div>
       </div>
@@ -63,9 +63,10 @@ function Welcome() {
 }
 
 /**
- * Home, in Tarsi's order: the greeting, Faldo's note on his green strip, quick actions, Safe to Spend beside money in
- * and out, the total balance, what's due and the latest activity. On wide screens the balance line and spending sit
- * in a side column; accounts close the page. The same order on every width, so nothing jumps between breakpoints.
+ * Home, most useful first: the greeting and Faldo's note, the balance with its trend, quick actions, Safe to Spend
+ * beside money in and out, what's due, the latest activity and where this month's money went; accounts close the
+ * page. The source is in that order everywhere; on wide screens named grid areas set the balance beside Faldo and
+ * the quick actions, and spending beside the cards under them, without moving anything in the reading order.
  */
 export default function HomePage() {
   useMaskedAmounts()
@@ -83,24 +84,19 @@ export default function HomePage() {
   if (!data.has_data && data.accounts.length === 0) return <Welcome />
 
   return (
-    <div className="pb-4">
+    <div>
       <HomeHeader />
-      <div className="mt-1 grid grid-cols-1 gap-6 lg:mt-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-8">
-        <div className="cascade flex min-w-0 flex-col gap-6">
-          <FaldoPanel data={data} />
-          <QuickActions />
-          <div className="grid grid-cols-1 gap-3 min-[375px]:grid-cols-2">
-            <SafeToSpendCard sts={data.safe_to_spend} />
-            <MoneyInOut />
-          </div>
-          <BalanceRow data={data} className="xl:hidden" />
-          <PaymentsDue data={data} />
-          <RecentActivity data={data} />
+      <div className="cascade mt-1 grid grid-cols-1 gap-6 lg:mt-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-x-8 xl:[grid-template-areas:'panel_balance'_'actions_balance'_'status_spending'_'payments_spending'_'recent_spending']">
+        <div className="min-w-0 xl:[grid-area:panel]"><FaldoPanel data={data} /></div>
+        <BalanceCard data={data} className="xl:[grid-area:balance]" />
+        <QuickActions className="xl:[grid-area:actions]" />
+        <div className="grid grid-cols-1 gap-3 min-[375px]:grid-cols-2 xl:[grid-area:status]">
+          <SafeToSpendCard sts={data.safe_to_spend} />
+          <MoneyInOut />
         </div>
-        <div className="cascade flex min-w-0 flex-col gap-6">
-          <BalanceCard data={data} />
-          <SpendingCard data={data} />
-        </div>
+        <div className="min-w-0 xl:[grid-area:payments]"><PaymentsDue data={data} /></div>
+        <div className="min-w-0 xl:[grid-area:recent]"><RecentActivity data={data} /></div>
+        <SpendingCard data={data} className="xl:[grid-area:spending]" />
       </div>
       <div className="mt-6 lg:mt-8"><AccountsRail data={data} /></div>
     </div>

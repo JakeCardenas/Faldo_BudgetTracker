@@ -185,9 +185,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <PullToRefresh onRefresh={refresh} disabled={fullBleed} className="flex min-h-dvh min-w-0 flex-1 flex-col bg-background">
               <PageMain key={pathname} pathname={pathname} className={fullBleed
                 ? "w-full flex-1"
-                // The page scrolls far enough for its last row to clear the tab bar (and the Faldo bubble when it's on).
-                : cn("mx-auto w-full max-w-[1160px] flex-1 px-5 sm:px-6 lg:px-10 lg:pb-20", isNarrow(pathname) && "lg:max-w-[52rem]",
-                  bubble ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(7rem+env(safe-area-inset-bottom))]")}>
+                // The one place that leaves room under a page: on phones exactly the tab bar's footprint and a breathing gap
+                // (plus the Faldo bubble's height when it's on, since it docks just above the bar); on desktop, where
+                // nothing floats over the page, a plain margin.
+                : cn("mx-auto w-full max-w-[1160px] flex-1 px-5 sm:px-6 lg:px-10 lg:pb-12", isNarrow(pathname) && "lg:max-w-[52rem]",
+                  bubble ? "pb-[calc(var(--tabbar-clearance)+4rem)]" : "pb-(--tabbar-clearance)")}>
                 {children}
               </PageMain>
             </PullToRefresh>

@@ -96,6 +96,14 @@
   */
   --ios-edge: 0px;
   --top-inset: calc(env(safe-area-inset-top) + var(--ios-edge));
+  /*
+    The phone tab bar's footprint, in one place. The bar floats this far above the bottom edge: 20px, or clear of the
+    home indicator where the screen has one (the safe area is counted here, once). Pages leave room for the bar plus
+    a small breathing gap and nothing more (see AppShell), so the last row ends just above it.
+  */
+  --tabbar-height: 3.875rem;
+  --tabbar-offset: max(1.25rem, calc(env(safe-area-inset-bottom) - 0.75rem));
+  --tabbar-clearance: calc(var(--tabbar-height) + var(--tabbar-offset) + 1.25rem);
   --background: #f7f9f8;
   --surface: #f1f4f2;
   --foreground: #111827;

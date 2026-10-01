@@ -1,4 +1,4 @@
-export { BalanceCard, BalanceRow, FaldoPanel, HomeHeader } from "./ui/hero"
+export { BalanceCard, FaldoPanel, HomeHeader } from "./ui/hero"
 export { SafeToSpendCard, untilPhrase } from "./ui/safe-to-spend"
 export { AccountsRail, DateTile, PaymentsDue, RecentActivity } from "./ui/sections"
 export { MoneyInOut, QuickActions, SpendingCard } from "./ui/widgets"

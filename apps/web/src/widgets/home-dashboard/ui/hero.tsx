@@ -1,13 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
-import { format, parseISO } from "date-fns"
-import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight, CircleUserRound, Flame, MessageCircle, Search, Settings, WalletMinimal } from "lucide-react"
+import { useMemo, useState } from "react"
+import { differenceInCalendarDays, format, parseISO } from "date-fns"
+import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight, CircleUserRound, Flame, MessageCircle, Search, Settings } from "lucide-react"
 import { Panda } from "@/shared/ui/brand/panda"
 import { BalanceLine, type BalancePointValue } from "@/shared/ui/charts/charts"
 import { HideAmountsButton } from "@/features/hide-amounts"
-import { AnimatedMoney, Money } from "@/shared/ui/money/money"
+import { AnimatedMoney } from "@/shared/ui/money/money"
 import { useFaldoNote } from "./sections"
 import { useAppActions } from "@/shared/lib/app-actions"
 import { Notifications } from "@/features/notifications"
@@ -137,22 +137,6 @@ export function FaldoPanel({ data }: { data: Dashboard }) {
   )
 }
 
-/** The total across accounts in one line under the status cards; the Wallet has the detail. */
-export function BalanceRow({ data, className }: { data: Dashboard; className?: string }) {
-  const accounts = data.accounts.filter((a) => !a.archived).length
-  return (
-    <Link href="/accounts" onClick={() => play("tap")} className={cn("card-surface pressable flex items-center gap-3 px-4 py-3.5", className)}>
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[0.75rem] bg-secondary text-primary"><WalletMinimal className="size-5" strokeWidth={2} /></span>
-      <span className="min-w-0 flex-1">
-        <span className="label-caps block">Total balance</span>
-        <span className="block text-[0.8125rem] text-muted-foreground">{accounts} {accounts === 1 ? "account" : "accounts"}</span>
-      </span>
-      <Money minor={data.overview.total_balance_minor} className="font-money text-[1.25rem] font-extrabold tracking-[-0.02em]" />
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-    </Link>
-  )
-}
-
 /** Long balances step down a size so they always fit their card. */
 function balanceSize(text: string) {
   if (text.length <= 10) return "text-[2.625rem]"
@@ -173,12 +157,29 @@ function ChangePill({ change, pct }: { change: number; pct: number | null }) {
 }
 
 /**
- * What you have and how it has moved: the total balance, the change over the chosen range, the balance
- * history with a dashed line where the range began, and the range picker. Drag across the line to read
- * any day; the amount and the change above follow your finger.
+ * The ranges worth offering: a week and a month always, and a longer one only when the balance history goes back
+ * further than the next shorter range, so every choice shows something new. Read from the year's history (shared
+ * through the query cache), where the first change marks when there is data to show.
+ */
+function useRanges() {
+  const { data: year } = useBalanceHistory(365)
+  return useMemo(() => {
+    const first = (year ?? []).findIndex((p, i, all) => i > 0 && p.net_minor !== all[i - 1].net_minor)
+    if (!year || first < 0) return RANGES.slice(0, 2)
+    const since = differenceInCalendarDays(new Date(), parseISO(year[first - 1].date))
+    return RANGES.filter((r, i) => i < 2 || since > RANGES[i - 1].days)
+  }, [year])
+}
+
+/**
+ * What you have and how it has moved, first on Home: the total, the change over the chosen range in words and colour,
+ * and the balance as one plain line, short enough to read at a glance. Drag across the line to read any day; the
+ * total and the change above follow your finger. The account count links to the Wallet.
  */
 export function BalanceCard({ data, className }: { data: Dashboard; className?: string }) {
-  const [range, setRange] = useState<(typeof RANGES)[number]>(RANGES[1])
+  const ranges = useRanges()
+  const [chosen, setRange] = useState<(typeof RANGES)[number]>(RANGES[1])
+  const range = ranges.includes(chosen) ? chosen : RANGES[1]
   const [hover, setHover] = useState<BalancePointValue | null>(null)
   const { data: history, isLoading } = useBalanceHistory(range.days)
   const series = (history ?? []).map((p) => ({ date: p.date, value: p.net_minor }))
@@ -190,16 +191,18 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
   const accounts = data.accounts.filter((a) => !a.archived).length
 
   return (
-    <section aria-labelledby="balance-title" className={cn("card-surface rounded-[1.5rem] p-5", className)}>
+    <section aria-labelledby="balance-title" className={cn("card-surface p-5", className)}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <h2 id="balance-title" className="label-caps">Total balance</h2>
           <HideAmountsButton className="-my-1 size-7" />
         </div>
-        <p className="text-xs text-muted-foreground">{accounts} {accounts === 1 ? "account" : "accounts"}</p>
+        <Link href="/accounts" onClick={() => play("tap")} className="hit inline-flex items-center gap-0.5 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
+          {accounts} {accounts === 1 ? "account" : "accounts"} <ChevronRight className="size-3.5" />
+        </Link>
       </div>
-      <AnimatedMoney minor={shown} className={cn("mt-2 block leading-none font-extrabold tracking-[-0.025em] lg:text-[2.75rem]", balanceSize(formatMoney(shown)))} />
-      <p className="mt-2.5 flex min-h-6 flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.8125rem] text-muted-foreground" aria-live="polite">
+      <AnimatedMoney minor={shown} className={cn("mt-2 block leading-none font-extrabold tracking-[-0.025em]", balanceSize(formatMoney(shown)))} />
+      <p className="mt-2 flex min-h-6 flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.8125rem] text-muted-foreground" aria-live="polite">
         {hover && <span className="font-semibold text-foreground">{format(parseISO(hover.date), "EEE, MMM d")}</span>}
         {change !== null && change !== 0 ? (
           <>
@@ -209,24 +212,26 @@ export function BalanceCard({ data, className }: { data: Dashboard; className?: 
         ) : !hover && <>No change over the {range.phrase}</>}
       </p>
 
-      <div className="mt-4 h-40 lg:h-48">
+      <div className="mt-3 h-28 xl:h-32">
         {isLoading ? <Skeleton className="h-full rounded-xl" /> : series.length > 1 ? (
           <BalanceLine data={series} onHover={setHover} height="100%" startLine />
         ) : (
           <p className="flex h-full items-center justify-center rounded-xl border border-dashed px-6 text-center text-sm text-muted-foreground">Your balance line appears after a few days of activity.</p>
         )}
       </div>
-      <div className="mx-auto mt-4 flex w-full rounded-full bg-muted p-1 sm:max-w-sm" role="radiogroup" aria-label="Chart range">
-        {RANGES.map((r) => (
-          <button key={r.label} type="button" role="radio" aria-checked={r.label === range.label}
-            onClick={() => { play("select"); setRange(r); setHover(null) }}
-            className={cn("pressable hit h-8 flex-1 rounded-full text-[0.8125rem] font-semibold transition-[background-color,color,box-shadow] duration-200",
-              r.label === range.label ? "bg-primary text-primary-foreground shadow-[0_1px_2px_rgb(17_24_39/0.12)] dark:shadow-none"
-                : "text-muted-foreground hover:text-foreground")}>
-            {r.label}
-          </button>
-        ))}
-      </div>
+      {ranges.length > 1 && (
+        <div className="mx-auto mt-3 flex w-full rounded-full bg-muted p-1 sm:max-w-sm" role="radiogroup" aria-label="Chart range">
+          {ranges.map((r) => (
+            <button key={r.label} type="button" role="radio" aria-checked={r.label === range.label}
+              onClick={() => { play("select"); setRange(r); setHover(null) }}
+              className={cn("pressable hit h-7 flex-1 rounded-full text-[0.8125rem] font-semibold transition-[background-color,color,box-shadow] duration-200",
+                r.label === range.label ? "bg-primary text-primary-foreground shadow-[0_1px_2px_rgb(17_24_39/0.12)] dark:shadow-none"
+                  : "text-muted-foreground hover:text-foreground")}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

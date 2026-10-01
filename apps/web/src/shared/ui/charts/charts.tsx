@@ -49,11 +49,11 @@ function niceTicks(min: number, max: number) {
 const PLOT = { top: 10, right: 4, left: 2, bottom: 4, axis: 46 }
 
 /**
- * Answers one question: how has my balance moved? One line over a quiet grid, a compact scale on the
- * right, the first, middle and last dates below and a dot for today. `startLine` adds a dashed line at
- * where the range began, so up or down reads at a glance. `tone="light"` draws it in white for the green
- * Home environment. Drag across it (finger or mouse) or use the arrow keys to read any day; `onHover`
- * reports that point so a headline can show it.
+ * Answers one question: how has my balance moved? One plain line (no fill, no grid), its top and bottom values on
+ * the right on round numbers that cover the data, the first, middle and last dates below and a dot for today.
+ * `startLine` adds a dashed line at where the range began, so up or down reads at a glance. `tone="light"` draws it
+ * in white on green. Drag across it (finger or mouse) or use the arrow keys to read any day; `onHover` reports that
+ * point so a headline can show it. Nothing needs the drag: the headline beside it carries today's figure.
  */
 export function BalanceLine({ data, height = 168, tone = "default", startLine = false, onHover }: {
   data: BalancePointValue[]
@@ -64,10 +64,13 @@ export function BalanceLine({ data, height = 168, tone = "default", startLine = 
   startLine?: boolean
   onHover?: (point: BalancePointValue | null) => void
 }) {
-  const gradientId = `line-${useId().replace(/:/g, "")}`
   const hidden = useAmountsHidden()
   const [active, setActive] = useState<number | null>(null)
-  const ticks = useMemo(() => niceTicks(Math.min(...data.map((d) => d.value)), Math.max(...data.map((d) => d.value))), [data])
+  // The scale's two ends only: enough to read the size of the move without a grid of numbers.
+  const ticks = useMemo(() => {
+    const all = niceTicks(Math.min(...data.map((d) => d.value)), Math.max(...data.map((d) => d.value)))
+    return [all[0], all[all.length - 1]]
+  }, [data])
   const dates = useMemo(() => {
     const last = data.length - 1
     return [...new Set([0, Math.round(last / 2), last])].map((i) => data[i].date)
@@ -107,13 +110,6 @@ export function BalanceLine({ data, height = 168, tone = "default", startLine = 
       }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: PLOT.top, right: PLOT.right, left: PLOT.left, bottom: PLOT.bottom }}>
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={stroke} stopOpacity={light ? 0.26 : 0.22} />
-              <stop offset="100%" stopColor={stroke} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid vertical={false} stroke={light ? "#ffffff" : "var(--foreground)"} strokeOpacity={light ? 0.16 : 0.07} />
           {startLine && <ReferenceLine y={data[0].value} stroke="var(--muted-foreground)" strokeOpacity={0.55} strokeDasharray="3 4" />}
           <YAxis orientation="right" hide={hidden} width={axis} domain={[ticks[0], ticks[ticks.length - 1]]} ticks={ticks} interval={0}
             axisLine={false} tickLine={false} tickMargin={6} tick={{ fontSize: 10.5, fill: ink }} tickFormatter={compact} />
@@ -125,7 +121,7 @@ export function BalanceLine({ data, height = 168, tone = "default", startLine = 
               </text>
             )} />
           {point && <ReferenceLine x={point.date} stroke={light ? "#ffffff" : "var(--foreground)"} strokeOpacity={light ? 0.5 : 0.22} strokeDasharray="3 3" />}
-          <Area type="monotone" dataKey="value" stroke={stroke} strokeWidth={2} fill={`url(#${gradientId})`} isAnimationActive animationDuration={600}
+          <Area type="monotone" dataKey="value" stroke={stroke} strokeWidth={2.25} fill="none" isAnimationActive animationDuration={600}
             activeDot={false}
             dot={(props: { cx?: number; cy?: number; index?: number }) => {
               if (props.cx === undefined || props.cy === undefined) return <g key={`d-${props.index}`} />

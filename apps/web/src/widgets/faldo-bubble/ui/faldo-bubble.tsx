@@ -345,13 +345,13 @@ export function FaldoBubble() {
     <div className="lg:hidden">
       {/* Probes that measure the free band in CSS terms (safe areas, the tab bar's height), kept off screen. */}
       <div ref={topProbe} aria-hidden className="invisible absolute -top-[9999px] left-0 h-(--top-inset) w-px" />
-      <div ref={bottomProbe} aria-hidden className="invisible absolute -top-[9999px] left-0 h-[calc(3.8125rem+max(1.25rem,env(safe-area-inset-bottom)-0.75rem)+0.75rem)] w-px" />
+      <div ref={bottomProbe} aria-hidden className="invisible absolute -top-[9999px] left-0 h-[calc(var(--tabbar-height)+var(--tabbar-offset)+0.75rem)] w-px" />
 
       {/* While you drag, the bottom of the screen darkens and the × rises above the tab bar. */}
       <div aria-hidden className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-[44] h-64 bg-linear-to-t from-black/35 to-transparent transition-opacity duration-200",
         dragging ? "opacity-100" : "opacity-0")} />
       <div ref={target} aria-hidden
-        className={cn("pointer-events-none fixed bottom-[calc(3.8125rem+max(1.25rem,env(safe-area-inset-bottom)-0.75rem)+1rem)] left-1/2 z-[44] flex size-[3.75rem] -translate-x-1/2 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur-md transition-[opacity,translate,scale] duration-200 ease-(--ease-spring)",
+        className={cn("pointer-events-none fixed bottom-[calc(var(--tabbar-height)+var(--tabbar-offset)+1rem)] left-1/2 z-[44] flex size-[3.75rem] -translate-x-1/2 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/25 backdrop-blur-md transition-[opacity,translate,scale] duration-200 ease-(--ease-spring)",
           dragging ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0", over ? "scale-[1.2]" : "scale-100")}>
         <X className="size-6" strokeWidth={2.2} />
       </div>

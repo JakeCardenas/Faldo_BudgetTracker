@@ -330,11 +330,11 @@ export function MobileNav() {
 
   return (
     <nav aria-label="Main"
-      className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)-0.75rem))] lg:hidden", away && "nav-away")}>
+      className={cn("pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-(--tabbar-offset) lg:hidden", away && "nav-away")}>
       <div className="relative mx-auto max-w-[30rem]">
         <div ref={bar} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
           onFocus={() => setAwayOn(null)}
-          className="nav-bar pointer-events-auto relative h-[3.875rem] touch-none select-none [-webkit-touch-callout:none]">
+          className="nav-bar pointer-events-auto relative h-(--tabbar-height) touch-none select-none [-webkit-touch-callout:none]">
           {/* The shadow on its own layer, so the glass can draw in to a circle without clipping it. */}
           <span aria-hidden className="nav-shadow absolute inset-0 rounded-full" />
           <span aria-hidden className="nav-glass nav-glass-flat nav-shape absolute inset-0 rounded-full" />

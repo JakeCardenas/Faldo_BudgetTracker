@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { addMonths, format, parse } from "date-fns"
 import { ArrowDownRight, ArrowUpRight, BarChart3, ChevronDown, ChevronLeft, ChevronRight, Info, Printer } from "lucide-react"
 import { IncomeExpenseBars } from "@/shared/ui/charts/charts"
+import { WeekBars } from "@/shared/ui/charts/week-bars"
 import { CategoryIcon } from "@/shared/ui/category-icon"
 import { EmptyState } from "@/shared/ui/empty-state"
 import { Money } from "@/shared/ui/money/money"
@@ -17,6 +18,7 @@ import { api } from "@/shared/api/client"
 import { formatMoney, monthKey } from "@/shared/lib/format"
 import { maskAmounts, useMaskedAmounts } from "@/shared/lib/privacy"
 import { useReport } from "@/entities/report"
+import { useDashboard } from "@/entities/dashboard"
 import type { Health, MonthlyReport } from "@/shared/api/types"
 import { cn } from "@/shared/lib/utils"
 import { LoadError } from "@/shared/ui/load-error"
@@ -178,6 +180,18 @@ function HealthDetails({ health }: { health: Health }) {
 }
 
 /** Past money, explained. Each block answers one question; nothing is here just because finance apps have charts. */
+/** Spending per day this past week: the month's view has the totals, this shows the rhythm of the last few days. */
+function LastSevenDays() {
+  const { data } = useDashboard("this_month")
+  const days = data?.last_7_days ?? []
+  if (days.length === 0) return null
+  return (
+    <Section title="Day by day" description="Spending over the last 7 days">
+      <div className="card-surface p-4 sm:p-5"><WeekBars days={days} /></div>
+    </Section>
+  )
+}
+
 export default function ReportsPage() {
   useMaskedAmounts()
   const [month, setMonth] = useState(monthKey())
@@ -224,6 +238,7 @@ export default function ReportsPage() {
                 : <div className="mt-4 space-y-2"><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-3/4" /></div>}
             </section>
             <WhereItWent report={report} />
+            {month === monthKey() && <LastSevenDays />}
             <Section title="Money in and out" description="Last 12 months">
               <div className="card-surface p-4 sm:p-5">
                 <IncomeExpenseBars data={report.history} height={220} />

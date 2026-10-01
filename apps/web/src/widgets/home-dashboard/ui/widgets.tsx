@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { format, parseISO } from "date-fns"
 import { ArrowDownLeft, ArrowUpRight, ChevronRight, Ellipsis, Flag, PieChart, Plus, Scale, type LucideIcon } from "lucide-react"
 import { Money } from "@/shared/ui/money/money"
 import { Segmented } from "@/shared/ui/ios/segmented"
@@ -83,66 +82,6 @@ function slices(rows: CategoryRow[]): Slice[] {
   }]
 }
 
-/** The ring: each category an arc with a hairline gap; pointing at one (or its legend row) quiets the others. */
-function CategoryRing({ data, focus, onFocus }: { data: Slice[]; focus: string | null; onFocus: (label: string | null) => void }) {
-  const size = 124
-  const stroke = 15
-  const r = (size - stroke) / 2
-  const circumference = 2 * Math.PI * r
-  const gap = data.length > 1 ? 2.5 : 0
-  const lengths = data.map((slice) => (slice.pct / 100) * circumference)
-  const starts = lengths.map((_, i) => lengths.slice(0, i).reduce((sum, l) => sum + l, 0))
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} className="shrink-0 -rotate-90" aria-hidden onPointerLeave={() => onFocus(null)}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--chart-track)" strokeWidth={stroke} />
-      {data.map((slice, i) => (
-        <circle key={slice.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={slice.color} strokeWidth={stroke}
-          strokeDasharray={`${Math.max(0.5, lengths[i] - gap)} ${circumference}`} strokeDashoffset={-starts[i]}
-          onPointerEnter={() => onFocus(slice.label)}
-          className="transition-opacity duration-200" opacity={focus && focus !== slice.label ? 0.3 : 1} />
-      ))}
-    </svg>
-  )
-}
-
-/** Spending per day for the last seven days on quiet tracks. Point at or tap a day to read it; today is the bright bar. */
-function WeekBars({ days }: { days: { date: string; amount_minor: number }[] }) {
-  const [picked, setPicked] = useState<number | null>(null)
-  const max = Math.max(1, ...days.map((d) => d.amount_minor))
-  const total = days.reduce((sum, d) => sum + d.amount_minor, 0)
-  const day = picked !== null ? days[picked] : null
-  return (
-    <div className="min-w-0">
-      <div className="flex items-baseline justify-between gap-3 text-[0.8125rem]">
-        <span className="font-semibold">{day ? format(parseISO(day.date), "EEEE, MMM d") : "Last 7 days"}</span>
-        <Money minor={day ? day.amount_minor : total} className="font-bold" />
-      </div>
-      <ol className="mt-3 grid grid-cols-7 gap-2" onPointerLeave={(e) => { if (e.pointerType === "mouse") setPicked(null) }}>
-        {days.map((d, i) => {
-          const isToday = i === days.length - 1
-          const on = picked === i || (picked === null && isToday)
-          return (
-            <li key={d.date} className="min-w-0">
-              <button type="button" aria-label={`${format(parseISO(d.date), "EEEE, MMMM d")}: ${formatMoney(d.amount_minor)}`} aria-pressed={picked === i}
-                onPointerEnter={(e) => { if (e.pointerType === "mouse") setPicked(i) }}
-                onClick={() => setPicked(picked === i ? null : i)} onFocus={(e) => { if (e.currentTarget.matches(":focus-visible")) setPicked(i) }} onBlur={() => setPicked(null)}
-                className="group flex w-full flex-col items-center gap-1.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-                <span className="flex h-14 w-full items-end overflow-hidden rounded-[0.375rem] bg-chart-track">
-                  <span className={cn("w-full rounded-[0.375rem] transition-[background-color] duration-200", on ? "bg-primary" : "bg-chart-2")}
-                    style={{ height: d.amount_minor > 0 ? `max(0.25rem, ${(d.amount_minor / max) * 100}%)` : 0 }} />
-                </span>
-                <span className={cn("text-[0.6875rem] leading-none", isToday ? "font-bold text-foreground" : "font-medium text-muted-foreground")}>
-                  {format(parseISO(d.date), "EEEEE")}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ol>
-    </div>
-  )
-}
-
 function changeText(pct: number | null) {
   if (pct === null) return "So far this month"
   if (Math.round(pct) === 0) return "About the same as this time last month"
@@ -150,47 +89,45 @@ function changeText(pct: number | null) {
 }
 
 /**
- * This month's spending: the total first, then where it went (a ring with a legend that names every slice)
- * and the last seven days as bars. On wide cards the ring and the week sit side by side.
+ * This month's spending, answering one question: where did it go? The total, then one labelled bar per category
+ * (the four biggest, and Other only when there are more), each bar measured against the biggest so they compare at
+ * a glance, with the amount and share written beside it. The colour dot names the category too; the label carries
+ * the meaning. The week-by-day view lives on Statistics.
  */
 export function SpendingCard({ data, className }: { data: Dashboard; className?: string }) {
-  const [focus, setFocus] = useState<string | null>(null)
   const rows = slices(data.spending_by_category)
   const total = data.overview.expense_minor
+  const largest = Math.max(1, ...rows.map((r) => r.amount_minor))
   return (
-    <section aria-labelledby="spending-title" className={cn("card-surface @container min-w-0 rounded-[1.5rem] p-5", className)}>
+    <section aria-labelledby="spending-title" className={cn("card-surface min-w-0 p-5", className)}>
       <div className="flex items-center justify-between gap-2">
-        <h2 id="spending-title" className="label-caps">Spent this month</h2>
-        {rows.length > 0 && (
-          <Link href="/reports" className="hit inline-flex items-center gap-0.5 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
-            Breakdown <ChevronRight className="size-3.5" />
-          </Link>
-        )}
+        <h2 id="spending-title" className="section-title">Spent this month</h2>
+        <Link href="/reports" className="hit inline-flex items-center gap-0.5 text-[0.8125rem] font-semibold text-primary hover:opacity-80">
+          Statistics <ChevronRight className="size-3.5" />
+        </Link>
       </div>
       <Money minor={total} className="display-number mt-2 block" />
       <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">{changeText(data.overview.expense_change_pct)}</p>
 
-      <div className="mt-5 grid gap-6 @[40rem]:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] @[40rem]:items-center @[40rem]:gap-10">
-        {rows.length === 0 ? (
-          <p className="text-[0.875rem] text-muted-foreground">Nothing spent yet this month. What you log shows up here by category.</p>
-        ) : (
-          <div className="flex items-center gap-5">
-            <CategoryRing data={rows} focus={focus} onFocus={setFocus} />
-            <ul className="min-w-0 flex-1 space-y-2.5" aria-label="Spending by category" onPointerLeave={() => setFocus(null)}>
-              {rows.map((row) => (
-                <li key={row.label} onPointerEnter={() => setFocus(row.label)}
-                  className={cn("flex items-center gap-2 text-[0.8125rem] transition-opacity duration-200", focus && focus !== row.label && "opacity-45")}>
-                  <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} />
-                  <span className="min-w-0 flex-1 truncate font-medium">{row.label}</span>
-                  <Money minor={row.amount_minor} compact={row.amount_minor >= 10_000_000} className="hidden text-muted-foreground @[40rem]:inline" />
-                  <span className="tabular w-10 shrink-0 text-right font-semibold">{Math.round(row.pct)}%</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {data.last_7_days && data.last_7_days.length > 0 && <WeekBars days={data.last_7_days} />}
-      </div>
+      {rows.length === 0 ? (
+        <p className="mt-4 text-[0.875rem] text-muted-foreground">Nothing spent yet this month. What you log shows up here by category.</p>
+      ) : (
+        <ul className="mt-4 space-y-3.5" aria-label="Spending by category">
+          {rows.map((row) => (
+            <li key={row.label} className="min-w-0">
+              <div className="flex items-baseline gap-2 text-[0.875rem]">
+                <span aria-hidden className="size-2.5 shrink-0 translate-y-[-0.0625rem] rounded-full" style={{ backgroundColor: row.color }} />
+                <span className="min-w-0 flex-1 truncate font-medium">{row.label}</span>
+                <Money minor={row.amount_minor} compact={row.amount_minor >= 10_000_000} className="font-semibold" />
+                <span className="tabular w-9 shrink-0 text-right text-[0.8125rem] text-muted-foreground">{Math.round(row.pct)}%</span>
+              </div>
+              <div aria-hidden className="mt-1.5 h-2 overflow-hidden rounded-full bg-chart-track">
+                <div className="h-full rounded-full" style={{ width: `${Math.max(2, (row.amount_minor / largest) * 100)}%`, backgroundColor: row.color }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   )
 }

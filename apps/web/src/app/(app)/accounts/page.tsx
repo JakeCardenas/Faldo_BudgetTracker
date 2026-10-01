@@ -209,7 +209,7 @@ export default function AccountsPage() {
   const toggle = (type: AccountType) => setCollapsed((c) => { const n = new Set(c); if (n.has(type)) n.delete(type); else n.add(type); return n })
 
   return (
-    <div className="space-y-6 pb-2">
+    <div className="space-y-6">
       <header className="flex items-start justify-between gap-3 pt-[calc(var(--top-inset)+0.75rem)] lg:pt-10">
         <div className="min-w-0 pt-1">
           <h1 className="page-title lg:text-[2rem]">Wallet</h1>
