@@ -1,10 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { OrDivider, PILL } from "./fields"
-import { api } from "@/shared/api/client"
+import { useSignInOptions } from "../api/options"
 import { markWelcome } from "@/shared/ui/brand/welcome-splash"
 import { cn } from "@/shared/lib/utils"
 
@@ -45,7 +44,7 @@ function AppleMark() {
  * Tapping one leaves for the service's own sign-in page and comes back signed in (see /api/v1/auth/{provider}/start).
  */
 export function SocialSignIn({ next }: { next: string }) {
-  const { data } = useQuery({ queryKey: ["auth-providers"], queryFn: () => api.get<Record<Provider, boolean>>("/auth/providers"), staleTime: 5 * 60_000 })
+  const { data } = useSignInOptions()
   const [leaving, setLeaving] = useState<Provider | null>(null)
   const available = (["google", "apple"] as const).filter((p) => data?.[p])
   if (!available.length) return null

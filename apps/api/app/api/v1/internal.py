@@ -31,4 +31,9 @@ async def run_jobs(request: Request) -> dict[str, int]:
     provided = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
     if secret is None or not hmac.compare_digest(provided, secret.get_secret_value()):
         raise Unauthorized("Not allowed.")
-    return {"processed": await drain(500)}
+    from app.core.db import scoped_session
+    from app.services.demo import purge_expired
+
+    async with scoped_session(None) as db:
+        ended = await purge_expired(db, limit=1000)
+    return {"processed": await drain(500), "demos_ended": ended}

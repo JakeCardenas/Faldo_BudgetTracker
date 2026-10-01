@@ -36,7 +36,7 @@ export default function YouPage() {
             {isLoading ? <><Skeleton className="h-5 w-32" /><Skeleton className="mt-2 h-4 w-44" /></> : (
               <>
                 <p className="truncate text-xl font-semibold tracking-[-0.02em]">{me?.display_name}</p>
-                <p className="truncate text-sm text-muted-foreground">{me?.email}</p>
+                <p className="truncate text-sm text-muted-foreground">{me?.is_demo ? "Demo with sample data" : me?.email}</p>
               </>
             )}
           </div>
@@ -47,7 +47,7 @@ export default function YouPage() {
             {MENU.map((item) => <ListRow key={item.href} icon={item.icon} title={item.label} href={item.href} />)}
           </ListGroup>
           <ListGroup divider>
-            <ListRow title="Sign out" onClick={logout} destructive />
+            <ListRow title={me?.is_demo ? "End demo" : "Sign out"} onClick={logout} destructive />
           </ListGroup>
         </div>
       </div>

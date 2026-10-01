@@ -52,27 +52,18 @@ async function parseError(response: Response): Promise<ApiError> {
   } catch {
     if (response.status >= 500) detail = "The server is unavailable right now."
   }
-  if (response.status === 401) signedOutElsewhere()
+  // The server no longer accepts this tab's session: it expired, was signed out from another device, or was a demo
+  // that reached its end.
+  if (response.status === 401) onSignedOut?.(type === DEMO_ENDED ? "demo-ended" : "expired")
   return new ApiError(response.status, detail, errors, type, problem)
 }
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"]
-let onSignedOut: (() => void) | null = null
+export type SignedOutReason = "expired" | "demo-ended"
+let onSignedOut: ((reason: SignedOutReason) => void) | null = null
 
-/** What to forget when a request finds the session gone (the query cache, set up in providers.tsx). */
-export function whenSignedOut(handler: (() => void) | null) {
+/** What to do when a request finds the session gone: forget the person, then leave (set up in providers.tsx). */
+export function whenSignedOut(handler: ((reason: SignedOutReason) => void) | null) {
   onSignedOut = handler
-}
-
-/**
- * The server no longer accepts this tab's session (it expired, or was signed out from another device): forget the
- * last person's data first, then go to Log in. A 401 on the sign-in screens themselves is just a wrong password.
- */
-function signedOutElsewhere() {
-  const onPublicPage = typeof window !== "undefined" && PUBLIC_PATHS.some((p) => window.location.pathname.startsWith(p))
-  if (onPublicPage) return
-  onSignedOut?.()
-  if (typeof window !== "undefined") window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`
 }
 
 // Answers that mean "the request may never have been handled": worth sending again, but only when an Idempotency-Key
@@ -122,6 +113,8 @@ export async function download(path: string, query?: Query): Promise<{ blob: Blo
 }
 
 export const REAUTH_REQUIRED = "urn:faldo:problem:reauthentication-required"
+/** A demo sandbox past its end time (apps/api/app/services/demo.py). */
+export const DEMO_ENDED = "urn:faldo:problem:demo-ended"
 
 export const api = {
   get: <T>(path: string, query?: Query) => request<T>("GET", path, { query }),

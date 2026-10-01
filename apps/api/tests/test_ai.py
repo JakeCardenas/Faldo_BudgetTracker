@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 
 import pytest
@@ -18,9 +19,19 @@ TODAY = today_in("Asia/Manila")
 
 @pytest.fixture(scope="module")
 async def demo(app):
-    await seed(reset=True)
+    # The seed has no default password; this run makes up its own.
+    password = f"test-{uuid.uuid4().hex}"
+    previous = os.environ.get("SEED_DEMO_PASSWORD")
+    os.environ["SEED_DEMO_PASSWORD"] = password
+    try:
+        await seed(reset=True)
+    finally:
+        if previous is None:
+            os.environ.pop("SEED_DEMO_PASSWORD", None)
+        else:
+            os.environ["SEED_DEMO_PASSWORD"] = previous
     client = ApiClient(transport=__import__("httpx").ASGITransport(app=app), base_url="http://test")
-    r = await client.post("/api/v1/auth/login", json={"email": DEMO_EMAIL, "password": "faldo-demo-2026"})
+    r = await client.post("/api/v1/auth/login", json={"email": DEMO_EMAIL, "password": password})
     assert r.status_code == 200, r.text
     yield client
     await client.aclose()
@@ -56,7 +67,9 @@ async def test_seed_indexes_memory_and_retrieval_finds_items(demo):
         assert count and count > 400
         hits = await search_memory(db, uid, "shoes sneakers", entity_types=["transaction_item", "transaction"])
         names = " ".join(h.content for h in hits)
-        assert "Nike Air Force 1" in names and "Adidas Samba" in names
+        # Purchases from earlier months, which are in the seed whatever day of the month it is (some of this month's
+        # purchases, like the Nike shoes on the 6th, aren't there yet early in a month).
+        assert "Adidas Samba" in names and "Foot Locker" in names
         notes = await search_memory(db, uid, "Carlo tuition", entity_types=["financial_note", "debt"])
         assert notes and "Carlo" in notes[0].content
 

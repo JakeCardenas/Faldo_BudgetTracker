@@ -35,7 +35,7 @@ from app.models.enums import InsightStatus, TransactionSource
 from app.schemas.common import ApiModel
 from app.schemas.ledger import TransactionIn, TransactionOut
 from app.services import check as check_service
-from app.services import dashboard, forecast, health, idempotency, insights, pulse, receipts, reports
+from app.services import dashboard, demo, forecast, health, idempotency, insights, pulse, receipts, reports
 from app.services.common import get_owned
 from app.services.transactions import TransactionFilters, create_transaction, list_transactions
 from app.services.transactions import to_out as txn_out
@@ -195,6 +195,7 @@ def _receipt_out(r: Any) -> dict[str, Any]:
 
 @router.post("/receipts", status_code=201, tags=["receipts"])
 async def upload_receipt(ctx: CtxDep, file: Annotated[UploadFile, File()], idempotency_key: IdempotencyKeyHeader = None) -> Any:
+    demo.refuse_in_demo(ctx.user, "Reading receipts")
     cfg = get_settings()
     await limiter.hit(f"receipt:{ctx.user_id}", cfg.receipt_uploads_per_day, 86400)
     data = await file.read(cfg.receipt_max_bytes + 1)

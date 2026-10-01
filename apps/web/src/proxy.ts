@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { signedOutDestination } from "@/shared/config/routes"
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/logout", "/privacy", "/terms"]
 const FORWARDED_IP = "x-faldo-client-ip"
 const PROXY_AUTH = "x-faldo-proxy-auth"
 
@@ -26,16 +26,8 @@ function toApi(request: NextRequest) {
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   if (pathname.startsWith("/api/")) return toApi(request)
-  const hasSession = request.cookies.has("faldo_session")
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
-
-  if (!hasSession && !isPublic) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + search)}`
-    return NextResponse.redirect(url)
-  }
-  return NextResponse.next()
+  const destination = request.cookies.has("faldo_session") ? null : signedOutDestination(pathname, search)
+  return destination ? NextResponse.redirect(new URL(destination, request.url)) : NextResponse.next()
 }
 
 export const config = {

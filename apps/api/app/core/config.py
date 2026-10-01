@@ -3,7 +3,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from pydantic import Field, SecretStr, computed_field, model_validator
+from pydantic import Field, SecretStr, StringConstraints, computed_field, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ON_VERCEL = bool(os.environ.get("VERCEL"))
@@ -100,6 +100,22 @@ class Settings(BaseSettings):
     # Calls to outside AI services per Philippine calendar day (see ai/usage.py). Past either, Faldo's own rules answer.
     ai_user_daily_calls: int = 150
     ai_global_daily_calls: int = 1500
+    ai_demo_daily_calls: int = 10
+
+    demo_enabled: bool = not ON_VERCEL
+    """Let visitors try Faldo without signing up, each in their own sandbox account with sample data that's deleted
+    after demo_hours (services/demo.py). Off on Vercel unless DEMO_ENABLED=true."""
+    demo_hours: int = 24
+    demo_max_active: int = 100
+    demo_starts_per_ip_per_hour: int = 3
+
+    seed_demo_password: SecretStr | None = None
+    """Password of the local demo account made by `make seed` (app/seed/demo.py). No default, on purpose."""
+
+    policy_version: Annotated[str, StringConstraints(max_length=40)] | None = None
+    """The approved version of the Privacy notice and Terms, for example "2026-10-15". Leave it unset while they're
+    drafts: sign-up then records no acceptance. Once set, new accounts agree to it before they're created and existing
+    accounts are asked once."""
 
     email_provider: Literal["auto", "resend", "log"] = "auto"
     resend_api_key: SecretStr | None = None

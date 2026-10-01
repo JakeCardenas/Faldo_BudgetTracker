@@ -17,6 +17,10 @@ Faldo should feel like a calm consumer finance app, not a dashboard. Simple on t
 
 The **+** (the middle of the tab bar on phones, and a glass circle in the corner while the bar is away; "Add" on desktop) opens one menu: type it like a text, Expense, Income, Transfer, then the scanner (receipts and QR codes: the live camera full screen with rounded corner brackets that close in on a QR code and turn green, a white shutter, Photos and the light; `components/capture/scanner.tsx`), goal, money owed, planned purchase, Faldo Check and import.
 
+**Signed out**, `/` opens the start page (`/welcome`): what Safe to Spend and Faldo Check are, a worked example whose numbers are labelled as made up, and the ways in (Create an account, Try the demo when the server has it on, Log in). Any other private page goes to Log in and comes back after. `src/shared/config/routes.ts` holds the public pages.
+
+**A demo** is a sandbox account of the visitor's own with sample data. A slim sage banner sticks to the top of every screen ("You're exploring a demo", Create your account); it covers the top inset itself, so under it `--top-inset` is zero and sticky headers stick below it (`--sticky-top`). Its email is never shown; menus say "Demo with sample data" and "End demo".
+
 ## Navigation
 
 Phones and tablets: one frosted capsule, Home, Wallet, **+**, Plan, History, each named under its icon (11px semibold, icons 22px with a 2px stroke; the + is named "Add"), because a wallet, a calendar and a clock alone don't say Wallet, Plan and History. It sits on the page's 20px margins about 21px above the bottom edge (62px tall). The selected tab sits in a sage lens (83 x 53px) set 4px into the glass, and whatever the lens covers is drawn **filled** in Faldo's green (a solid icon with its details cut out: the wallet's clasp, the calendar's lines, the clock's hands); everything outside it stays outlined in grey. The fill follows the lens exactly, so an icon half under a moving lens is half filled.

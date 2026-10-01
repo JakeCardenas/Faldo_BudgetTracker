@@ -14,7 +14,8 @@ import { AppActionsContext, type AddModeOption, type CheckPreset, type EntryPres
 import { AddMenu } from "@/widgets/add-menu"
 import { CommandSearch } from "@/widgets/command-search"
 import { FaldoBubble } from "@/widgets/faldo-bubble"
-import { MobileNav, SideNav } from "@/widgets/navigation"
+import { DemoBanner, MobileNav, SideNav, useLogout } from "@/widgets/navigation"
+import { PolicyGate } from "@/features/auth"
 import { Button } from "@/shared/ui/button"
 import { PullToRefresh } from "@/shared/ui/pull-to-refresh"
 import { useBubbleShown } from "@/shared/lib/bubble"
@@ -86,6 +87,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const qc = useQueryClient()
   const { data: me, isLoading, isError, isFetching, refetch } = useMe()
+  const logout = useLogout()
   // Re-renders the shell's own sheets and dialogs when "Hide amounts" changes; pages subscribe themselves.
   useAmountsHidden()
   const bubble = useBubbleShown()
@@ -157,6 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }), [openAddTransaction])
 
   const booting = isLoading || !me || !me.settings.onboarding_completed_at
+  const demo = Boolean(me?.is_demo)
   const fullBleed = pathname.startsWith("/assistant")
 
   // Pull to refresh: everything cached goes stale and what's on screen loads again, in place.
@@ -174,6 +177,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Unreachable retrying={isFetching} onRetry={() => void refetch()} />
       ) : booting ? (
         <Booting />
+      ) : me?.policy_to_accept ? (
+        <PolicyGate version={me.policy_to_accept} onSignOut={() => void logout()} />
       ) : (
         <AppActionsContext.Provider value={actions}>
           <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:shadow-(--shadow-float)">Skip to content</a>
@@ -182,14 +187,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {/* Desktop: the sidebar beside the page. Phones and tablets: the page alone, with the tab bar over its foot. */}
           <div className="flex min-h-dvh bg-background">
             <SideNav />
-            <PullToRefresh onRefresh={refresh} disabled={fullBleed} className="flex min-h-dvh min-w-0 flex-1 flex-col bg-background">
+            {/* A demo's banner takes the top inset, so the page under it starts at the top of the safe area and sticky
+                headers stick below the banner. */}
+            <PullToRefresh onRefresh={refresh} disabled={fullBleed}
+              className={cn("flex min-h-dvh min-w-0 flex-1 flex-col bg-background", demo && "[--sticky-top:calc(var(--top-inset)+2.75rem)]")}>
+              {demo && <DemoBanner />}
               <PageMain key={pathname} pathname={pathname} className={fullBleed
-                ? "w-full flex-1"
+                ? cn("w-full flex-1", demo && "[--top-inset:0px]")
                 // The one place that leaves room under a page: on phones exactly the tab bar's footprint and a breathing gap
                 // (plus the Faldo bubble's height when it's on, since it docks just above the bar); on desktop, where
                 // nothing floats over the page, a plain margin.
                 : cn("mx-auto w-full max-w-[1160px] flex-1 px-5 sm:px-6 lg:px-10 lg:pb-12", isNarrow(pathname) && "lg:max-w-[52rem]",
-                  bubble ? "pb-[calc(var(--tabbar-clearance)+4rem)]" : "pb-(--tabbar-clearance)")}>
+                  bubble ? "pb-[calc(var(--tabbar-clearance)+4rem)]" : "pb-(--tabbar-clearance)", demo && "[--top-inset:0px]")}>
                 {children}
               </PageMain>
             </PullToRefresh>

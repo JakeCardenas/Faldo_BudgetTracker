@@ -60,6 +60,11 @@ class Unauthorized(AppError):
     title = "Unauthorized"
 
 
+class DemoEnded(Unauthorized):
+    """A demo sandbox past its end time (services/demo.py): the app sends its visitor back to the start page."""
+    problem_type = "urn:faldo:problem:demo-ended"
+
+
 class RateLimited(AppError):
     status_code = 429
     title = "Too many requests"

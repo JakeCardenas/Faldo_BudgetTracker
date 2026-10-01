@@ -103,3 +103,18 @@ test("a request that finds the session gone forgets the person before anything e
   }
   assert.equal(qc.getQueryCache().getAll().length, 0)
 })
+
+test("leaving a demo to sign up forgets it the same way, then goes to Create account", async () => {
+  const qc = new QueryClient()
+  asAna(qc)
+  const navigated = []
+  await signOut(qc, {
+    unsubscribePush: async () => {},
+    revokeSession: async () => {},
+    navigate: (path) => navigated.push(path),
+    destination: "/register",
+    storage: null,
+  })
+  assert.deepEqual(navigated, ["/register"])
+  assert.equal(qc.getQueryCache().getAll().length, 0)
+})

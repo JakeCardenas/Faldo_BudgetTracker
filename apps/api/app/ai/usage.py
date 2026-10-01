@@ -100,6 +100,19 @@ def reset() -> None:
     _memory.counts.clear()
 
 
+async def daily_limit(user_id: uuid.UUID) -> int:
+    """A person's outside AI calls per day: a demo sandbox (services/demo.py) gets far fewer than a real account."""
+    from sqlalchemy import select
+
+    from app.core.db import get_sessionmaker
+    from app.models import User
+
+    settings = get_settings()
+    async with get_sessionmaker()() as session:
+        demo_ends = await session.scalar(select(User.demo_expires_at).where(User.id == user_id))
+    return settings.ai_demo_daily_calls if demo_ends is not None else settings.ai_user_daily_calls
+
+
 async def charge(user_id: uuid.UUID | None, kind: str) -> None:
     """Count one outside AI call, or raise AIBudgetExceeded if today's limit is used up.
 
@@ -108,7 +121,7 @@ async def charge(user_id: uuid.UUID | None, kind: str) -> None:
     """
     settings = get_settings()
     store, day = _store(), _today()
-    if user_id is not None and await store.add(day, f"user:{user_id}") > settings.ai_user_daily_calls:
+    if user_id is not None and await store.add(day, f"user:{user_id}") > await daily_limit(user_id):
         raise AIBudgetExceeded("user")
     if await store.add(day, "global") > settings.ai_global_daily_calls:
         raise AIBudgetExceeded("global")

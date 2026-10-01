@@ -57,6 +57,8 @@ export interface SignOutSteps {
   afterward?: () => void
   /** Leave the app; a full page load, so nothing from this person survives in memory. */
   navigate: (path: string) => void
+  /** Where to go: Log in, unless said otherwise (a demo leaving to sign up goes to Create account). */
+  destination?: string
   storage?: Removable | null
   timeoutMs?: number
 }
@@ -87,6 +89,6 @@ export async function signOut(qc: QueryClient, steps: SignOutSteps): Promise<boo
   }
   forgetUser(qc, steps.storage)
   steps.afterward?.()
-  steps.navigate("/login")
+  steps.navigate(steps.destination ?? "/login")
   return revoked
 }

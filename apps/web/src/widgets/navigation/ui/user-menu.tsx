@@ -19,8 +19,11 @@ export function Avatar({ name, className }: { name?: string | null; className?: 
 
 const post = (path: string) => fetch(path, { method: "POST", credentials: "same-origin", headers: { "x-faldo-client": "web" } })
 
-/** Signing out forgets everything this tab knows about the person, even when the server can't be reached. */
-export function useLogout() {
+/**
+ * Signing out forgets everything this tab knows about the person, even when the server can't be reached. Signing out
+ * of a demo also deletes it (the API does that).
+ */
+export function useLogout(destination?: string) {
   const qc = useQueryClient()
   return () => signOut(qc, {
     unsubscribePush: forgetPushOnThisDevice,
@@ -28,6 +31,7 @@ export function useLogout() {
     dropCookie: () => post("/logout"),
     afterward: () => toast.dismiss(),
     navigate: (path) => window.location.replace(path),
+    destination,
   })
 }
 
@@ -46,20 +50,20 @@ export function UserMenu({ showName = false }: { showName?: boolean }) {
         {showName && (
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold">{me?.display_name}</span>
-            <span className="block truncate text-xs text-muted-foreground">{me?.email}</span>
+            <span className="block truncate text-xs text-muted-foreground">{me?.is_demo ? "Demo with sample data" : me?.email}</span>
           </span>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={showName ? "start" : "end"} side={showName ? "top" : "bottom"} className="w-60">
         <DropdownMenuLabel className="font-normal">
           <p className="text-sm font-medium">{me?.display_name}</p>
-          <p className="truncate text-xs text-muted-foreground">{me?.email}</p>
+          <p className="truncate text-xs text-muted-foreground">{me?.is_demo ? "Demo with sample data" : me?.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link href="/you"><CircleUserRound /> Profile</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link href="/settings"><Settings /> Settings</Link></DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={logout}><LogOut /> Sign out</DropdownMenuItem>
+        <DropdownMenuItem onSelect={logout}><LogOut /> {me?.is_demo ? "End demo" : "Sign out"}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -6,8 +6,11 @@ import { useId, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { useAuthDraft } from "../model/draft"
+import { AGREE_FIRST, PolicyAgreement } from "./agreement"
+import { TryDemo } from "./demo"
 import { AuthError, AuthField, AuthHeading, PasswordField, PRIMARY_PILL } from "./fields"
 import { SIGN_IN_ERRORS, SocialSignIn } from "./social"
+import { usePolicyVersion } from "../api/options"
 import { markWelcome } from "@/shared/ui/brand/welcome-splash"
 import { Checkbox } from "@/shared/ui/checkbox"
 import { api, ApiError } from "@/shared/api/client"
@@ -41,21 +44,25 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const rememberId = useId()
   const [{ name, email, password }, setDraft] = useAuthDraft()
   const [remember, setRemember] = useState(true)
+  const [agreed, setAgreed] = useState(false)
   // A Google or Apple sign-in that came back unfinished says why (/login?error=code).
   const [error, setError] = useState<string | null>(() => SIGN_IN_ERRORS[params.get("error") ?? ""] ?? null)
   const [busy, setBusy] = useState(false)
   const login = mode === "login"
-  const showDemo = login && process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === "true"
+  // Once the operator approves a version of the Privacy notice and Terms, signing up agrees to that exact version.
+  const { data: policy } = usePolicyVersion()
+  const askAgreement = !login && Boolean(policy)
   const next = safeNext(params.get("next"))
 
-  async function submit(e: React.FormEvent, override?: { email: string; password: string }) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (askAgreement && !agreed) return setError(AGREE_FIRST)
     setBusy(true)
     setError(null)
     try {
       const me = login
-        ? await api.post<Me>("/auth/login", { ...(override ?? { email, password }), remember: override ? true : remember })
-        : await api.post<Me>("/auth/register", { email, password, display_name: name })
+        ? await api.post<Me>("/auth/login", { email, password, remember })
+        : await api.post<Me>("/auth/register", { email, password, display_name: name, ...(askAgreement && { accepted_policy_version: policy }) })
       signedIn(qc, me)
       if (me.settings.onboarding_completed_at) markWelcome()
       router.replace(!me.settings.onboarding_completed_at ? "/onboarding" : next)
@@ -86,11 +93,20 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           value={password} onChange={(e) => setDraft({ password: e.target.value })} />
 
         {login && (
-          <div className="flex min-h-11 items-center gap-2.5 px-1">
-            <Checkbox id={rememberId} checked={remember} onCheckedChange={(checked) => setRemember(checked === true)} className="size-[1.125rem] rounded-[5px]" />
-            <label htmlFor={rememberId} className="text-sm">Remember me</label>
+          <div className="flex min-h-11 items-start gap-2.5 px-1 py-1">
+            <Checkbox id={rememberId} checked={remember} onCheckedChange={(checked) => setRemember(checked === true)}
+              aria-describedby={`${rememberId}-hint`} className="mt-0.5 size-[1.125rem] rounded-[5px]" />
+            <div className="space-y-0.5">
+              <label htmlFor={rememberId} className="block text-sm">Remember me</label>
+              {/* Matches the API: 30 days from the last visit when remembered (SESSION_TTL_DAYS), else until the browser closes. */}
+              <p id={`${rememberId}-hint`} className="text-xs text-muted-foreground">
+                {remember ? "Stay signed in on this device for 30 days after your last visit." : "You'll be signed out when you close the browser."}
+              </p>
+            </div>
           </div>
         )}
+
+        {askAgreement && <PolicyAgreement checked={agreed} onCheckedChange={(value) => { setAgreed(value); setError(null) }} />}
 
         {error && <AuthError>{error}</AuthError>}
 
@@ -108,15 +124,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             {login ? "Sign up" : "Log in"}
           </Link>
         </p>
-        {showDemo && (
-          <p>
-            Just looking?{" "}
-            <button type="button" disabled={busy} onClick={(e) => submit(e as unknown as React.FormEvent, { email: "jake@faldo.app", password: "faldo-demo-2026" })}
-              className="font-semibold text-foreground underline-offset-4 hover:underline disabled:opacity-60">
-              Explore the demo
-            </button>
-          </p>
-        )}
+        {/* A sandbox of the visitor's own, made by the server; it never signs in to a shared account. */}
+        <TryDemo className="mx-auto inline-flex min-h-11 items-center gap-1.5 px-2 font-semibold text-foreground underline-offset-4 hover:underline disabled:opacity-60">
+          Just looking? Try the demo
+        </TryDemo>
       </div>
     </div>
   )

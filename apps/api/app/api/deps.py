@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_sessionmaker, set_user_scope
-from app.core.errors import ReauthenticationRequired, Unauthorized
+from app.core.errors import DemoEnded, ReauthenticationRequired, Unauthorized
 from app.core.security import hash_token, session_window
 from app.engine.periods import today_in
 from app.models import Session, User, UserSettings
@@ -65,6 +65,8 @@ async def get_ctx(request: Request) -> AsyncIterator[Ctx]:
         if row is None:
             raise Unauthorized("Your session has expired. Sign in again.")
         sess, user = row
+        if user.demo_expires_at is not None and user.demo_expires_at <= now:
+            raise DemoEnded("This demo has ended. Create an account to keep using Faldo.")
         await set_user_scope(session, user.id)
         user_settings = await session.get(UserSettings, user.id)
         if user_settings is None:
@@ -96,6 +98,8 @@ async def require_recent_sign_in(ctx: Ctx) -> None:
     borrowed phone or a stolen session cookie alone can't export or delete everything."""
     if ctx.reauthenticated_at and datetime.now(UTC) - ctx.reauthenticated_at <= REAUTH_WINDOW:
         return
+    if ctx.user.demo_expires_at is not None:
+        return  # A demo sandbox has nothing to re-enter: its session is the only way in, and its data is sample data.
     from app.models import OAuthIdentity
 
     providers = sorted(set((await ctx.db.execute(select(OAuthIdentity.provider)

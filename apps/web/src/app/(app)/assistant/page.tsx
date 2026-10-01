@@ -434,7 +434,7 @@ function AssistantView() {
 
 
   return (
-    <div className="flex h-dvh">
+    <div className="flex h-[calc(100dvh-var(--sticky-top))]">
       <aside className="hidden w-64 shrink-0 border-r px-3 py-4 xl:block">
         <Conversations activeId={conversationId} onSelect={loadConversation} onNew={newConversation} />
       </aside>

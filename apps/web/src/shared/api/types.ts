@@ -37,6 +37,11 @@ export interface Me {
     allowed: boolean
     sends: string
   }
+  /** A demo sandbox with sample data, deleted at demo_expires_at or when its visitor signs out. */
+  is_demo: boolean
+  demo_expires_at: string | null
+  /** The approved Privacy notice and Terms version this person still needs to agree to, or null. */
+  policy_to_accept: string | null
 }
 
 export interface Account {

@@ -159,6 +159,11 @@ function EmailAndPassword({ me }: { me: Me }) {
       setBusy(null)
     }
   }
+  if (me.is_demo) return (
+    <ListGroup title="Demo account">
+      <ListRow icon={Mail} title="No email or password" detail="This demo has sample data. It's deleted when you sign out, or within a day." />
+    </ListGroup>
+  )
   return (
     <ListGroup title="Email">
       <ListRow icon={Mail} title={me.email} detail={me.email_verified ? "Confirmed" : "Not confirmed yet"}

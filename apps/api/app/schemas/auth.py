@@ -15,6 +15,13 @@ class RegisterIn(ApiModel):
     email: EmailStr
     password: Password
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    # The Privacy notice and Terms version the person ticked to agree to (GET /auth/policy). Needed only once the
+    # operator has approved a version.
+    accepted_policy_version: Annotated[str, StringConstraints(max_length=40)] | None = None
+
+
+class PolicyAcceptIn(ApiModel):
+    version: Annotated[str, StringConstraints(min_length=1, max_length=40)]
 
 
 class LoginIn(ApiModel):
@@ -84,6 +91,11 @@ class MeOut(OutModel):
     email_verified: bool
     has_password: bool
     ai: AIUseOut
+    # A demo sandbox (services/demo.py) and when it ends.
+    is_demo: bool = False
+    demo_expires_at: datetime | None = None
+    # The approved Privacy notice and Terms version this person still needs to agree to, or None.
+    policy_to_accept: str | None = None
 
 
 class ForgotPasswordIn(ApiModel):

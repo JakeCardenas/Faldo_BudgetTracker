@@ -218,7 +218,10 @@ Constraints enforce positive amounts, transfer destinations, distinct transfer a
 | `RESEND_API_KEY` / `EMAIL_FROM` | — | for password reset emails | without a key, reset links are only logged in development |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | for Continue with Google | redirect URI: `PUBLIC_APP_URL/api/v1/auth/google/callback` |
 | `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | — | for Continue with Apple | needs the Apple Developer Program; return URL `PUBLIC_APP_URL/api/v1/auth/apple/callback` |
-| `SEED_DEMO_PASSWORD` | `faldo-demo-2026` | — | |
+| `DEMO_ENABLED` | `true` | `false` | "Try the demo": each visitor gets a sandbox account of their own with sample data, signed in until the browser closes and deleted after `DEMO_HOURS` (24), on sign-out, or by the daily cron. No shared account or password. Receipts, backup restore and emails are off in a demo |
+| `DEMO_MAX_ACTIVE` / `DEMO_STARTS_PER_IP_PER_HOUR` / `AI_DEMO_DAILY_CALLS` | `100` / `3` / `10` | same | limits for demo sandboxes |
+| `POLICY_VERSION` | — | set only after legal review | the approved version of the Privacy notice and Terms. Unset while they're drafts: sign-up asks for no agreement and records none. Once set, sign-up requires ticking agreement to that version, and existing accounts are asked once; the version and time are stored on the user |
+| `SEED_DEMO_PASSWORD` | — (required by `make seed`) | never set | password of the local demo account `jake@faldo.app`; no default, so no database has a known password |
 
 Vercel defaults in the right column apply automatically when the `VERCEL` environment variable is present.
 
@@ -227,7 +230,6 @@ Vercel defaults in the right column apply automatically when the `VERCEL` enviro
 | Variable | Default | Notes |
 |---|---|---|
 | `API_ORIGIN` | `http://localhost:8000` | **required on Vercel**; the build fails without it |
-| `NEXT_PUBLIC_SHOW_DEMO_LOGIN` | `true` locally | set `false` in production unless you seed a demo account |
 | `PROXY_SHARED_SECRET` | — | the same random value as the API's; passes the visitor's address to the API for rate limits |
 
 ## Run locally
@@ -239,7 +241,7 @@ cp .env.example .env
 make up
 ```
 
-Open http://localhost:3000 and choose **Explore the demo account** (`jake@faldo.app` / `faldo-demo-2026`).
+Open http://localhost:3000 and choose **Try the demo** for a sandbox of your own, or set `SEED_DEMO_PASSWORD` in `.env` and run `make seed` for a fixed local account (`jake@faldo.app` with that password).
 
 ### Without Docker
 
@@ -251,7 +253,8 @@ psql -d postgres -c "CREATE ROLE faldo_app LOGIN PASSWORD 'faldo_app' NOSUPERUSE
 psql -d postgres -c "CREATE DATABASE faldo OWNER faldo;"
 psql -d faldo -c "CREATE EXTENSION vector; CREATE EXTENSION pg_trgm; CREATE EXTENSION citext;"
 
-cd apps/api && uv sync && uv run alembic upgrade head && uv run python -m app.seed.demo
+cd apps/api && uv sync && uv run alembic upgrade head
+SEED_DEMO_PASSWORD="<choose one>" uv run python -m app.seed.demo   # optional: a fixed local demo account
 uv run uvicorn app.main:app --reload --port 8000
 
 cd apps/web && cp .env.example .env.local && npm install && npm run dev
@@ -271,10 +274,11 @@ Faldo deploys as **two Vercel projects from the same GitHub repository** plus a 
    - `vercel.json` sets a daily cron that sweeps queued jobs.
 3. **Web project.**
    - Import the same repository, set **Root Directory** to `apps/web` (framework: Next.js).
-   - Environment variables: `API_ORIGIN` = the API project's URL, `NEXT_PUBLIC_SHOW_DEMO_LOGIN=false`.
+   - Environment variables: `API_ORIGIN` = the API project's URL.
    - The web app rewrites `/api/*` to the API, so the session cookie stays on the web domain.
 4. **Order.** Deploy the API first, copy its URL into the web project's `API_ORIGIN`, deploy the web project, then set the API's `PUBLIC_APP_URL` to the web URL and redeploy the API.
-5. **Demo data (optional).** From your machine: `cd apps/api && DATABASE_URL="<production url>" uv run python -m app.seed.demo`.
+5. **Demo (optional).** Set `DEMO_ENABLED=true` on the API project. Visitors then get a sandbox of their own from the start page; don't seed a shared demo account into production.
+6. **Before inviting real people.** The Privacy notice and Terms (`apps/web/src/app/privacy`, `apps/web/src/app/terms`) are drafts with bracketed placeholders for the operator's details, providers, retention, rights, minimum age, liability and governing law. Have them completed and reviewed by a qualified professional, then set `POLICY_VERSION` to the approved version.
 
 Open copies of the web app keep themselves current: each build carries its commit (`VERCEL_GIT_COMMIT_SHA`), `/version` reports the live one, and when the app comes back to the front after a newer deploy it reloads (or, if a sheet is open or you are typing, loads the new version on your next page change). This matters most for Faldo added to an iPhone home screen, which resumes instead of reloading.
 

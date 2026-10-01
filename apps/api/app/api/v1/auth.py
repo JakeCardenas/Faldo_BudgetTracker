@@ -37,6 +37,7 @@ from app.schemas.auth import (
     ForgotPasswordIn,
     LoginIn,
     MeOut,
+    PolicyAcceptIn,
     ReauthenticateIn,
     RegisterIn,
     ResetPasswordIn,
@@ -45,7 +46,7 @@ from app.schemas.auth import (
     SettingsUpdate,
     VerifyEmailIn,
 )
-from app.services import oauth
+from app.services import demo, oauth
 from app.services.categories import create_default_categories
 from app.services.email import send_email
 from app.services.engagement import check_outfit
@@ -58,8 +59,11 @@ async def _start_session(db: Any, response: Response, request: Request, user: Us
     settings = get_settings()
     token = new_session_token()
     now = datetime.now(UTC)
+    expires_at = now + session_window(remember)
+    if user.demo_expires_at is not None:
+        expires_at = min(expires_at, user.demo_expires_at)
     db.add(Session(token_hash=hash_token(token), user_id=user.id, remember=remember, reauthenticated_at=now,
-                   expires_at=now + session_window(remember),
+                   expires_at=expires_at,
                    user_agent=(request.headers.get("user-agent") or "")[:255]))
     # Not remembered: no max-age, so the browser drops the cookie when it closes.
     response.set_cookie(
@@ -68,13 +72,21 @@ async def _start_session(db: Any, response: Response, request: Request, user: Us
     )
 
 
+def _policy_to_accept(user: User) -> str | None:
+    """The approved Privacy notice and Terms version this person hasn't agreed to yet, if there's one."""
+    version = get_settings().policy_version
+    return version if version and user.policy_version != version else None
+
+
 def _me(user: User, user_settings: UserSettings) -> MeOut:
     llm = get_llm()
     return MeOut(id=user.id, email=user.email, display_name=user.display_name,
                  settings=SettingsOut.model_validate(user_settings),
                  ai_provider=llm.name if consent.permits(user_settings, llm) else "local",
                  ai=AIUseOut.model_validate(consent.summary(user_settings)),
-                 email_verified=user.email_verified_at is not None, has_password=user.password_hash is not None)
+                 email_verified=user.email_verified_at is not None, has_password=user.password_hash is not None,
+                 is_demo=demo.is_demo(user), demo_expires_at=user.demo_expires_at,
+                 policy_to_accept=_policy_to_accept(user))
 
 
 VERIFY_PURPOSE = "verify_email"
@@ -113,11 +125,17 @@ def _with_notice(path: str, notice: str) -> str:
 @router.post("/auth/register", response_model=MeOut, status_code=201)
 async def register(data: RegisterIn, request: Request, response: Response, db: AnonDbDep) -> MeOut:
     await limiter.hit(f"register:{client_ip(request)}", 10, 3600)
+    # Only an approved version is recorded, and only when the person ticked to agree to that exact version. While the
+    # documents are drafts (no POLICY_VERSION), nothing is recorded either way.
+    policy = get_settings().policy_version
+    if policy and data.accepted_policy_version != policy:
+        raise AppError("To create an account, agree to the Terms of use and the Privacy notice.")
     # Hash first so a taken email takes as long to answer as a new one.
     password_hash = hash_password(data.password)
     if await db.scalar(select(User.id).where(User.email == data.email)):
         raise Conflict("An account with this email already exists.")
-    user = User(email=data.email, password_hash=password_hash, display_name=data.display_name)
+    user = User(email=data.email, password_hash=password_hash, display_name=data.display_name,
+                policy_version=policy, policy_accepted_at=datetime.now(UTC) if policy else None)
     db.add(user)
     await db.flush()
     await set_user_scope(db, user.id)
@@ -128,6 +146,21 @@ async def register(data: RegisterIn, request: Request, response: Response, db: A
     await _send_verification(db, user)
     await db.flush()
     await db.refresh(user_settings)
+    return _me(user, user_settings)
+
+
+@router.post("/auth/demo", response_model=MeOut, status_code=201)
+async def start_demo(request: Request, response: Response, db: AnonDbDep) -> MeOut:
+    """Try Faldo without signing up: a sandbox account of this visitor's own, with sample data, for a day."""
+    if not get_settings().demo_enabled:
+        raise AppError("The demo isn't available here.", status_code=404)
+    await limiter.hit(f"demo:{client_ip(request)}", get_settings().demo_starts_per_ip_per_hour, 3600)
+    user = await demo.create(db)
+    await _start_session(db, response, request, user, remember=False)
+    await db.flush()
+    user_settings = await db.get(UserSettings, user.id)
+    if user_settings is None:
+        raise Unauthorized("Account is not fully set up.")
     return _me(user, user_settings)
 
 
@@ -149,8 +182,14 @@ async def login(data: LoginIn, request: Request, response: Response, db: AnonDbD
 
 @router.get("/auth/providers", tags=["auth"])
 async def sign_in_providers() -> dict[str, bool]:
-    """Which "Continue with…" buttons to show: only the services this server is set up for."""
-    return {provider: oauth.enabled(provider) for provider in oauth.PROVIDERS}
+    """Which "Continue with…" buttons to show: only the services this server is set up for, and whether the demo is on."""
+    return {**{provider: oauth.enabled(provider) for provider in oauth.PROVIDERS}, "demo": get_settings().demo_enabled}
+
+
+@router.get("/auth/policy", tags=["auth"])
+async def current_policy() -> dict[str, str | None]:
+    """The approved Privacy notice and Terms version people agree to when signing up. None while they're drafts."""
+    return {"version": get_settings().policy_version}
 
 
 @router.get("/auth/{provider}/start", tags=["auth"])
@@ -203,6 +242,8 @@ async def apple_callback(request: Request, db: AnonDbDep, code: Annotated[str | 
 @router.post("/auth/logout", status_code=204)
 async def logout(ctx: CtxDep, response: Response) -> Response:
     await ctx.db.execute(delete(Session).where(Session.token_hash == ctx.session_token_hash))
+    # A demo sandbox has no way back in once its session ends, so it goes now rather than at its end time.
+    await demo.end(ctx.db, ctx.user)
     response.delete_cookie(get_settings().session_cookie_name, path="/")
     response.status_code = 204
     return response
@@ -250,6 +291,20 @@ async def set_ai_consent(data: AIConsentIn, ctx: CtxDep) -> MeOut:
     ctx.settings.ai_consent = data.choice
     ctx.settings.ai_consent_at = datetime.now(UTC)
     ctx.settings.ai_consent_providers = consent.external_providers() if data.choice == "allowed" else []
+    await ctx.db.flush()
+    return _me(ctx.user, ctx.settings)
+
+
+@router.post("/me/policy", response_model=MeOut)
+async def accept_policy(data: PolicyAcceptIn, ctx: CtxDep) -> MeOut:
+    """Record that this person agreed to the approved Privacy notice and Terms, the exact version they were shown."""
+    version = get_settings().policy_version
+    if not version:
+        raise AppError("There's no approved version of the Privacy notice and Terms to agree to yet.", status_code=409)
+    if data.version != version:
+        raise AppError("The Privacy notice or Terms changed. Reload the page to see the current version.", status_code=409)
+    ctx.user.policy_version = version
+    ctx.user.policy_accepted_at = datetime.now(UTC)
     await ctx.db.flush()
     return _me(ctx.user, ctx.settings)
 
@@ -389,6 +444,7 @@ async def verify_email(data: VerifyEmailIn, ctx: CtxDep) -> MeOut:
 
 @router.post("/auth/email/resend", status_code=204)
 async def resend_verification(ctx: CtxDep) -> Response:
+    demo.refuse_in_demo(ctx.user, "Email")
     if ctx.user.email_verified_at is None:
         await limiter.hit(f"verify-resend:{ctx.user_id}", 3, 3600)
         await _send_verification(ctx.db, ctx.user)

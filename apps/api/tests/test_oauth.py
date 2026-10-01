@@ -61,9 +61,13 @@ async def _start(client: httpx.AsyncClient, next_path: str = "/") -> str:
 
 
 async def test_the_buttons_show_only_for_what_is_set_up(anon, monkeypatch):
-    assert (await anon.get("/api/v1/auth/providers")).json() == {"google": False, "apple": False}
+    async def buttons() -> dict[str, bool]:
+        shown = (await anon.get("/api/v1/auth/providers")).json()
+        return {provider: shown[provider] for provider in ("google", "apple")}
+
+    assert await buttons() == {"google": False, "apple": False}
     monkeypatch.setattr(oauth, "get_settings", lambda: _settings())
-    assert (await anon.get("/api/v1/auth/providers")).json() == {"google": True, "apple": False}
+    assert await buttons() == {"google": True, "apple": False}
     assert (await anon.get("/api/v1/auth/apple/start")).headers["location"] == "/login?error=unavailable"
 
 

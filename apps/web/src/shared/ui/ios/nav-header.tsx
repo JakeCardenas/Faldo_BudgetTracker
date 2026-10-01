@@ -32,7 +32,7 @@ export function LargeTitle({ title, subtitle, back, actions, className, mobileAc
 
   return (
     <>
-      <div className="sticky top-0 isolate z-30 -mx-5 px-5 pt-safe sm:-mx-6 sm:px-6 lg:hidden">
+      <div className="sticky top-(--sticky-top) isolate z-30 -mx-5 px-5 pt-safe sm:-mx-6 sm:px-6 lg:hidden">
         {/* Always painted (it matches the page at the top): iOS 26 tints the status bar from the sticky layer
             at the top of the screen, and a see-through one turned the strip grey. */}
         <div aria-hidden className="scroll-edge pointer-events-none absolute inset-0 -z-10" />

@@ -96,6 +96,8 @@
   */
   --ios-edge: 0px;
   --top-inset: calc(env(safe-area-inset-top) + var(--ios-edge));
+  /* How far down sticky headers stick: zero, or under the demo banner (app-shell.tsx), which covers the top inset. */
+  --sticky-top: 0px;
   /*
     The phone tab bar's footprint, in one place. The bar floats this far above the bottom edge: 20px, or clear of the
     home indicator where the screen has one (the safe area is counted here, once). Pages leave room for the bar plus

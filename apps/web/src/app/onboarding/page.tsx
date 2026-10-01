@@ -18,6 +18,9 @@ import { useSubmissionKey } from "@/shared/api/use-submission-key"
 import { FREQUENCY_LABELS, formatMoney, toMinor, todayISO } from "@/shared/lib/format"
 import { useCategories } from "@/entities/category"
 import { useMe } from "@/entities/session"
+import { finishSetup } from "./finish"
+import { PolicyGate } from "@/features/auth"
+import { useLogout } from "@/widgets/navigation"
 import type { AccountType, CaptureResult, Frequency, Me } from "@/shared/api/types"
 import { cn } from "@/shared/lib/utils"
 
@@ -67,9 +70,11 @@ export default function OnboardingPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const { data: me } = useMe()
+  const logout = useLogout()
   const { data: categories = [] } = useCategories()
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [finishError, setFinishError] = useState<string | null>(null)
   const submission = useSubmissionKey()
   const [currency, setCurrency] = useState("PHP")
   const [accountPreset, setAccountPreset] = useState(0)
@@ -87,8 +92,8 @@ export default function OnboardingPage() {
   const [txText, setTxText] = useState("")
   const [txSaved, setTxSaved] = useState<string | null>(null)
 
-  const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1))
-  const back = () => setStep((s) => Math.max(0, s - 1))
+  const next = () => { setFinishError(null); setStep((s) => Math.min(STEPS.length - 1, s + 1)) }
+  const back = () => { setFinishError(null); setStep((s) => Math.max(0, s - 1)) }
 
   async function run(fn: () => Promise<void>) {
     setBusy(true)
@@ -167,21 +172,25 @@ export default function OnboardingPage() {
     }
   }
 
-  async function finish(destination: string) {
-    setBusy(true)
-    const updated = await api.post<Me>("/me/onboarding/complete")
-    qc.setQueryData(["me"], updated)
-    markWelcome()
-    router.replace(destination)
-  }
+  // Leaves setup only once the server has saved that it's done (see ./finish.ts).
+  const finish = (destination: string) => finishSetup({
+    save: () => api.post<Me>("/me/onboarding/complete"),
+    saved: (updated) => { qc.setQueryData(["me"], updated); markWelcome() },
+    leave: () => router.replace(destination),
+    setBusy,
+    setError: setFinishError,
+    explain: (error) => error instanceof ApiError ? error.message : "Couldn't finish setting up. Check your connection and try again.",
+  })
 
   const symbol = CURRENCIES.find((c) => c.code === currency)?.symbol ?? "₱"
+  // A Google or Apple sign-up created the account before Faldo could ask: agree first, then set up.
+  if (me?.policy_to_accept) return <PolicyGate version={me.policy_to_accept} onSignOut={() => void logout()} />
 
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 pt-[calc(1.25rem+var(--top-inset))] pb-5 sm:px-10">
         <Logo />
-        {step > 0 && step < STEPS.length - 1 && <button onClick={() => finish("/")} className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">Skip setup</button>}
+        {step > 0 && step < STEPS.length - 1 && <button onClick={() => finish("/")} disabled={busy} className="min-h-11 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-60">Skip setup</button>}
       </header>
       <div className="px-5 sm:px-10">
         <div className="mx-auto flex max-w-xl gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
@@ -343,6 +352,16 @@ export default function OnboardingPage() {
                 <Button size="lg" onClick={() => finish("/")} disabled={busy}>Go to Home <ArrowRight /></Button>
                 <Button size="lg" variant="secondary" onClick={() => finish("/assistant")} disabled={busy}>Ask Faldo a question</Button>
               </div>
+            </div>
+          )}
+
+          {/* Next to the buttons that finish setup, so it's seen where the person tapped. */}
+          {finishError && (
+            // Brought into view as it appears: "Skip setup" sits at the top of the screen, far from here.
+            <div role="alert" ref={(el) => el?.scrollIntoView({ block: "nearest" })}
+              className="flex flex-wrap items-center gap-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-destructive">
+              <p className="min-w-0 flex-1">{finishError}</p>
+              <button type="button" onClick={() => setFinishError(null)} className="min-h-11 shrink-0 px-2 font-semibold underline-offset-4 hover:underline">Dismiss</button>
             </div>
           )}
 

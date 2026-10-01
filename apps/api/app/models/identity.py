@@ -7,11 +7,13 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
     true,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, CITEXT, UUID
@@ -30,6 +32,14 @@ class User(UUIDPk, Timestamps, Base):
     # When this account proved it controls its email: an emailed link opened while signed in, a password reset, or a
     # Google or Apple sign-in with that verified address. Null means whoever registered it may not own the inbox.
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Set only on a demo sandbox (services/demo.py): when it stops working and is deleted.
+    demo_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The approved Privacy notice and Terms version this person agreed to (settings.policy_version), and when.
+    policy_version: Mapped[str | None] = mapped_column(String(40))
+    policy_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_users_demo_expires_at", "demo_expires_at",
+                            postgresql_where=text("demo_expires_at IS NOT NULL")),)
 
 
 class OAuthIdentity(UUIDPk, Timestamps, Base):

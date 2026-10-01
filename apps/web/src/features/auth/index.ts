@@ -1,3 +1,7 @@
 export { AuthForm } from "./ui/auth-form"
-export { AuthError, AuthField, AuthHeading, PRIMARY_PILL, PasswordField } from "./ui/fields"
+export { AGREE_FIRST, PolicyAgreement, PolicyGate } from "./ui/agreement"
+export { TryDemo } from "./ui/demo"
+export { AuthError, AuthField, AuthHeading, PasswordField } from "./ui/fields"
+export { PILL, PRIMARY_PILL } from "./ui/pill"
 export { AuthDraftProvider, useAuthDraft } from "./model/draft"
+export { usePolicyVersion, useSignInOptions } from "./api/options"
